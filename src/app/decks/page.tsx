@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { CreateDeckCard, DeckCard } from '@/components/features/decks/DeckCard';
+import { CreateDeckModal } from '@/components/features/decks/CreateDeckModal';
 
 // Types
 interface Deck {
@@ -10,8 +11,7 @@ interface Deck {
     name: string;
     description: string;
     cardCount: number;
-    lastStudied?: Date;
-    category: string;
+    lastStudied: Date;
 }
 
 // Sample data
@@ -22,36 +22,33 @@ const sampleDecks: Deck[] = [
         description: 'Core concepts and syntax',
         cardCount: 25,
         lastStudied: new Date('2024-01-15'),
-        category: 'Programming'
     },
     {
         id: '2',
         name: 'React Hooks',
         description: 'useState, useEffect, and more',
         cardCount: 18,
-        lastStudied: new Date('2024-01-10'),
-        category: 'Programming'
+        lastStudied: new Date('2025-07-16'),
     },
     {
         id: '3',
         name: 'Spanish Vocabulary',
         description: 'Common words and phrases',
         cardCount: 42,
-        lastStudied: new Date('2024-01-12'),
-        category: 'Language'
+        lastStudied: new Date('2025-01-12'),
     },
     {
         id: '4',
         name: 'Math Formulas',
         description: 'Algebra and calculus formulas',
         cardCount: 31,
-        lastStudied: new Date('2024-01-08'),
-        category: 'Mathematics'
+        lastStudied: new Date('2024-12-08'),
     }
 ];
 
 export default function DecksPage() {
-    const [decks] = useState<Deck[]>(sampleDecks);
+    const [decks, setDecks] = useState<Deck[]>(sampleDecks);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const handleStudy = (deckId: string) => {
         console.log('Study deck:', deckId);
@@ -61,6 +58,27 @@ export default function DecksPage() {
     const handleEdit = (deckId: string) => {
         console.log('Edit deck:', deckId);
         // TODO: Navigate to edit page
+    };
+
+    const handleCreateDeck = (deckName: string) => {
+        const newDeck: Deck = {
+            id: Date.now().toString(),
+            name: deckName,
+            description: 'Add your first card to get started',
+            cardCount: 0,
+            lastStudied: new Date(),
+        };
+
+        setDecks(prev => [newDeck, ...prev]);
+        console.log('Created deck:', newDeck);
+    };
+
+    const handleOpenModal = () => {
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
     };
 
     return (
@@ -86,19 +104,20 @@ export default function DecksPage() {
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Stats */}
                 <div className="mb-8">
-                    <div className="flex flex-wrap gap-4 text-sm text-text-secondary">
+                    <div className="flex flex-wrap gap-2 text-sm text-text-secondary">
                         <span>{decks.length} decks</span>
                         <span>•</span>
-                        <span>{decks.reduce((total, deck) => total + deck.cardCount, 0)} total cards</span>
-                        <span>•</span>
-                        <span>{decks.filter(deck => deck.lastStudied).length} recently studied</span>
+                        <span>{decks.reduce((total, deck) => total + deck.cardCount, 0)} cards</span>
                     </div>
                 </div>
 
                 {/* Decks Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {/* Create New Deck Card */}
+                    <CreateDeckCard onClick={handleOpenModal} />
+
                     {/* Existing Decks */}
-                    {decks.map((deck) => (
+                    {decks.sort((a, b) => b.lastStudied.getTime() - a.lastStudied.getTime()).map((deck) => (
                         <DeckCard
                             key={deck.id}
                             deck={deck}
@@ -106,11 +125,15 @@ export default function DecksPage() {
                             onEdit={handleEdit}
                         />
                     ))}
-
-                    {/* Create New Deck Card */}
-                    <CreateDeckCard />
                 </div>
             </main>
+
+            {/* Create Deck Modal */}
+            <CreateDeckModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                onCreateDeck={handleCreateDeck}
+            />
         </div>
     );
 }

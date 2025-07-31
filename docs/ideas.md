@@ -24,9 +24,10 @@
 
 ### Essentials
 
+- [ ] Overall Supabase setup
 - [ ] Auth
 - [ ] Create, store, modify decks/flashcards
-- [ ] Review time tracking
+- [ ] Time tracking (last studied, next review, etc.)
 
 
 ## Future Ideas
@@ -47,5 +48,4 @@
 - [ ] Learning paths
 - [ ] Deck sharing
 - [ ] Deck rating
-- [ ] 
-
+- [ ] Deck modes (flashcards, matching, etc.)
