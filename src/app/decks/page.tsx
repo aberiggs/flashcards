@@ -4,50 +4,10 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { CreateDeckCard, DeckCard } from '@/components/features/decks/DeckCard';
 import { CreateDeckModal } from '@/components/features/decks/CreateDeckModal';
-
-// Types
-interface Deck {
-    id: string;
-    name: string;
-    description: string;
-    cardCount: number;
-    lastStudied: Date;
-}
-
-// Sample data
-const sampleDecks: Deck[] = [
-    {
-        id: '1',
-        name: 'JavaScript Basics',
-        description: 'Core concepts and syntax',
-        cardCount: 25,
-        lastStudied: new Date('2024-01-15'),
-    },
-    {
-        id: '2',
-        name: 'React Hooks',
-        description: 'useState, useEffect, and more',
-        cardCount: 18,
-        lastStudied: new Date('2025-07-16'),
-    },
-    {
-        id: '3',
-        name: 'Spanish Vocabulary',
-        description: 'Common words and phrases',
-        cardCount: 42,
-        lastStudied: new Date('2025-01-12'),
-    },
-    {
-        id: '4',
-        name: 'Math Formulas',
-        description: 'Algebra and calculus formulas',
-        cardCount: 31,
-        lastStudied: new Date('2024-12-08'),
-    }
-];
+import { useDecks } from '@/context/DeckContext';
 
 export default function DecksPage() {
-    const [decks, setDecks] = useState<Deck[]>(sampleDecks);
+    const { decks, addDeck, getDeckStats } = useDecks();
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const handleStudy = (deckId: string) => {
@@ -61,16 +21,8 @@ export default function DecksPage() {
     };
 
     const handleCreateDeck = (deckName: string) => {
-        const newDeck: Deck = {
-            id: Date.now().toString(),
-            name: deckName,
-            description: 'Add your first card to get started',
-            cardCount: 0,
-            lastStudied: new Date(),
-        };
-
-        setDecks(prev => [newDeck, ...prev]);
-        console.log('Created deck:', newDeck);
+        addDeck(deckName, 'Add your first card to get started');
+        console.log('Created deck:', deckName);
     };
 
     const handleOpenModal = () => {
@@ -107,7 +59,7 @@ export default function DecksPage() {
                     <div className="flex flex-wrap gap-2 text-sm text-text-secondary">
                         <span>{decks.length} decks</span>
                         <span>•</span>
-                        <span>{decks.reduce((total, deck) => total + deck.cardCount, 0)} cards</span>
+                        <span>{decks.reduce((total, deck) => total + getDeckStats(deck.id).totalCards, 0)} cards</span>
                     </div>
                 </div>
 
@@ -117,14 +69,22 @@ export default function DecksPage() {
                     <CreateDeckCard onClick={handleOpenModal} />
 
                     {/* Existing Decks */}
-                    {decks.sort((a, b) => b.lastStudied.getTime() - a.lastStudied.getTime()).map((deck) => (
-                        <DeckCard
-                            key={deck.id}
-                            deck={deck}
-                            onStudy={handleStudy}
-                            onEdit={handleEdit}
-                        />
-                    ))}
+                    {decks.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map((deck) => {
+                        const stats = getDeckStats(deck.id);
+                        const deckWithStats = {
+                            ...deck,
+                            cardCount: stats.totalCards,
+                            lastStudied: stats.lastStudied || deck.createdAt,
+                        };
+                        return (
+                            <DeckCard
+                                key={deck.id}
+                                deck={deckWithStats}
+                                onStudy={handleStudy}
+                                onEdit={handleEdit}
+                            />
+                        );
+                    })}
                 </div>
             </main>
 

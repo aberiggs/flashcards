@@ -1,15 +1,13 @@
 import { Card } from '@/components/ui/Card';
+import type { Deck } from '@/types/flashcards';
 
-interface Deck {
-    id: string;
-    name: string;
-    description: string;
+interface DeckWithStats extends Deck {
     cardCount: number;
     lastStudied: Date;
 }
 
 interface DeckCardProps {
-    deck: Deck;
+    deck: DeckWithStats;
     onStudy?: (deckId: string) => void;
     onEdit?: (deckId: string) => void;
 }
