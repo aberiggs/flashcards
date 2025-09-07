@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CreateDeckCard, DeckCard } from '@/components/features/decks/DeckCard';
 import { CreateDeckModal } from '@/components/features/decks/CreateDeckModal';
 import { useDecks } from '@/context/DeckContext';
@@ -9,6 +10,7 @@ import { useDecks } from '@/context/DeckContext';
 export default function DecksPage() {
     const { decks, addDeck, getDeckStats } = useDecks();
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const router = useRouter();
 
     const handleStudy = (deckId: string) => {
         console.log('Study deck:', deckId);
@@ -16,8 +18,7 @@ export default function DecksPage() {
     };
 
     const handleEdit = (deckId: string) => {
-        console.log('Edit deck:', deckId);
-        // TODO: Navigate to edit page
+        router.push(`/decks/${deckId}/edit`);
     };
 
     const handleCreateDeck = (deckName: string) => {
@@ -59,7 +60,7 @@ export default function DecksPage() {
                     <div className="flex flex-wrap gap-2 text-sm text-text-secondary">
                         <span>{decks.length} decks</span>
                         <span>•</span>
-                        <span>{decks.reduce((total, deck) => total + getDeckStats(deck.id).totalCards, 0)} cards</span>
+                        <span>{decks.reduce((total, deck) => total + getDeckStats(deck.id).cardCount, 0)} cards</span>
                     </div>
                 </div>
 
@@ -70,16 +71,10 @@ export default function DecksPage() {
 
                     {/* Existing Decks */}
                     {decks.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map((deck) => {
-                        const stats = getDeckStats(deck.id);
-                        const deckWithStats = {
-                            ...deck,
-                            cardCount: stats.totalCards,
-                            lastStudied: stats.lastStudied || deck.createdAt,
-                        };
                         return (
                             <DeckCard
                                 key={deck.id}
-                                deck={deckWithStats}
+                                deck={deck}
                                 onStudy={handleStudy}
                                 onEdit={handleEdit}
                             />

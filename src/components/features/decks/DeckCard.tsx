@@ -1,21 +1,22 @@
 import { Card } from '@/components/ui/Card';
 import type { Deck } from '@/types/flashcards';
-
-interface DeckWithStats extends Deck {
-    cardCount: number;
-    lastStudied: Date;
-}
+import { useDecks } from '@/context/DeckContext';
 
 interface DeckCardProps {
-    deck: DeckWithStats;
+    deck: Deck;
     onStudy?: (deckId: string) => void;
     onEdit?: (deckId: string) => void;
 }
 
 export function DeckCard({ deck, onStudy, onEdit }: DeckCardProps) {
-    const formatLastStudied = (date: Date) => {
+    const { getDeckStats } = useDecks();
+    const stats = getDeckStats(deck.id);
+
+    const formatLastStudied = (date: Date | string) => {
         const now = new Date();
-        const diffTime = Math.abs(now.getTime() - date.getTime());
+        // Type guard to handle string dates
+        const dateObj = typeof date === 'string' ? new Date(date) : date;
+        const diffTime = Math.abs(now.getTime() - dateObj.getTime());
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays < 1) {
@@ -49,10 +50,13 @@ export function DeckCard({ deck, onStudy, onEdit }: DeckCardProps) {
             </div>
 
             <div className="flex justify-between items-center text-sm text-text-tertiary">
-                <span>{deck.cardCount} cards</span>
-                {deck.lastStudied && (
-                    <span>Studied {formatLastStudied(deck.lastStudied)}</span>
-                )}
+                <span>{stats.cardCount} cards</span>
+                <span>
+                    {stats.lastStudied
+                        ? `Studied ${formatLastStudied(stats.lastStudied)}`
+                        : 'Never studied'
+                    }
+                </span>
             </div>
 
             <div className="mt-4 flex gap-2">

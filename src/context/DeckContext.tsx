@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import type { Deck, Card } from "@/types/flashcards";
+import type { Deck, Card, DeckStats } from "@/types/flashcards";
 import { seedSampleData } from "@/data/mockData";
 
 type DeckContextType = {
@@ -24,7 +24,7 @@ type DeckContextType = {
 
     // Utility functions
     getDeckWithCards: (deckId: string) => (Deck & { cards: Card[] }) | undefined;
-    getDeckStats: (deckId: string) => { totalCards: number; lastStudied?: Date };
+    getDeckStats: (deckId: string) => DeckStats;
 };
 
 const DeckContext = createContext<DeckContextType | undefined>(undefined);
@@ -169,8 +169,13 @@ export function DeckProvider({ children }: { children: ReactNode }) {
     const getDeckStats = (deckId: string) => {
         const deckCards = getCardsByDeck(deckId);
         return {
-            totalCards: deckCards.length,
-            // You can add lastStudied logic here when you implement study sessions
+            cardCount: deckCards.length,
+            lastStudied: deckCards.reduce<Date | undefined>((latest, card) => {
+                if (card.lastStudied && (!latest || card.lastStudied > latest)) {
+                    return card.lastStudied;
+                }
+                return latest;
+            }, undefined),
         };
     };
 
