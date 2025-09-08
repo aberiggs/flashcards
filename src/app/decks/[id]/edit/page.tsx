@@ -1,6 +1,7 @@
 'use client';
 
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+
 import { useState } from 'react';
 import { useDecks } from '@/context/DeckContext';
 import { Card } from '@/components/ui/Card';
@@ -15,7 +16,6 @@ interface CardFormData {
 
 export default function EditDeckPage() {
     const { id } = useParams();
-    const router = useRouter();
     const {
         getDeck,
         updateDeck,

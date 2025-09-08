@@ -17,7 +17,7 @@ type DeckContextType = {
 
     // Card operations
     addCard: (deckId: string, front: string, back: string) => void;
-    updateCard: (id: string, updates: Partial<Pick<Card, 'front' | 'back'>>) => void;
+    updateCard: (id: string, updates: Partial<Pick<Card, 'front' | 'back' | 'lastStudied'>>) => void;
     deleteCard: (id: string) => void;
     getCardsByDeck: (deckId: string) => Card[];
     getCard: (id: string) => Card | undefined;
@@ -117,6 +117,7 @@ export function DeckProvider({ children }: { children: ReactNode }) {
         setDecks((prev) => prev.filter(deck => deck.id !== id));
         // Also delete all cards in this deck
         setCards((prev) => prev.filter(card => card.deckId !== id));
+
     };
 
     const getDeck = (id: string) => {
@@ -133,9 +134,14 @@ export function DeckProvider({ children }: { children: ReactNode }) {
             createdAt: new Date(),
         };
         setCards((prev) => [...prev, newCard]);
+
+        updateDeck(deckId, {});
     };
 
-    const updateCard = (id: string, updates: Partial<Pick<Card, 'front' | 'back'>>) => {
+    const updateCard = (id: string, updates: Partial<Pick<Card, 'front' | 'back' | 'lastStudied'>>) => {
+        const card = getCard(id);
+        if (!card) return;
+
         setCards((prev) =>
             prev.map(card =>
                 card.id === id
@@ -143,10 +149,17 @@ export function DeckProvider({ children }: { children: ReactNode }) {
                     : card
             )
         );
+
+        updateDeck(card.deckId, {});
     };
 
     const deleteCard = (id: string) => {
+        const card = getCard(id);
+        if (!card) return;
+
         setCards((prev) => prev.filter(card => card.id !== id));
+
+        updateDeck(card.deckId, {});
     };
 
     const getCardsByDeck = (deckId: string) => {

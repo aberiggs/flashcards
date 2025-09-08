@@ -10,7 +10,6 @@ interface DeckCardProps {
 
 export function DeckCard({ deck, onStudy, onEdit }: DeckCardProps) {
     const { getDeckStats } = useDecks();
-    const stats = getDeckStats(deck.id);
 
     const formatLastStudied = (date: Date | string) => {
         const now = new Date();
@@ -50,10 +49,10 @@ export function DeckCard({ deck, onStudy, onEdit }: DeckCardProps) {
             </div>
 
             <div className="flex justify-between items-center text-sm text-text-tertiary">
-                <span>{stats.cardCount} cards</span>
+                <span>{getDeckStats(deck.id).cardCount} cards</span>
                 <span>
-                    {stats.lastStudied
-                        ? `Studied ${formatLastStudied(stats.lastStudied)}`
+                    {getDeckStats(deck.id).lastStudied
+                        ? `Studied ${formatLastStudied(getDeckStats(deck.id).lastStudied as Date)}`
                         : 'Never studied'
                     }
                 </span>

@@ -6,15 +6,42 @@ import { useRouter } from 'next/navigation';
 import { CreateDeckCard, DeckCard } from '@/components/features/decks/DeckCard';
 import { CreateDeckModal } from '@/components/features/decks/CreateDeckModal';
 import { useDecks } from '@/context/DeckContext';
+import { Deck, Card } from '@/types/flashcards';
 
 export default function DecksPage() {
-    const { decks, addDeck, getDeckStats } = useDecks();
+    const { decks, cards, addDeck, getDeckStats } = useDecks();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const router = useRouter();
 
+    // TODO: Fix broken sorting on study race condition
+    const sortedDecks = (decks: Deck[], cards: Card[]) => {
+        const sorted = [...decks].sort((a, b) => {
+            const aStats = getDeckStats(a.id);
+            const bStats = getDeckStats(b.id);
+
+            if (aStats.lastStudied && bStats.lastStudied) {
+                const aDate = typeof aStats.lastStudied === 'string' ? new Date(aStats.lastStudied) : aStats.lastStudied;
+                const bDate = typeof bStats.lastStudied === 'string' ? new Date(bStats.lastStudied) : bStats.lastStudied;
+                return bDate.getTime() - aDate.getTime();
+            }
+
+            // If only one deck has been studied, prioritize it
+            if (aStats.lastStudied && !bStats.lastStudied) return -1;
+            if (!aStats.lastStudied && bStats.lastStudied) return 1;
+
+            return b.createdAt.getTime() - a.createdAt.getTime();
+        });
+
+        console.log('Sorted decks:');
+        for (const deck of sorted) {
+            console.log(`* ${deck.name}: lastStudied =`, getDeckStats(deck.id).lastStudied);
+        }
+
+        return sorted;
+    };
+
     const handleStudy = (deckId: string) => {
-        console.log('Study deck:', deckId);
-        // TODO: Navigate to study session
+        router.push(`/decks/${deckId}/study`);
     };
 
     const handleEdit = (deckId: string) => {
@@ -70,7 +97,7 @@ export default function DecksPage() {
                     <CreateDeckCard onClick={handleOpenModal} />
 
                     {/* Existing Decks */}
-                    {decks.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).map((deck) => {
+                    {sortedDecks(decks, cards).map((deck) => {
                         return (
                             <DeckCard
                                 key={deck.id}
