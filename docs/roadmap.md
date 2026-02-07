@@ -68,6 +68,7 @@ Take a look at what’s built and what’s next.
 - [ ] **Custom card schema** — User-defined fields (e.g. front, back, image, examples) and optional custom HTML/CSS/JS.
 - [ ] **Stats** — Per-deck or per-card stats (e.g. accuracy, streak, time spent).
 - [ ] **Rich card components** — Highlighted terms linked to explanations; concept web / related-terms view.
+ -[ ] **Flashcard review schedule preview** - See a graph of how many cards are due for review for each day in the future.
 
 ### Data & portability
 

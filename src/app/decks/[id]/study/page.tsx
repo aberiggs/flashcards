@@ -2,14 +2,14 @@
 
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { BookOpen, Check, HelpCircle, Lightbulb, Minus, X } from 'lucide-react';
+import { BookOpen, Check, HelpCircle, Lightbulb, X, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../../convex/_generated/api';
 import type { Id } from '../../../../../convex/_generated/dataModel';
 import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
 
-type ConfidenceLevel = 'easy' | 'medium' | 'hard';
+type ConfidenceLevel = 'wrong' | 'close' | 'hard' | 'easy';
 
 function sortByLastStudied<T extends { lastStudied?: number }>(items: T[]): T[] {
     return [...items].sort((a, b) => {
@@ -25,26 +25,32 @@ export default function StudyPage() {
     const deckId = id as Id<"decks">;
 
     const deck = useQuery(api.decks.get, { id: deckId });
-    const cards = useQuery(api.cards.getByDeck, { deckId });
-    const updateCardMutation = useMutation(api.cards.update);
+    const dueCards = useQuery(api.cards.getDueByDeck, { deckId });
+    const allCards = useQuery(api.cards.getByDeck, { deckId });
+    const recordReviewMutation = useMutation(api.cards.recordReview);
 
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
     const [sessionComplete, setSessionComplete] = useState(false);
+    // When true, study all cards (e.g. "Study Again" from "No cards due" state)
+    const [studyAllCards, setStudyAllCards] = useState(false);
     // Freeze study order at session start so Convex live updates don't re-sort
     // mid-session (which would show the same card again after studying it)
-    const [sessionCards, setSessionCards] = useState<NonNullable<typeof cards> | null>(null);
+    const [sessionCards, setSessionCards] = useState<NonNullable<typeof dueCards> | null>(null);
+
+    const cardsToUse = studyAllCards ? allCards : dueCards;
 
     useEffect(() => {
-        if (cards && cards.length > 0 && sessionCards === null && !sessionComplete) {
-            setSessionCards(sortByLastStudied(cards));
+        if (cardsToUse && cardsToUse.length > 0 && sessionCards === null && !sessionComplete) {
+            const ordered = studyAllCards ? sortByLastStudied(cardsToUse) : cardsToUse;
+            setSessionCards(ordered);
         }
-    }, [cards, sessionCards, sessionComplete]);
+    }, [cardsToUse, sessionCards, sessionComplete, studyAllCards]);
 
     const studyCards = sessionCards ?? [];
 
     // Loading state (include brief init when cards loaded but session order not yet frozen)
-    if (deck === undefined || cards === undefined || (cards && cards.length > 0 && sessionCards === null && !sessionComplete)) {
+    if (deck === undefined || dueCards === undefined || allCards === undefined || (cardsToUse && cardsToUse.length > 0 && sessionCards === null && !sessionComplete)) {
         return (
             <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
                 <p className="text-text-secondary">Loading...</p>
@@ -68,24 +74,62 @@ export default function StudyPage() {
         );
     }
 
-    if ((sessionCards ?? cards ?? []).length === 0) {
-        return (
-            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-surface-secondary rounded-full flex items-center justify-center">
-                        <BookOpen className="w-8 h-8 text-text-tertiary" aria-hidden />
+    const hasNoCards = (allCards ?? []).length === 0;
+    const hasNoDueCards = (dueCards ?? []).length === 0 && !studyAllCards;
+    const hasCardsToStudy = studyCards.length > 0;
+
+    if (!hasCardsToStudy) {
+        if (hasNoCards) {
+            return (
+                <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-surface-secondary rounded-full flex items-center justify-center">
+                            <BookOpen className="w-8 h-8 text-text-tertiary" aria-hidden />
+                        </div>
+                        <h1 className="text-2xl font-bold text-text-primary mb-2">No cards to study</h1>
+                        <p className="text-text-secondary mb-6">This deck doesn&apos;t have any cards yet.</p>
+                        <Link
+                            href={`/decks/${deck._id}/edit`}
+                            className="inline-block bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
+                        >
+                            Add Cards
+                        </Link>
                     </div>
-                    <h1 className="text-2xl font-bold text-text-primary mb-2">No cards to study</h1>
-                    <p className="text-text-secondary mb-6">This deck doesn&apos;t have any cards yet.</p>
-                    <Link
-                        href={`/decks/${deck._id}/edit`}
-                        className="inline-block bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
-                    >
-                        Add Cards
-                    </Link>
                 </div>
-            </div>
-        );
+            );
+        }
+        if (hasNoDueCards && !sessionComplete) {
+            return (
+                <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="w-16 h-16 mx-auto mb-4 bg-surface-secondary rounded-full flex items-center justify-center">
+                            <AlertCircle className="w-8 h-8 text-text-tertiary" aria-hidden />
+                        </div>
+                        <h1 className="text-2xl font-bold text-text-primary mb-2">No cards due today</h1>
+                        <p className="text-text-secondary mb-6">
+                            All cards in this deck are scheduled for later. Come back when they&apos;re due, or study all cards now.
+                        </p>
+                        <div className="flex gap-4 justify-center">
+                            <Link
+                                href="/decks"
+                                className="bg-surface-secondary text-text-primary border border-border-primary px-4 py-2 rounded-md hover:bg-surface-tertiary transition-colors"
+                            >
+                                Back to Decks
+                            </Link>
+                            <button
+                                onClick={() => {
+                                    setStudyAllCards(true);
+                                    setSessionCards(null);
+                                }}
+                                className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
+                            >
+                                Study All Cards
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
     }
 
     if (sessionComplete) {
@@ -110,6 +154,7 @@ export default function StudyPage() {
                                 setCurrentCardIndex(0);
                                 setShowAnswer(false);
                                 setSessionComplete(false);
+                                setStudyAllCards(false);
                             }}
                             className="bg-surface-secondary text-text-primary border border-border-primary px-4 py-2 rounded-md hover:bg-surface-tertiary transition-colors"
                         >
@@ -124,13 +169,10 @@ export default function StudyPage() {
     const currentCard = studyCards[currentCardIndex];
     const progress = ((currentCardIndex + 1) / studyCards.length) * 100;
 
-    // TODO: Use confidence for spaced-repetition scheduling
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future scheduling
     const handleConfidence = async (confidence: ConfidenceLevel) => {
-        // Update the card's lastStudied timestamp
-        await updateCardMutation({
+        await recordReviewMutation({
             id: currentCard._id,
-            lastStudied: Date.now(),
+            confidence,
         });
 
         // Move to next card or complete session
@@ -218,22 +260,29 @@ export default function StudyPage() {
 
                                 <div className="space-y-4">
                                     <p className="text-text-tertiary font-medium">
-                                        How confident were you?
+                                        How did you do?
                                     </p>
-                                    <div className="flex gap-4 justify-center">
+                                    <div className="flex flex-wrap gap-4 justify-center">
                                         <button
-                                            onClick={() => handleConfidence('hard')}
+                                            onClick={() => handleConfidence('wrong')}
                                             className="flex flex-col items-center gap-2 bg-red-50 text-red-700 border border-red-200 px-6 py-4 rounded-lg hover:bg-red-100 transition-colors"
                                         >
                                             <X className="w-5 h-5" aria-hidden />
-                                            <span className="font-medium">Hard</span>
+                                            <span className="font-medium">Wrong</span>
                                         </button>
                                         <button
-                                            onClick={() => handleConfidence('medium')}
+                                            onClick={() => handleConfidence('close')}
+                                            className="flex flex-col items-center gap-2 bg-orange-50 text-orange-700 border border-orange-200 px-6 py-4 rounded-lg hover:bg-orange-100 transition-colors"
+                                        >
+                                            <AlertCircle className="w-5 h-5" aria-hidden />
+                                            <span className="font-medium">Close</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleConfidence('hard')}
                                             className="flex flex-col items-center gap-2 bg-yellow-50 text-yellow-700 border border-yellow-200 px-6 py-4 rounded-lg hover:bg-yellow-100 transition-colors"
                                         >
-                                            <Minus className="w-5 h-5" aria-hidden />
-                                            <span className="font-medium">Medium</span>
+                                            <HelpCircle className="w-5 h-5" aria-hidden />
+                                            <span className="font-medium">Hard</span>
                                         </button>
                                         <button
                                             onClick={() => handleConfidence('easy')}
