@@ -43,7 +43,8 @@ Take a look at what’s built and what’s next.
 
 ### Flashcard & study
 
-- [ ] **Search** — Search across decks or within a deck (e.g. by front/back text).
+- [ ] **Card browser with search** — Browse and search cards outside the SRS study flow (e.g. by deck, text, due status). Better edit UX (inline or side-panel edit) instead of the current modal-on-edit-page flow; good for review and bulk edits.
+- [ ] **Search** — Search across decks or within a deck (e.g. by front/back text); powers the card browser and filters.
 - [ ] **Keyboard shortcuts (study)** — e.g. space to reveal, 1/2/3 for confidence, arrows to navigate; faster flow for power users.
 
 ### Spaced repetition & scheduling
@@ -61,6 +62,8 @@ Take a look at what’s built and what’s next.
 
 ### Flashcard features
 
+- [ ] **Multimedia in cards** — Images, audio, or video in card content (e.g. image on front/back, pronunciation audio). Requires file storage (e.g. Convex file storage) and schema updates.
+- [ ] **Markdown / MDX in cards** — Render card content as Markdown (headings, lists, code blocks, links). Optional: MDX for embedded components or interactive snippets; start with Markdown for simplicity, add MDX later if needed.
 - [ ] **Custom card schema** — User-defined fields (e.g. front, back, image, examples) and optional custom HTML/CSS/JS.
 - [ ] **Stats** — Per-deck or per-card stats (e.g. accuracy, streak, time spent).
 - [ ] **Rich card components** — Highlighted terms linked to explanations; concept web / related-terms view.
@@ -78,4 +81,4 @@ Take a look at what’s built and what’s next.
 - [ ] **Deck rating** — Rate or review shared decks.
 - [ ] **Deck modes** — Multiple study modes (e.g. flashcards, matching, typing).
 - [ ] **Loading & polish** — Better loading states and transitions.
-- [ ] **Advanced Themes** - Allow for customization of the app theme along with a larger variety of default themes.
+- [ ] **Advanced themes** - Allow for customization of the app theme along with a larger variety of default themes.
