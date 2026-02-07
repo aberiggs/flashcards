@@ -1,12 +1,13 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-
-import { useState } from 'react';
-import { useDecks } from '@/context/DeckContext';
+import { useState, useEffect } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../../../convex/_generated/api';
+import type { Id } from '../../../../../convex/_generated/dataModel';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
-import type { Card as CardType } from '@/types/flashcards';
 import Link from 'next/link';
 
 interface CardFormData {
@@ -16,25 +17,37 @@ interface CardFormData {
 
 export default function EditDeckPage() {
     const { id } = useParams();
-    const {
-        getDeck,
-        updateDeck,
-        getCardsByDeck,
-        addCard,
-        updateCard,
-        deleteCard
-    } = useDecks();
+    const deckId = id as Id<"decks">;
 
-    const deck = getDeck(id as string);
-    const cards = getCardsByDeck(id as string);
+    const deckWithCards = useQuery(api.decks.getWithCards, { id: deckId });
+    const updateDeckMutation = useMutation(api.decks.update);
+    const addCardMutation = useMutation(api.cards.create);
+    const updateCardMutation = useMutation(api.cards.update);
+    const deleteCardMutation = useMutation(api.cards.remove);
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [editingCard, setEditingCard] = useState<CardType | null>(null);
-    const [deckName, setDeckName] = useState(deck?.name || '');
-    const [deckDescription, setDeckDescription] = useState(deck?.description || '');
+    const [editingCardId, setEditingCardId] = useState<Id<"cards"> | null>(null);
+    const [deckName, setDeckName] = useState('');
+    const [deckDescription, setDeckDescription] = useState('');
     const [cardForm, setCardForm] = useState<CardFormData>({ front: '', back: '' });
 
-    if (!deck) {
+    // Keep form in sync when data loads or changes
+    useEffect(() => {
+        if (deckWithCards) {
+            setDeckName(deckWithCards.name);
+            setDeckDescription(deckWithCards.description ?? '');
+        }
+    }, [deckWithCards]);
+
+    if (deckWithCards === undefined) {
+        return (
+            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                <p className="text-text-secondary">Loading...</p>
+            </div>
+        );
+    }
+
+    if (deckWithCards === null) {
         return (
             <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
                 <div className="text-center">
@@ -50,46 +63,54 @@ export default function EditDeckPage() {
         );
     }
 
-    const handleSaveDeck = () => {
-        updateDeck(id as string, {
+    const cards = deckWithCards.cards;
+
+    const handleSaveDeck = async () => {
+        await updateDeckMutation({
+            id: deckId,
             name: deckName,
-            description: deckDescription
+            description: deckDescription,
         });
     };
 
-    const handleAddCard = () => {
+    const handleAddCard = async () => {
         if (cardForm.front.trim() && cardForm.back.trim()) {
-            addCard(id as string, cardForm.front.trim(), cardForm.back.trim());
+            await addCardMutation({
+                deckId: deckId,
+                front: cardForm.front.trim(),
+                back: cardForm.back.trim(),
+            });
             setCardForm({ front: '', back: '' });
             setIsAddModalOpen(false);
         }
     };
 
-    const handleEditCard = () => {
-        if (editingCard && cardForm.front.trim() && cardForm.back.trim()) {
-            updateCard(editingCard.id, {
+    const handleEditCard = async () => {
+        if (editingCardId && cardForm.front.trim() && cardForm.back.trim()) {
+            await updateCardMutation({
+                id: editingCardId,
                 front: cardForm.front.trim(),
-                back: cardForm.back.trim()
+                back: cardForm.back.trim(),
             });
-            setEditingCard(null);
+            setEditingCardId(null);
             setCardForm({ front: '', back: '' });
         }
     };
 
-    const handleDeleteCard = (cardId: string) => {
+    const handleDeleteCard = async (cardId: Id<"cards">) => {
         if (confirm('Are you sure you want to delete this card?')) {
-            deleteCard(cardId);
+            await deleteCardMutation({ id: cardId });
         }
     };
 
-    const openEditModal = (card: CardType) => {
-        setEditingCard(card);
+    const openEditModal = (card: typeof cards[number]) => {
+        setEditingCardId(card._id);
         setCardForm({ front: card.front, back: card.back });
     };
 
     const closeModals = () => {
         setIsAddModalOpen(false);
-        setEditingCard(null);
+        setEditingCardId(null);
         setCardForm({ front: '', back: '' });
     };
 
@@ -174,7 +195,7 @@ export default function EditDeckPage() {
                 ) : (
                     <div className="space-y-4">
                         {cards.map((card, index) => (
-                            <Card key={card.id} variant="default">
+                            <Card key={card._id} variant="default">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-2">
@@ -199,14 +220,14 @@ export default function EditDeckPage() {
                                             className="p-2 text-accent-primary hover:text-accent-primary-hover hover:bg-accent-primary/10 rounded-md transition-colors"
                                             title="Edit card"
                                         >
-                                            <EditIcon className="w-4 h-4" />
+                                            <Pencil className="w-4 h-4" aria-hidden />
                                         </button>
                                         <button
-                                            onClick={() => handleDeleteCard(card.id)}
+                                            onClick={() => handleDeleteCard(card._id)}
                                             className="p-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-md transition-colors"
                                             title="Delete card"
                                         >
-                                            <DeleteIcon className="w-4 h-4" />
+                                            <Trash2 className="w-4 h-4" aria-hidden />
                                         </button>
                                     </div>
                                 </div>
@@ -266,7 +287,7 @@ export default function EditDeckPage() {
 
             {/* Edit Card Modal */}
             <Modal
-                isOpen={!!editingCard}
+                isOpen={!!editingCardId}
                 onClose={closeModals}
                 title="Edit Card"
             >
@@ -312,22 +333,5 @@ export default function EditDeckPage() {
                 </div>
             </Modal>
         </div>
-    );
-}
-
-// Icon Components
-function EditIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-    );
-}
-
-function DeleteIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-        </svg>
     );
 }
