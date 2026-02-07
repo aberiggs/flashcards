@@ -6,16 +6,16 @@ import { useRouter } from 'next/navigation';
 import { CreateDeckCard, DeckCard } from '@/components/features/decks/DeckCard';
 import { CreateDeckModal } from '@/components/features/decks/CreateDeckModal';
 import { useDecks } from '@/context/DeckContext';
-import { Deck, Card } from '@/types/flashcards';
+import type { Deck } from '@/types/flashcards';
 
 export default function DecksPage() {
-    const { decks, cards, addDeck, getDeckStats } = useDecks();
+    const { decks, addDeck, deleteDeck, getDeckStats } = useDecks();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const router = useRouter();
 
-    // TODO: Fix broken sorting on study race condition
-    const sortedDecks = (decks: Deck[], cards: Card[]) => {
-        const sorted = [...decks].sort((a, b) => {
+    // Sort decks: most recently studied first, then by creation date
+    const sortedDecks = (decksToSort: Deck[]) => {
+        return [...decksToSort].sort((a, b) => {
             const aStats = getDeckStats(a.id);
             const bStats = getDeckStats(b.id);
 
@@ -25,19 +25,11 @@ export default function DecksPage() {
                 return bDate.getTime() - aDate.getTime();
             }
 
-            // If only one deck has been studied, prioritize it
             if (aStats.lastStudied && !bStats.lastStudied) return -1;
             if (!aStats.lastStudied && bStats.lastStudied) return 1;
 
             return b.createdAt.getTime() - a.createdAt.getTime();
         });
-
-        console.log('Sorted decks:');
-        for (const deck of sorted) {
-            console.log(`* ${deck.name}: lastStudied =`, getDeckStats(deck.id).lastStudied);
-        }
-
-        return sorted;
     };
 
     const handleStudy = (deckId: string) => {
@@ -48,9 +40,16 @@ export default function DecksPage() {
         router.push(`/decks/${deckId}/edit`);
     };
 
+    const handleDeleteDeck = (deckId: string) => {
+        const deck = decks.find((d) => d.id === deckId);
+        if (!deck) return;
+        if (confirm(`Delete deck "${deck.name}"? This will permanently remove the deck and all its cards.`)) {
+            deleteDeck(deckId);
+        }
+    };
+
     const handleCreateDeck = (deckName: string) => {
         addDeck(deckName, 'Add your first card to get started');
-        console.log('Created deck:', deckName);
     };
 
     const handleOpenModal = () => {
@@ -97,13 +96,14 @@ export default function DecksPage() {
                     <CreateDeckCard onClick={handleOpenModal} />
 
                     {/* Existing Decks */}
-                    {sortedDecks(decks, cards).map((deck) => {
+                    {sortedDecks(decks).map((deck) => {
                         return (
                             <DeckCard
                                 key={deck.id}
                                 deck={deck}
                                 onStudy={handleStudy}
                                 onEdit={handleEdit}
+                                onDelete={handleDeleteDeck}
                             />
                         );
                     })}

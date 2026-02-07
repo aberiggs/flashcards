@@ -1,3 +1,4 @@
+import { Trash2, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import type { Deck } from '@/types/flashcards';
 import { useDecks } from '@/context/DeckContext';
@@ -6,9 +7,10 @@ interface DeckCardProps {
     deck: Deck;
     onStudy?: (deckId: string) => void;
     onEdit?: (deckId: string) => void;
+    onDelete?: (deckId: string) => void;
 }
 
-export function DeckCard({ deck, onStudy, onEdit }: DeckCardProps) {
+export function DeckCard({ deck, onStudy, onEdit, onDelete }: DeckCardProps) {
     const { getDeckStats } = useDecks();
 
     const formatLastStudied = (date: Date | string) => {
@@ -38,7 +40,7 @@ export function DeckCard({ deck, onStudy, onEdit }: DeckCardProps) {
     return (
         <Card variant="hover">
             <div className="flex justify-between items-start mb-4">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-semibold text-text-primary group-hover:text-accent-primary transition-colors">
                         {deck.name}
                     </h3>
@@ -46,6 +48,20 @@ export function DeckCard({ deck, onStudy, onEdit }: DeckCardProps) {
                         {deck.description}
                     </p>
                 </div>
+                {onDelete && (
+                    <button
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(deck.id);
+                        }}
+                        className="p-2 text-text-tertiary hover:text-accent-error hover:bg-accent-error/10 rounded-md transition-colors shrink-0"
+                        title="Delete deck"
+                        aria-label="Delete deck"
+                    >
+                        <Trash2 className="w-4 h-4" aria-hidden />
+                    </button>
+                )}
             </div>
 
             <div className="flex justify-between items-center text-sm text-text-tertiary">
@@ -82,14 +98,6 @@ export function DeckCard({ deck, onStudy, onEdit }: DeckCardProps) {
     );
 }
 
-function PlusIcon({ className }: { className?: string }) {
-    return (
-        <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-    );
-}
-
 export function CreateDeckCard({ onClick }: { onClick?: () => void }) {
     return (
         <div
@@ -101,7 +109,7 @@ export function CreateDeckCard({ onClick }: { onClick?: () => void }) {
             <div className="flex flex-col items-center justify-center h-full text-center">
                 <div className="w-12 h-12 bg-accent-primary/10 rounded-full flex items-center justify-center mb-4 
                     group-hover:bg-accent-primary/20 group-hover:scale-110 transition-all duration-200">
-                    <PlusIcon className="w-6 h-6 text-accent-primary" />
+                    <Plus className="w-6 h-6 text-accent-primary" aria-hidden />
                 </div>
                 <h3 className="text-lg font-semibold text-text-primary mb-2 group-hover:text-accent-primary transition-colors">
                     Create New Deck
