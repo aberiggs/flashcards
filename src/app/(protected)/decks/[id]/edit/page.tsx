@@ -1,13 +1,15 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../../../../convex/_generated/api';
-import type { Id } from '../../../../../convex/_generated/dataModel';
+import { api } from '../../../../../../convex/_generated/api';
+import type { Id } from '../../../../../../convex/_generated/dataModel';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
+import { AppHeader } from '@/components/layout/AppHeader';
+import { PageLoader } from '@/components/ui/PageLoader';
 import Link from 'next/link';
 
 interface CardFormData {
@@ -17,10 +19,12 @@ interface CardFormData {
 
 export default function EditDeckPage() {
     const { id } = useParams();
+    const router = useRouter();
     const deckId = id as Id<"decks">;
 
     const deckWithCards = useQuery(api.decks.getWithCards, { id: deckId });
     const updateDeckMutation = useMutation(api.decks.update);
+    const deleteDeckMutation = useMutation(api.decks.remove);
     const addCardMutation = useMutation(api.cards.create);
     const updateCardMutation = useMutation(api.cards.update);
     const deleteCardMutation = useMutation(api.cards.remove);
@@ -41,24 +45,30 @@ export default function EditDeckPage() {
 
     if (deckWithCards === undefined) {
         return (
-            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-                <p className="text-text-secondary">Loading...</p>
+            <div className="min-h-screen bg-background text-foreground">
+                <AppHeader title="Edit Deck" backHref="/decks" backLabel="Decks" />
+                <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                    <PageLoader message="Loading…" />
+                </main>
             </div>
         );
     }
 
     if (deckWithCards === null) {
         return (
-            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-                <div className="text-center">
-                    <h1 className="text-2xl font-bold text-text-primary mb-4">Deck not found</h1>
-                    <Link
-                        href="/decks"
-                        className="inline-block bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
-                    >
-                        Back to Decks
-                    </Link>
-                </div>
+            <div className="min-h-screen bg-background text-foreground">
+                <AppHeader title="Edit Deck" backHref="/decks" backLabel="Decks" />
+                <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
+                    <div className="text-center">
+                        <h1 className="text-2xl font-bold text-text-primary mb-4">Deck not found</h1>
+                        <Link
+                            href="/decks"
+                            className="inline-block bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
+                        >
+                            Back to Decks
+                        </Link>
+                    </div>
+                </main>
             </div>
         );
     }
@@ -103,6 +113,13 @@ export default function EditDeckPage() {
         }
     };
 
+    const handleDeleteDeck = async () => {
+        if (confirm(`Delete deck "${deckWithCards.name}"? This will permanently remove the deck and all its cards.`)) {
+            await deleteDeckMutation({ id: deckId });
+            router.push('/decks');
+        }
+    };
+
     const openEditModal = (card: typeof cards[number]) => {
         setEditingCardId(card._id);
         setCardForm({ front: card.front, back: card.back });
@@ -116,20 +133,7 @@ export default function EditDeckPage() {
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            {/* Header */}
-            <header className="border-b border-border-primary bg-surface-primary">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <h1 className="text-xl font-semibold text-text-primary">Edit Deck</h1>
-                        <Link
-                            href="/decks"
-                            className="text-text-secondary hover:text-text-primary transition-colors"
-                        >
-                            ← Back to Decks
-                        </Link>
-                    </div>
-                </div>
-            </header>
+            <AppHeader title="Edit Deck" backHref="/decks" backLabel="Decks" />
 
             {/* Main Content */}
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -161,12 +165,21 @@ export default function EditDeckPage() {
                                 rows={3}
                             />
                         </div>
-                        <button
-                            onClick={handleSaveDeck}
-                            className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
-                        >
-                            Save Deck Info
-                        </button>
+                        <div className="flex flex-wrap gap-3 items-center">
+                            <button
+                                onClick={handleSaveDeck}
+                                className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors cursor-pointer"
+                            >
+                                Save Deck Info
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleDeleteDeck}
+                                className="px-4 py-2 rounded-md border border-accent-error/50 text-accent-error hover:bg-accent-error/10 transition-colors cursor-pointer"
+                            >
+                                Delete deck
+                            </button>
+                        </div>
                     </div>
                 </Card>
 
@@ -175,7 +188,7 @@ export default function EditDeckPage() {
                     <h2 className="text-xl font-semibold text-text-primary">Cards</h2>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
+                        className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors cursor-pointer"
                     >
                         Add Card
                     </button>
@@ -187,7 +200,7 @@ export default function EditDeckPage() {
                         <p className="text-text-secondary mb-4">No cards in this deck yet.</p>
                         <button
                             onClick={() => setIsAddModalOpen(true)}
-                            className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
+                            className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors cursor-pointer"
                         >
                             Add Your First Card
                         </button>
@@ -217,14 +230,14 @@ export default function EditDeckPage() {
                                     <div className="flex gap-2 ml-4">
                                         <button
                                             onClick={() => openEditModal(card)}
-                                            className="p-2 text-accent-primary hover:text-accent-primary-hover hover:bg-accent-primary/10 rounded-md transition-colors"
+                                            className="p-2 text-accent-primary hover:text-accent-primary-hover hover:bg-accent-primary/10 rounded-md transition-colors cursor-pointer"
                                             title="Edit card"
                                         >
                                             <Pencil className="w-4 h-4" aria-hidden />
                                         </button>
                                         <button
                                             onClick={() => handleDeleteCard(card._id)}
-                                            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-md transition-colors"
+                                            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-md transition-colors cursor-pointer"
                                             title="Delete card"
                                         >
                                             <Trash2 className="w-4 h-4" aria-hidden />
@@ -271,13 +284,13 @@ export default function EditDeckPage() {
                     <div className="flex gap-2 justify-end">
                         <button
                             onClick={closeModals}
-                            className="px-4 py-2 border border-border-primary rounded-md text-text-primary hover:bg-surface-secondary transition-colors"
+                            className="px-4 py-2 border border-border-primary rounded-md text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleAddCard}
-                            className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
+                            className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors cursor-pointer"
                         >
                             Add Card
                         </button>
@@ -319,13 +332,13 @@ export default function EditDeckPage() {
                     <div className="flex gap-2 justify-end">
                         <button
                             onClick={closeModals}
-                            className="px-4 py-2 border border-border-primary rounded-md text-text-primary hover:bg-surface-secondary transition-colors"
+                            className="px-4 py-2 border border-border-primary rounded-md text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleEditCard}
-                            className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
+                            className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors cursor-pointer"
                         >
                             Save Changes
                         </button>

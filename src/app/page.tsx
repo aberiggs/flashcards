@@ -1,41 +1,15 @@
 'use client';
 
 import Link from "next/link";
-import { Settings, LogOut } from "lucide-react";
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { PageLoader } from "@/components/ui/PageLoader";
 
 function AuthenticatedContent() {
-  const { signOut } = useAuthActions();
-
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Header */}
-      <header className="border-b border-border-primary bg-surface-primary">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-xl font-semibold text-text-primary">
-              Flashcards App
-            </h1>
-            <div className="flex items-center space-x-4">
-              <Link
-                href="/options"
-                className="text-text-secondary hover:text-text-primary transition-colors"
-                title="Options & Settings"
-              >
-                <Settings className="w-6 h-6" aria-hidden />
-              </Link>
-              <button
-                onClick={() => void signOut()}
-                className="cursor-pointer text-text-secondary hover:text-text-primary transition-colors"
-                title="Sign out"
-              >
-                <LogOut className="w-6 h-6" aria-hidden />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AppHeader />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -138,9 +112,7 @@ export default function HomePage() {
   return (
     <>
       <AuthLoading>
-        <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
-          <p className="text-text-secondary">Loading...</p>
-        </div>
+        <PageLoader fullScreen />
       </AuthLoading>
       <Unauthenticated>
         <SignInPage />

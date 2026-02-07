@@ -35,7 +35,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm cursor-pointer"
                 onClick={onClose}
             />
 
@@ -48,7 +48,7 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
                     </h2>
                     <button
                         onClick={onClose}
-                        className="text-text-secondary hover:text-text-primary transition-colors p-1 rounded-md hover:bg-surface-secondary"
+                        className="text-text-secondary hover:text-text-primary transition-colors p-1 rounded-md hover:bg-surface-secondary cursor-pointer"
                         aria-label="Close modal"
                     >
                         <X className="w-5 h-5" aria-hidden />

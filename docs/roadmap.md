@@ -6,32 +6,37 @@ Take a look at what’s built and what’s next.
 
 ## Implemented ✅
 
-### Frontend — Flashcard essentials
+### Pages & decks
 
 - [x] **Home page** — Landing with sign-in and a link to view decks.
 - [x] **Decks list** — View all decks with card counts and last-studied order.
 - [x] **Create deck** — Create a new deck (name and optional description).
 - [x] **Delete deck** — Delete a deck and all its cards (with confirmation).
 - [x] **Add, edit, and remove cards** — Full card CRUD from the deck edit page (front/back).
-- [x] **Review mode** — Study session with flip-to-reveal, progress bar, and confidence (easy / medium / hard).
 - [x] **View all cards in a deck** — Edit deck page lists every card with front/back.
 
-### Frontend — Auth
+### Study
+
+- [x] **Review mode** — Study session with flip-to-reveal, progress bar, and confidence (wrong / close / hard / easy) feeding SM-2.
+- [x] **SM-2 spaced repetition** — Confidence drives `efactor`, `repetitions`, and `nextReview`; cards are scheduled for future review.
+- [x] **Due-card filtering** — Study mode shows only cards due for review; decks list displays due count per deck.
+
+### Auth
 
 - [x] **Sign in** — GitHub OAuth.
 - [x] **Sign out** — Sign out in the header when authenticated.
 - [x] **Auth state** — Loading and unauthenticated states with appropriate UI.
 
-### Frontend — Other
+### Settings
 
 - [x] **Options** — Settings page with light/dark/system theme toggle.
 
-### Backend — Convex
+### Backend (Convex)
 
 - [x] **Convex setup** — Project wired to Convex with schema, queries, and mutations.
 - [x] **Auth** — Convex Auth with GitHub provider; user-scoped data.
 - [x] **Decks & cards** — Create, read, update, and delete for decks and cards.
-- [x] **Time tracking** — `lastStudied` on cards, aggregated for decks; updated when a card is studied (confidence not yet used for scheduling).
+- [x] **Time tracking** — `lastStudied` on cards, aggregated for decks; updated when a card is studied.
 
 ---
 
@@ -50,16 +55,13 @@ Take a look at what’s built and what’s next.
 
 ### Spaced repetition & scheduling
 
-- [ ] **Confidence-driven scheduling** — Use easy / medium / hard to compute next review time (e.g. SM-2 or similar).
-- [ ] **Mastery level & “burned”** — Each card has a phase/level (e.g. learning → review → mastered); after enough success, card is “burned” and no longer shown in regular sessions.
-- [ ] **Filter by due date** — In study mode, only show cards that are due for review (based on next-review from SRS).
 - [ ] **Configurable intervals** — User settings for how aggressively or gently to space reviews (e.g. interval multiplier, max interval, steps for learning).
 
 ### AI
 
 - [ ] **Generate from concepts** — Create flashcards from core concepts or topics the user specifies.
 - [ ] **Generate from content** — Create flashcards from notes, URLs, or pasted text.
-- [ ] **AI-assisted ordering** — Smarter review order or recommendations based on performance.
+- [ ] **AI-assisted explanations** — AI-assisted explanations of concepts and terms. It may also suggest additional resources or lessons.
 
 ### Flashcard features
 
@@ -68,7 +70,7 @@ Take a look at what’s built and what’s next.
 - [ ] **Custom card schema** — User-defined fields (e.g. front, back, image, examples) and optional custom HTML/CSS/JS.
 - [ ] **Stats** — Per-deck or per-card stats (e.g. accuracy, streak, time spent).
 - [ ] **Rich card components** — Highlighted terms linked to explanations; concept web / related-terms view.
- -[ ] **Flashcard review schedule preview** - See a graph of how many cards are due for review for each day in the future.
+- [ ] **Flashcard review schedule preview** — See a graph of how many cards are due for review for each day in the future.
 
 ### Data & portability
 

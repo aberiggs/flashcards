@@ -14,6 +14,7 @@ export const list = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
+    const now = Date.now();
     const decksWithStats = await Promise.all(
       decks.map(async (deck) => {
         const cards = await ctx.db
@@ -31,10 +32,22 @@ export const list = query({
           undefined,
         );
 
+        const dueCount = cards.filter(
+          (card) => !card.nextReview || card.nextReview <= now
+        ).length;
+
+        const futureReviews = cards
+          .map((c) => c.nextReview)
+          .filter((t): t is number => typeof t === "number" && t > now);
+        const nextReviewAt =
+          futureReviews.length > 0 ? Math.min(...futureReviews) : undefined;
+
         return {
           ...deck,
           cardCount: cards.length,
           lastStudied,
+          dueCount,
+          nextReviewAt,
         };
       }),
     );

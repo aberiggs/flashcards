@@ -1,30 +1,15 @@
 'use client';
 
-import Link from 'next/link';
-import { useTheme } from '../../components/theme/ThemeProvider';
-import { ThemeToggle } from '../../components/theme/ThemeToggle';
+import { useTheme } from '@/components/theme/ThemeProvider';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { AppHeader } from '@/components/layout/AppHeader';
 
 export default function OptionsPage() {
     const { theme, resolvedTheme } = useTheme();
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            {/* Header */}
-            <header className="border-b border-border-primary bg-surface-primary">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16">
-                        <h1 className="text-xl font-semibold text-text-primary">
-                            Options
-                        </h1>
-                        <Link
-                            href="/"
-                            className="text-text-secondary hover:text-text-primary transition-colors"
-                        >
-                            ← Back to Home
-                        </Link>
-                    </div>
-                </div>
-            </header>
+            <AppHeader title="Options" />
 
             {/* Main Content */}
             <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -155,16 +140,16 @@ export default function OptionsPage() {
                             <div>
                                 <h3 className="text-lg font-medium text-text-primary mb-3">Buttons</h3>
                                 <div className="space-y-2">
-                                    <button className="w-full bg-accent-primary text-text-inverse py-2 px-4 rounded-md hover:bg-accent-primary-hover transition-colors">
+                                    <button className="w-full bg-accent-primary text-text-inverse py-2 px-4 rounded-md hover:bg-accent-primary-hover transition-colors cursor-pointer">
                                         Primary Button
                                     </button>
-                                    <button className="w-full bg-surface-primary text-text-primary border border-border-primary py-2 px-4 rounded-md hover:bg-surface-secondary transition-colors">
+                                    <button className="w-full bg-surface-primary text-text-primary border border-border-primary py-2 px-4 rounded-md hover:bg-surface-secondary transition-colors cursor-pointer">
                                         Secondary Button
                                     </button>
-                                    <button className="w-full bg-accent-success text-text-inverse py-2 px-4 rounded-md hover:opacity-90 transition-colors">
+                                    <button className="w-full bg-accent-success text-text-inverse py-2 px-4 rounded-md hover:opacity-90 transition-colors cursor-pointer">
                                         Success Button
                                     </button>
-                                    <button className="w-full bg-accent-error text-text-inverse py-2 px-4 rounded-md hover:opacity-90 transition-colors">
+                                    <button className="w-full bg-accent-error text-text-inverse py-2 px-4 rounded-md hover:opacity-90 transition-colors cursor-pointer">
                                         Error Button
                                     </button>
                                 </div>
@@ -233,13 +218,13 @@ export default function OptionsPage() {
                             <div>
                                 <h3 className="text-lg font-medium text-text-primary mb-3">Data Management</h3>
                                 <div className="space-y-3">
-                                    <button className="bg-accent-primary text-text-inverse py-2 px-4 rounded-md hover:bg-accent-primary-hover transition-colors">
+                                    <button className="bg-accent-primary text-text-inverse py-2 px-4 rounded-md hover:bg-accent-primary-hover transition-colors cursor-pointer">
                                         Export Flashcards
                                     </button>
-                                    <button className="bg-surface-primary text-text-primary border border-border-primary py-2 px-4 rounded-md hover:bg-surface-secondary transition-colors">
+                                    <button className="bg-surface-primary text-text-primary border border-border-primary py-2 px-4 rounded-md hover:bg-surface-secondary transition-colors cursor-pointer">
                                         Import Flashcards
                                     </button>
-                                    <button className="bg-accent-error text-text-inverse py-2 px-4 rounded-md hover:opacity-90 transition-colors">
+                                    <button className="bg-accent-error text-text-inverse py-2 px-4 rounded-md hover:opacity-90 transition-colors cursor-pointer">
                                         Clear All Data
                                     </button>
                                 </div>
