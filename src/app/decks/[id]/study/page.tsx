@@ -1,46 +1,49 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { BookOpen, Check, HelpCircle, Lightbulb, Minus, X } from 'lucide-react';
-import { useDecks } from '@/context/DeckContext';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../../../convex/_generated/api';
+import type { Id } from '../../../../../convex/_generated/dataModel';
 import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
-import type { Card as CardType } from '@/types/flashcards';
 
 type ConfidenceLevel = 'easy' | 'medium' | 'hard';
 
 export default function StudyPage() {
     const { id } = useParams();
-    const { getDeck, getCardsByDeck, updateCard } = useDecks();
+    const deckId = id as Id<"decks">;
+
+    const deck = useQuery(api.decks.get, { id: deckId });
+    const cards = useQuery(api.cards.getByDeck, { deckId });
+    const updateCardMutation = useMutation(api.cards.update);
 
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
-    const [studyCards, setStudyCards] = useState<CardType[]>([]);
     const [sessionComplete, setSessionComplete] = useState(false);
 
-    const deck = getDeck(id as string);
-
     // Sort cards by least recently studied (or never studied) first
-    useEffect(() => {
-        if (deck) {
-            const cards = getCardsByDeck(deck.id);
-            const sortedCards = cards.sort((a, b) => {
-                // Never studied cards come first
-                if (!a.lastStudied && !b.lastStudied) return 0;
-                if (!a.lastStudied) return -1;
-                if (!b.lastStudied) return 1;
+    const studyCards = useMemo(() => {
+        if (!cards) return [];
+        return [...cards].sort((a, b) => {
+            // Never studied cards come first
+            if (!a.lastStudied && !b.lastStudied) return 0;
+            if (!a.lastStudied) return -1;
+            if (!b.lastStudied) return 1;
+            // Then sort by oldest lastStudied first
+            return a.lastStudied - b.lastStudied;
+        });
+    }, [cards]);
 
-                // Convert to Date objects if they're strings
-                const aDate = typeof a.lastStudied === 'string' ? new Date(a.lastStudied) : a.lastStudied;
-                const bDate = typeof b.lastStudied === 'string' ? new Date(b.lastStudied) : b.lastStudied;
-
-                // Then sort by oldest lastStudied first
-                return aDate.getTime() - bDate.getTime();
-            });
-            setStudyCards(sortedCards);
-        }
-    }, [deck, getCardsByDeck]);
+    // Loading state
+    if (deck === undefined || cards === undefined) {
+        return (
+            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                <p className="text-text-secondary">Loading...</p>
+            </div>
+        );
+    }
 
     if (!deck) {
         return (
@@ -68,7 +71,7 @@ export default function StudyPage() {
                     <h1 className="text-2xl font-bold text-text-primary mb-2">No cards to study</h1>
                     <p className="text-text-secondary mb-6">This deck doesn&apos;t have any cards yet.</p>
                     <Link
-                        href={`/decks/${deck.id}/edit`}
+                        href={`/decks/${deck._id}/edit`}
                         className="inline-block bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
                     >
                         Add Cards
@@ -115,10 +118,11 @@ export default function StudyPage() {
 
     // TODO: Use confidence for spaced-repetition scheduling
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for future scheduling
-    const handleConfidence = (confidence: ConfidenceLevel) => {
+    const handleConfidence = async (confidence: ConfidenceLevel) => {
         // Update the card's lastStudied timestamp
-        updateCard(currentCard.id, {
-            lastStudied: new Date()
+        await updateCardMutation({
+            id: currentCard._id,
+            lastStudied: Date.now(),
         });
 
         // Move to next card or complete session

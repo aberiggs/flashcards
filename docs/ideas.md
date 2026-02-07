@@ -23,7 +23,7 @@
 
 ### Essentials
 
-- [ ] Overall Supabase setup
+- [ ] Overall Convex setup
 - [ ] Auth
 - [ ] Create, store, modify decks/flashcards
 - [ ] Time tracking (last studied, next review, etc.)
@@ -34,7 +34,7 @@
 
 - [ ] Generate flashcards based on core concepts user is interested in
 - [ ] Generate flashcards from the content of notes, website, etc.
-- [ ] Create supplemental
+- [ ] AI assisted study or review ordering
 
 ### Flashcard Features
 
@@ -42,6 +42,9 @@
   - E.g. front, back, image, examples, etc.
   - User creates with html/css/js
 - [ ] View stats
+- [ ] Card components
+  - Have keywords highlighted in the card content that are linked to explanations/lessons
+  - Almost like a web that connects related terms and concepts
 
 ### Miscellaneous
 

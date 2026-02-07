@@ -1,23 +1,26 @@
 import { Trash2, Plus } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import type { Deck } from '@/types/flashcards';
-import { useDecks } from '@/context/DeckContext';
+
+interface DeckWithStats {
+    _id: string;
+    name: string;
+    description?: string;
+    _creationTime: number;
+    cardCount: number;
+    lastStudied?: number;
+}
 
 interface DeckCardProps {
-    deck: Deck;
+    deck: DeckWithStats;
     onStudy?: (deckId: string) => void;
     onEdit?: (deckId: string) => void;
     onDelete?: (deckId: string) => void;
 }
 
 export function DeckCard({ deck, onStudy, onEdit, onDelete }: DeckCardProps) {
-    const { getDeckStats } = useDecks();
-
-    const formatLastStudied = (date: Date | string) => {
-        const now = new Date();
-        // Type guard to handle string dates
-        const dateObj = typeof date === 'string' ? new Date(date) : date;
-        const diffTime = Math.abs(now.getTime() - dateObj.getTime());
+    const formatLastStudied = (timestamp: number) => {
+        const now = Date.now();
+        const diffTime = Math.abs(now - timestamp);
         const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
         if (diffDays < 1) {
@@ -53,7 +56,7 @@ export function DeckCard({ deck, onStudy, onEdit, onDelete }: DeckCardProps) {
                         type="button"
                         onClick={(e) => {
                             e.stopPropagation();
-                            onDelete(deck.id);
+                            onDelete(deck._id);
                         }}
                         className="p-2 text-text-tertiary hover:text-accent-error hover:bg-accent-error/10 rounded-md transition-colors shrink-0"
                         title="Delete deck"
@@ -65,10 +68,10 @@ export function DeckCard({ deck, onStudy, onEdit, onDelete }: DeckCardProps) {
             </div>
 
             <div className="flex justify-between items-center text-sm text-text-tertiary">
-                <span>{getDeckStats(deck.id).cardCount} cards</span>
+                <span>{deck.cardCount} cards</span>
                 <span>
-                    {getDeckStats(deck.id).lastStudied
-                        ? `Studied ${formatLastStudied(getDeckStats(deck.id).lastStudied as Date)}`
+                    {deck.lastStudied
+                        ? `Studied ${formatLastStudied(deck.lastStudied)}`
                         : 'Never studied'
                     }
                 </span>
@@ -76,7 +79,7 @@ export function DeckCard({ deck, onStudy, onEdit, onDelete }: DeckCardProps) {
 
             <div className="mt-4 flex gap-2">
                 <button
-                    onClick={() => onStudy?.(deck.id)}
+                    onClick={() => onStudy?.(deck._id)}
                     className="flex-1 bg-accent-primary text-text-inverse py-2 px-3 rounded-md text-sm font-medium 
             hover:bg-accent-primary-hover hover:scale-105 hover:shadow-lg 
             active:scale-95 transform transition-all duration-200 ease-out
@@ -85,7 +88,7 @@ export function DeckCard({ deck, onStudy, onEdit, onDelete }: DeckCardProps) {
                     Study
                 </button>
                 <button
-                    onClick={() => onEdit?.(deck.id)}
+                    onClick={() => onEdit?.(deck._id)}
                     className="flex-1 bg-surface-secondary text-text-primary border border-border-primary py-2 px-3 rounded-md text-sm font-medium 
             hover:bg-surface-tertiary hover:scale-105 hover:shadow-md hover:border-accent-primary/50
             active:scale-95 transform transition-all duration-200 ease-out

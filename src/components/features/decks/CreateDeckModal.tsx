@@ -2,18 +2,20 @@
 
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { useMutation } from 'convex/react';
+import { api } from '../../../../convex/_generated/api';
 
 interface CreateDeckModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onCreateDeck: (deckName: string) => void;
 }
 
-export function CreateDeckModal({ isOpen, onClose, onCreateDeck }: CreateDeckModalProps) {
+export function CreateDeckModal({ isOpen, onClose }: CreateDeckModalProps) {
+    const createDeck = useMutation(api.decks.create);
     const [deckName, setDeckName] = useState('');
     const [error, setError] = useState('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         const trimmedName = deckName.trim();
@@ -34,7 +36,10 @@ export function CreateDeckModal({ isOpen, onClose, onCreateDeck }: CreateDeckMod
         }
 
         setError('');
-        onCreateDeck(trimmedName);
+        await createDeck({
+            name: trimmedName,
+            description: 'Add your first card to get started',
+        });
         setDeckName('');
         onClose();
     };
@@ -93,4 +98,4 @@ export function CreateDeckModal({ isOpen, onClose, onCreateDeck }: CreateDeckMod
             </form>
         </Modal>
     );
-} 
+}

@@ -3,34 +3,29 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../convex/_generated/api';
 import { CreateDeckCard, DeckCard } from '@/components/features/decks/DeckCard';
 import { CreateDeckModal } from '@/components/features/decks/CreateDeckModal';
-import { useDecks } from '@/context/DeckContext';
-import type { Deck } from '@/types/flashcards';
+import type { Id } from '../../../convex/_generated/dataModel';
 
 export default function DecksPage() {
-    const { decks, addDeck, deleteDeck, getDeckStats } = useDecks();
+    const decks = useQuery(api.decks.list);
+    const deleteDeckMutation = useMutation(api.decks.remove);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const router = useRouter();
 
     // Sort decks: most recently studied first, then by creation date
-    const sortedDecks = (decksToSort: Deck[]) => {
-        return [...decksToSort].sort((a, b) => {
-            const aStats = getDeckStats(a.id);
-            const bStats = getDeckStats(b.id);
-
-            if (aStats.lastStudied && bStats.lastStudied) {
-                const aDate = typeof aStats.lastStudied === 'string' ? new Date(aStats.lastStudied) : aStats.lastStudied;
-                const bDate = typeof bStats.lastStudied === 'string' ? new Date(bStats.lastStudied) : bStats.lastStudied;
-                return bDate.getTime() - aDate.getTime();
+    const sortedDecks = decks
+        ? [...decks].sort((a, b) => {
+            if (a.lastStudied && b.lastStudied) {
+                return b.lastStudied - a.lastStudied;
             }
-
-            if (aStats.lastStudied && !bStats.lastStudied) return -1;
-            if (!aStats.lastStudied && bStats.lastStudied) return 1;
-
-            return b.createdAt.getTime() - a.createdAt.getTime();
-        });
-    };
+            if (a.lastStudied && !b.lastStudied) return -1;
+            if (!a.lastStudied && b.lastStudied) return 1;
+            return b._creationTime - a._creationTime;
+        })
+        : [];
 
     const handleStudy = (deckId: string) => {
         router.push(`/decks/${deckId}/study`);
@@ -40,16 +35,12 @@ export default function DecksPage() {
         router.push(`/decks/${deckId}/edit`);
     };
 
-    const handleDeleteDeck = (deckId: string) => {
-        const deck = decks.find((d) => d.id === deckId);
+    const handleDeleteDeck = async (deckId: string) => {
+        const deck = decks?.find((d) => d._id === deckId);
         if (!deck) return;
         if (confirm(`Delete deck "${deck.name}"? This will permanently remove the deck and all its cards.`)) {
-            deleteDeck(deckId);
+            await deleteDeckMutation({ id: deckId as Id<"decks"> });
         }
-    };
-
-    const handleCreateDeck = (deckName: string) => {
-        addDeck(deckName, 'Add your first card to get started');
     };
 
     const handleOpenModal = () => {
@@ -59,6 +50,16 @@ export default function DecksPage() {
     const handleCloseModal = () => {
         setIsModalOpen(false);
     };
+
+    if (decks === undefined) {
+        return (
+            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                <p className="text-text-secondary">Loading decks...</p>
+            </div>
+        );
+    }
+
+    const totalCards = decks.reduce((total, deck) => total + deck.cardCount, 0);
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -86,7 +87,7 @@ export default function DecksPage() {
                     <div className="flex flex-wrap gap-2 text-sm text-text-secondary">
                         <span>{decks.length} decks</span>
                         <span>•</span>
-                        <span>{decks.reduce((total, deck) => total + getDeckStats(deck.id).cardCount, 0)} cards</span>
+                        <span>{totalCards} cards</span>
                     </div>
                 </div>
 
@@ -96,10 +97,10 @@ export default function DecksPage() {
                     <CreateDeckCard onClick={handleOpenModal} />
 
                     {/* Existing Decks */}
-                    {sortedDecks(decks).map((deck) => {
+                    {sortedDecks.map((deck) => {
                         return (
                             <DeckCard
-                                key={deck.id}
+                                key={deck._id}
                                 deck={deck}
                                 onStudy={handleStudy}
                                 onEdit={handleEdit}
@@ -114,7 +115,6 @@ export default function DecksPage() {
             <CreateDeckModal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
-                onCreateDeck={handleCreateDeck}
             />
         </div>
     );

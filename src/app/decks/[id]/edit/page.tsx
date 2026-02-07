@@ -3,10 +3,11 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useDecks } from '@/context/DeckContext';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../../../../convex/_generated/api';
+import type { Id } from '../../../../../convex/_generated/dataModel';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
-import type { Card as CardType } from '@/types/flashcards';
 import Link from 'next/link';
 
 interface CardFormData {
@@ -16,33 +17,37 @@ interface CardFormData {
 
 export default function EditDeckPage() {
     const { id } = useParams();
-    const {
-        getDeck,
-        updateDeck,
-        getCardsByDeck,
-        addCard,
-        updateCard,
-        deleteCard
-    } = useDecks();
+    const deckId = id as Id<"decks">;
 
-    const deck = getDeck(id as string);
-    const cards = getCardsByDeck(id as string);
+    const deckWithCards = useQuery(api.decks.getWithCards, { id: deckId });
+    const updateDeckMutation = useMutation(api.decks.update);
+    const addCardMutation = useMutation(api.cards.create);
+    const updateCardMutation = useMutation(api.cards.update);
+    const deleteCardMutation = useMutation(api.cards.remove);
 
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [editingCard, setEditingCard] = useState<CardType | null>(null);
-    const [deckName, setDeckName] = useState(deck?.name || '');
-    const [deckDescription, setDeckDescription] = useState(deck?.description || '');
+    const [editingCardId, setEditingCardId] = useState<Id<"cards"> | null>(null);
+    const [deckName, setDeckName] = useState('');
+    const [deckDescription, setDeckDescription] = useState('');
     const [cardForm, setCardForm] = useState<CardFormData>({ front: '', back: '' });
 
-    // Keep form in sync when navigating to a different deck
+    // Keep form in sync when data loads or changes
     useEffect(() => {
-        if (deck) {
-            setDeckName(deck.name);
-            setDeckDescription(deck.description ?? '');
+        if (deckWithCards) {
+            setDeckName(deckWithCards.name);
+            setDeckDescription(deckWithCards.description ?? '');
         }
-    }, [deck]);
+    }, [deckWithCards]);
 
-    if (!deck) {
+    if (deckWithCards === undefined) {
+        return (
+            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+                <p className="text-text-secondary">Loading...</p>
+            </div>
+        );
+    }
+
+    if (deckWithCards === null) {
         return (
             <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
                 <div className="text-center">
@@ -58,46 +63,54 @@ export default function EditDeckPage() {
         );
     }
 
-    const handleSaveDeck = () => {
-        updateDeck(id as string, {
+    const cards = deckWithCards.cards;
+
+    const handleSaveDeck = async () => {
+        await updateDeckMutation({
+            id: deckId,
             name: deckName,
-            description: deckDescription
+            description: deckDescription,
         });
     };
 
-    const handleAddCard = () => {
+    const handleAddCard = async () => {
         if (cardForm.front.trim() && cardForm.back.trim()) {
-            addCard(id as string, cardForm.front.trim(), cardForm.back.trim());
+            await addCardMutation({
+                deckId: deckId,
+                front: cardForm.front.trim(),
+                back: cardForm.back.trim(),
+            });
             setCardForm({ front: '', back: '' });
             setIsAddModalOpen(false);
         }
     };
 
-    const handleEditCard = () => {
-        if (editingCard && cardForm.front.trim() && cardForm.back.trim()) {
-            updateCard(editingCard.id, {
+    const handleEditCard = async () => {
+        if (editingCardId && cardForm.front.trim() && cardForm.back.trim()) {
+            await updateCardMutation({
+                id: editingCardId,
                 front: cardForm.front.trim(),
-                back: cardForm.back.trim()
+                back: cardForm.back.trim(),
             });
-            setEditingCard(null);
+            setEditingCardId(null);
             setCardForm({ front: '', back: '' });
         }
     };
 
-    const handleDeleteCard = (cardId: string) => {
+    const handleDeleteCard = async (cardId: Id<"cards">) => {
         if (confirm('Are you sure you want to delete this card?')) {
-            deleteCard(cardId);
+            await deleteCardMutation({ id: cardId });
         }
     };
 
-    const openEditModal = (card: CardType) => {
-        setEditingCard(card);
+    const openEditModal = (card: typeof cards[number]) => {
+        setEditingCardId(card._id);
         setCardForm({ front: card.front, back: card.back });
     };
 
     const closeModals = () => {
         setIsAddModalOpen(false);
-        setEditingCard(null);
+        setEditingCardId(null);
         setCardForm({ front: '', back: '' });
     };
 
@@ -182,7 +195,7 @@ export default function EditDeckPage() {
                 ) : (
                     <div className="space-y-4">
                         {cards.map((card, index) => (
-                            <Card key={card.id} variant="default">
+                            <Card key={card._id} variant="default">
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-2">
@@ -210,7 +223,7 @@ export default function EditDeckPage() {
                                             <Pencil className="w-4 h-4" aria-hidden />
                                         </button>
                                         <button
-                                            onClick={() => handleDeleteCard(card.id)}
+                                            onClick={() => handleDeleteCard(card._id)}
                                             className="p-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-md transition-colors"
                                             title="Delete card"
                                         >
@@ -274,7 +287,7 @@ export default function EditDeckPage() {
 
             {/* Edit Card Modal */}
             <Modal
-                isOpen={!!editingCard}
+                isOpen={!!editingCardId}
                 onClose={closeModals}
                 title="Edit Card"
             >
