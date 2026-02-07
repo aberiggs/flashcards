@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { BookOpen, Check, HelpCircle, Lightbulb, Minus, X } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../../convex/_generated/api';
@@ -10,6 +10,15 @@ import { Card } from '@/components/ui/Card';
 import Link from 'next/link';
 
 type ConfidenceLevel = 'easy' | 'medium' | 'hard';
+
+function sortByLastStudied<T extends { lastStudied?: number }>(items: T[]): T[] {
+    return [...items].sort((a, b) => {
+        if (!a.lastStudied && !b.lastStudied) return 0;
+        if (!a.lastStudied) return -1;
+        if (!b.lastStudied) return 1;
+        return a.lastStudied - b.lastStudied;
+    });
+}
 
 export default function StudyPage() {
     const { id } = useParams();
@@ -22,22 +31,20 @@ export default function StudyPage() {
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
     const [sessionComplete, setSessionComplete] = useState(false);
+    // Freeze study order at session start so Convex live updates don't re-sort
+    // mid-session (which would show the same card again after studying it)
+    const [sessionCards, setSessionCards] = useState<NonNullable<typeof cards> | null>(null);
 
-    // Sort cards by least recently studied (or never studied) first
-    const studyCards = useMemo(() => {
-        if (!cards) return [];
-        return [...cards].sort((a, b) => {
-            // Never studied cards come first
-            if (!a.lastStudied && !b.lastStudied) return 0;
-            if (!a.lastStudied) return -1;
-            if (!b.lastStudied) return 1;
-            // Then sort by oldest lastStudied first
-            return a.lastStudied - b.lastStudied;
-        });
-    }, [cards]);
+    useEffect(() => {
+        if (cards && cards.length > 0 && sessionCards === null && !sessionComplete) {
+            setSessionCards(sortByLastStudied(cards));
+        }
+    }, [cards, sessionCards, sessionComplete]);
 
-    // Loading state
-    if (deck === undefined || cards === undefined) {
+    const studyCards = sessionCards ?? [];
+
+    // Loading state (include brief init when cards loaded but session order not yet frozen)
+    if (deck === undefined || cards === undefined || (cards && cards.length > 0 && sessionCards === null && !sessionComplete)) {
         return (
             <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
                 <p className="text-text-secondary">Loading...</p>
@@ -61,7 +68,7 @@ export default function StudyPage() {
         );
     }
 
-    if (studyCards.length === 0) {
+    if ((sessionCards ?? cards ?? []).length === 0) {
         return (
             <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
                 <div className="text-center">
@@ -99,6 +106,7 @@ export default function StudyPage() {
                         </Link>
                         <button
                             onClick={() => {
+                                setSessionCards(null);
                                 setCurrentCardIndex(0);
                                 setShowAnswer(false);
                                 setSessionComplete(false);

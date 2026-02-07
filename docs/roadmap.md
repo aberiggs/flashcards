@@ -46,6 +46,7 @@ Take a look at what’s built and what’s next.
 - [ ] **Card browser with search** — Browse and search cards outside the SRS study flow (e.g. by deck, text, due status). Better edit UX (inline or side-panel edit) instead of the current modal-on-edit-page flow; good for review and bulk edits.
 - [ ] **Search** — Search across decks or within a deck (e.g. by front/back text); powers the card browser and filters.
 - [ ] **Keyboard shortcuts (study)** — e.g. space to reveal, 1/2/3 for confidence, arrows to navigate; faster flow for power users.
+- [ ] **Deck tags and filtering** — Add tags to decks for easier organization and filtering.
 
 ### Spaced repetition & scheduling
 
