@@ -27,7 +27,7 @@ function AuthenticatedContent() {
               </Link>
               <button
                 onClick={() => void signOut()}
-                className="text-text-secondary hover:text-text-primary transition-colors"
+                className="cursor-pointer text-text-secondary hover:text-text-primary transition-colors"
                 title="Sign out"
               >
                 <LogOut className="w-6 h-6" aria-hidden />
@@ -117,7 +117,7 @@ function SignInPage() {
 
           <button
             onClick={() => void signIn("github")}
-            className="w-full flex items-center justify-center gap-3 bg-[#24292F] text-white py-3 px-4 rounded-md font-medium hover:bg-[#3b3f46] transition-colors"
+            className="w-full flex items-center justify-center gap-3 bg-[#24292F] text-white py-3 px-4 rounded-md font-medium hover:bg-[#3b3f46] transition-colors cursor-pointer"
           >
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
               <path

@@ -53,3 +53,4 @@
 - [ ] Deck sharing
 - [ ] Deck rating
 - [ ] Deck modes (flashcards, matching, etc.)
+- [ ] Better loading screens
