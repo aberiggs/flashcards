@@ -49,8 +49,17 @@ export default function DeckDetailPage() {
     const [isDeleteCardModalOpen, setIsDeleteCardModalOpen] = useState(false);
     const [cardToDeleteId, setCardToDeleteId] = useState<Id<"cards"> | null>(null);
     const [viewingCardIndex, setViewingCardIndex] = useState<number | null>(null);
+    const [showingCardInfo, setShowingCardInfo] = useState(false);
+    const [infoCardIndex, setInfoCardIndex] = useState(0);
 
     const nameInputRef = useRef<HTMLInputElement>(null);
+
+    function getMemoryStage(repetitions: number): 'New' | 'Learning' | 'Reviewing' | 'Mastered' {
+        if (repetitions === 0) return 'New';
+        if (repetitions <= 2) return 'Learning';
+        if (repetitions <= 5) return 'Reviewing';
+        return 'Mastered';
+    }
     const descInputRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -320,7 +329,10 @@ export default function DeckDetailPage() {
                                     key={card._id}
                                     front={card.front}
                                     index={index}
-                                    onClick={() => setViewingCardIndex(index)}
+                                    onClick={() => {
+                                    setViewingCardIndex(index);
+                                    setShowingCardInfo(false);
+                                }}
                                 />
                             ))}
                         </div>
@@ -328,19 +340,95 @@ export default function DeckDetailPage() {
                 </section>
             </main>
 
-            {/* Card Viewer Modal */}
+            {/* Card Viewer Modal - swaps to edit form when Edit is clicked */}
             <CardViewerModal
                 cards={cards}
                 initialIndex={viewingCardIndex ?? 0}
                 isOpen={viewingCardIndex !== null}
-                onClose={() => setViewingCardIndex(null)}
-                onEdit={(card) => {
+                onClose={() => {
                     setViewingCardIndex(null);
-                    openEditModal(card);
+                    setEditingCardId(null);
+                    setShowingCardInfo(false);
                 }}
+                onEdit={(card) => openEditModal(card)}
                 onDelete={(cardId) => {
                     setViewingCardIndex(null);
                     openDeleteCardModal(cardId);
+                }}
+                editContent={
+                    viewingCardIndex !== null && editingCardId !== null ? (
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-text-primary mb-2">Front</label>
+                                <textarea
+                                    value={cardForm.front}
+                                    onChange={(e) => setCardForm((prev) => ({ ...prev, front: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-border-primary rounded-lg bg-surface-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary min-h-[120px]"
+                                    placeholder="Enter the question or prompt"
+                                    rows={6}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-text-primary mb-2">Back</label>
+                                <textarea
+                                    value={cardForm.back}
+                                    onChange={(e) => setCardForm((prev) => ({ ...prev, back: e.target.value }))}
+                                    className="w-full px-3 py-2 border border-border-primary rounded-lg bg-surface-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary min-h-[120px]"
+                                    placeholder="Enter the answer"
+                                    rows={6}
+                                />
+                            </div>
+                            <div className="flex gap-2 justify-end">
+                                <button
+                                    type="button"
+                                    onClick={() => setEditingCardId(null)}
+                                    className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleEditCard()}
+                                    className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors cursor-pointer"
+                                >
+                                    Save Changes
+                                </button>
+                            </div>
+                        </div>
+                    ) : null
+                }
+                onCancelEdit={() => setEditingCardId(null)}
+                infoContent={
+                    viewingCardIndex !== null && showingCardInfo && cards.length > 0 ? (() => {
+                        const safeInfoIndex = Math.min(infoCardIndex, cards.length - 1);
+                        const infoCard = cards[safeInfoIndex] as typeof cards[number] & { nextReview?: number; repetitions?: number };
+                        const reps = infoCard.repetitions ?? 0;
+                        const stage = getMemoryStage(reps);
+                        const nextReview = infoCard.nextReview;
+                        const nextReviewLabel =
+                            nextReview == null
+                                ? 'Not scheduled'
+                                : nextReview <= Date.now()
+                                    ? 'Due for review'
+                                    : new Date(nextReview).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+                        return (
+                            <div className="space-y-6">
+                                <div>
+                                    <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">Memory stage</h3>
+                                    <p className="text-text-primary font-medium">{stage}</p>
+                                </div>
+                                <div>
+                                    <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">Next review</h3>
+                                    <p className="text-text-primary font-medium">{nextReviewLabel}</p>
+                                </div>
+                            </div>
+                        );
+                    })() : null
+                }
+                onCancelInfo={() => setShowingCardInfo(false)}
+                onShowInfo={(index) => {
+                    setInfoCardIndex(index);
+                    setShowingCardInfo(true);
                 }}
             />
 
@@ -371,14 +459,14 @@ export default function DeckDetailPage() {
                         <button
                             type="button"
                             onClick={closeModals}
-                            className="px-4 py-2 border border-border-primary rounded-lg text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                            className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                         >
                             Cancel
                         </button>
                         <button
                             type="button"
                             onClick={handleAddCard}
-                            className="bg-accent-primary text-text-inverse px-4 py-2 rounded-lg hover:bg-accent-primary-hover transition-colors cursor-pointer"
+                            className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors cursor-pointer"
                         >
                             Add Card
                         </button>
@@ -386,9 +474,9 @@ export default function DeckDetailPage() {
                 </div>
             </Modal>
 
-            {/* Edit Card Modal */}
+            {/* Edit Card Modal - only when not already in card viewer (e.g. future edit-from-list) */}
             <Modal
-                isOpen={!!editingCardId}
+                isOpen={editingCardId !== null && viewingCardIndex === null}
                 onClose={closeModals}
                 title="Edit Card"
                 size="lg"
@@ -418,14 +506,14 @@ export default function DeckDetailPage() {
                         <button
                             type="button"
                             onClick={closeModals}
-                            className="px-4 py-2 border border-border-primary rounded-lg text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                            className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                         >
                             Cancel
                         </button>
                         <button
                             type="button"
                             onClick={handleEditCard}
-                            className="bg-accent-primary text-text-inverse px-4 py-2 rounded-lg hover:bg-accent-primary-hover transition-colors cursor-pointer"
+                            className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors cursor-pointer"
                         >
                             Save Changes
                         </button>
@@ -452,14 +540,14 @@ export default function DeckDetailPage() {
                             setIsDeleteCardModalOpen(false);
                             setCardToDeleteId(null);
                         }}
-                        className="px-4 py-2 border border-border-primary rounded-lg text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                     >
                         Cancel
                     </button>
                     <button
                         type="button"
                         onClick={handleDeleteCardConfirm}
-                        className="px-4 py-2 rounded-lg bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer"
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer"
                     >
                         Delete
                     </button>
@@ -479,14 +567,14 @@ export default function DeckDetailPage() {
                     <button
                         type="button"
                         onClick={() => setIsDeleteDeckModalOpen(false)}
-                        className="px-4 py-2 border border-border-primary rounded-lg text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                     >
                         Cancel
                     </button>
                     <button
                         type="button"
                         onClick={handleDeleteDeckConfirm}
-                        className="px-4 py-2 rounded-lg bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer"
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer"
                     >
                         Delete deck
                     </button>
