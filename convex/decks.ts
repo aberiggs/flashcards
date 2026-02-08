@@ -14,6 +14,7 @@ export const list = query({
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
+    const now = Date.now();
     const decksWithStats = await Promise.all(
       decks.map(async (deck) => {
         const cards = await ctx.db
@@ -31,10 +32,22 @@ export const list = query({
           undefined,
         );
 
+        const dueCount = cards.filter(
+          (card) => !card.nextReview || card.nextReview <= now
+        ).length;
+
+        const futureReviews = cards
+          .map((c) => c.nextReview)
+          .filter((t): t is number => typeof t === "number" && t > now);
+        const nextReviewAt =
+          futureReviews.length > 0 ? Math.min(...futureReviews) : undefined;
+
         return {
           ...deck,
           cardCount: cards.length,
           lastStudied,
+          dueCount,
+          nextReviewAt,
         };
       }),
     );
@@ -86,8 +99,11 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const trimmedName = args.name.trim();
+    if (!trimmedName) throw new Error("Deck name cannot be empty");
+
     return await ctx.db.insert("decks", {
-      name: args.name,
+      name: trimmedName,
       description: args.description,
       userId,
     });
@@ -109,7 +125,11 @@ export const update = mutation({
     if (!deck || deck.userId !== userId) throw new Error("Deck not found");
 
     const updates: Record<string, unknown> = { updatedAt: Date.now() };
-    if (args.name !== undefined) updates.name = args.name;
+    if (args.name !== undefined) {
+      const trimmed = args.name.trim();
+      if (!trimmed) throw new Error("Deck name cannot be empty");
+      updates.name = trimmed;
+    }
     if (args.description !== undefined) updates.description = args.description;
 
     await ctx.db.patch(args.id, updates);

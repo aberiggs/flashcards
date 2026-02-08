@@ -18,5 +18,10 @@ export default defineSchema({
     back: v.string(),
     updatedAt: v.optional(v.number()),
     lastStudied: v.optional(v.number()),
-  }).index("by_deck", ["deckId"]),
+    efactor: v.optional(v.number()),
+    repetitions: v.optional(v.number()),
+    nextReview: v.optional(v.number()),
+  })
+    .index("by_deck", ["deckId"])
+    .index("by_deck_next_review", ["deckId", "nextReview"]),
 });

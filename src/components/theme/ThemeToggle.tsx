@@ -10,7 +10,7 @@ export function ThemeToggle() {
         <div className="flex items-center space-x-2">
             <button
                 onClick={() => setTheme('light')}
-                className={`p-2 rounded-md transition-colors ${theme === 'light'
+                className={`p-2 rounded-md transition-colors cursor-pointer ${theme === 'light'
                     ? 'bg-surface-secondary text-text-primary'
                     : 'text-text-secondary hover:text-text-primary hover:bg-surface-secondary'
                     }`}
@@ -21,7 +21,7 @@ export function ThemeToggle() {
 
             <button
                 onClick={() => setTheme('dark')}
-                className={`p-2 rounded-md transition-colors ${theme === 'dark'
+                className={`p-2 rounded-md transition-colors cursor-pointer ${theme === 'dark'
                     ? 'bg-surface-secondary text-text-primary'
                     : 'text-text-secondary hover:text-text-primary hover:bg-surface-secondary'
                     }`}
@@ -32,7 +32,7 @@ export function ThemeToggle() {
 
             <button
                 onClick={() => setTheme('system')}
-                className={`p-2 rounded-md transition-colors ${theme === 'system'
+                className={`p-2 rounded-md transition-colors cursor-pointer ${theme === 'system'
                     ? 'bg-surface-secondary text-text-primary'
                     : 'text-text-secondary hover:text-text-primary hover:bg-surface-secondary'
                     }`}

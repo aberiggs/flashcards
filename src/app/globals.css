@@ -27,6 +27,13 @@
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-error: #ef4444;
+
+  /* Chart colors - light mode */
+  --chart-new: #3b82f6;
+  --chart-learning: #f59e0b;
+  --chart-reviewing: #8b5cf6;
+  --chart-mastered: #10b981;
+  --chart-bar: #3b82f6;
   
   /* Shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -60,6 +67,13 @@
   --accent-success: #10b981;
   --accent-warning: #f59e0b;
   --accent-error: #ef4444;
+
+  /* Chart colors - slightly softer in dark mode */
+  --chart-new: #60a5fa;
+  --chart-learning: #fbbf24;
+  --chart-reviewing: #a78bfa;
+  --chart-mastered: #34d399;
+  --chart-bar: #60a5fa;
   
   /* Shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
@@ -87,6 +101,13 @@
     --text-secondary: #a3a3a3;
     --text-tertiary: #737373;
     --text-inverse: #171717;
+
+    /* Chart colors - slightly softer in dark mode */
+    --chart-new: #60a5fa;
+    --chart-learning: #fbbf24;
+    --chart-reviewing: #a78bfa;
+    --chart-mastered: #34d399;
+    --chart-bar: #60a5fa;
     
     /* Accent colors */
     --accent-primary: #3b82f6;
@@ -131,11 +152,48 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Scrollbar - themed to match light/dark mode */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) var(--surface-secondary);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 
 /* Smooth transitions for theme changes */
 * {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+/* Page loader indeterminate bar */
+@keyframes page-loader-bar {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(300%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }

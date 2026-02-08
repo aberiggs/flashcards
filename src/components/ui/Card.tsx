@@ -16,7 +16,9 @@ export function Card({ children, className = '', variant = 'default', onClick }:
         hover: "border-border-primary hover:shadow-md transition-all duration-200 hover:border-accent-primary/50 group"
     };
 
-    const classes = `${baseClasses} ${variantClasses[variant]} ${className}`;
+    const clickableClass = onClick ? "cursor-pointer" : "";
+
+    const classes = `${baseClasses} ${variantClasses[variant]} ${clickableClass} ${className}`;
 
     return (
         <div className={classes} onClick={onClick}>
