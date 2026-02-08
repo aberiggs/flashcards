@@ -31,12 +31,26 @@ Take a look at what’s built and what’s next.
 
 - [x] **Options** — Settings page with light/dark/system theme toggle.
 
+### Dashboard & stats
+
+- [x] **Dashboard home** — Authenticated home page shows welcome message and stats widgets.
+- [x] **Memory stages** — Pie chart of cards by stage (new, learning, reviewing, mastered) based on SM-2 repetitions.
+- [x] **Review forecast** — Bar chart of cards due today, tomorrow, in 3 days, and in 7 days (timezone-aware).
+- [x] **Decks page summary** — Stats bar with deck count, total cards, and due count (“all caught up” when none due).
+
 ### Backend (Convex)
 
 - [x] **Convex setup** — Project wired to Convex with schema, queries, and mutations.
 - [x] **Auth** — Convex Auth with GitHub provider; user-scoped data.
 - [x] **Decks & cards** — Create, read, update, and delete for decks and cards.
 - [x] **Time tracking** — `lastStudied` on cards, aggregated for decks; updated when a card is studied.
+- [x] **Stats API** — `dashboardStats` query for memory stages and review forecast (timezone-aware).
+
+### Landing & polish
+
+- [x] **Landing page** — Unauthenticated page with tagline, feature highlights, and sign-in CTA.
+- [x] **Chart theming** — Chart colors adapt to light/dark theme via CSS variables.
+- [x] **Empty states** — Dashboard widgets show helpful messages when there is no data.
 
 ---
 
@@ -45,6 +59,7 @@ Take a look at what’s built and what’s next.
 ### Auth
 
 - [ ] **Google OAuth** — Sign in with Google in addition to (or instead of) GitHub.
+- [ ] **Beta gate** — Only allow access to the app for beta testers (until the app is ready for public release).
 
 ### Flashcard & study
 
@@ -52,6 +67,7 @@ Take a look at what’s built and what’s next.
 - [ ] **Search** — Search across decks or within a deck (e.g. by front/back text); powers the card browser and filters.
 - [ ] **Keyboard shortcuts (study)** — e.g. space to reveal, 1/2/3 for confidence, arrows to navigate; faster flow for power users.
 - [ ] **Deck tags and filtering** — Add tags to decks for easier organization and filtering.
+- [ ] **Cram mode** - Changes from the SRS system to a more aggressive mode of reviewing cards.
 
 ### Spaced repetition & scheduling
 
@@ -68,9 +84,8 @@ Take a look at what’s built and what’s next.
 - [ ] **Multimedia in cards** — Images, audio, or video in card content (e.g. image on front/back, pronunciation audio). Requires file storage (e.g. Convex file storage) and schema updates.
 - [ ] **Markdown / MDX in cards** — Render card content as Markdown (headings, lists, code blocks, links). Optional: MDX for embedded components or interactive snippets; start with Markdown for simplicity, add MDX later if needed.
 - [ ] **Custom card schema** — User-defined fields (e.g. front, back, image, examples) and optional custom HTML/CSS/JS.
-- [ ] **Stats** — Per-deck or per-card stats (e.g. accuracy, streak, time spent).
+- [ ] **Per-deck / per-card stats** — Accuracy, streak, and time spent per deck or per card (beyond current aggregate dashboard).
 - [ ] **Rich card components** — Highlighted terms linked to explanations; concept web / related-terms view.
-- [ ] **Flashcard review schedule preview** — See a graph of how many cards are due for review for each day in the future.
 
 ### Data & portability
 

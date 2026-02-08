@@ -1,10 +1,13 @@
 'use client';
 
 import Link from "next/link";
-import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { api } from "../../convex/_generated/api";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { PageLoader } from "@/components/ui/PageLoader";
+import { MemoryStagesWidget } from "@/components/features/dashboard/MemoryStagesWidget";
+import { ReviewForecastWidget } from "@/components/features/dashboard/ReviewForecastWidget";
 
 function BuiltByFooter() {
   return (
@@ -22,6 +25,12 @@ function BuiltByFooter() {
 }
 
 function AuthenticatedContent() {
+  const timeZone =
+    typeof Intl !== "undefined"
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : "UTC";
+  const stats = useQuery(api.stats.dashboardStats, { timeZone });
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <AppHeader />
@@ -35,6 +44,14 @@ function AuthenticatedContent() {
             Ready to study? Pick up where you left off or create a new deck.
           </p>
         </div>
+
+        {/* Stats widgets */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <MemoryStagesWidget data={stats.memoryStages} />
+            <ReviewForecastWidget data={stats.reviewForecast} />
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
