@@ -156,6 +156,30 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/* Scrollbar - themed to match light/dark mode */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-secondary) var(--surface-secondary);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-secondary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
 /* Smooth transitions for theme changes */
 * {
   transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;

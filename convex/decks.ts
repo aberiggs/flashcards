@@ -99,8 +99,11 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const trimmedName = args.name.trim();
+    if (!trimmedName) throw new Error("Deck name cannot be empty");
+
     return await ctx.db.insert("decks", {
-      name: args.name,
+      name: trimmedName,
       description: args.description,
       userId,
     });
@@ -122,7 +125,11 @@ export const update = mutation({
     if (!deck || deck.userId !== userId) throw new Error("Deck not found");
 
     const updates: Record<string, unknown> = { updatedAt: Date.now() };
-    if (args.name !== undefined) updates.name = args.name;
+    if (args.name !== undefined) {
+      const trimmed = args.name.trim();
+      if (!trimmed) throw new Error("Deck name cannot be empty");
+      updates.name = trimmed;
+    }
     if (args.description !== undefined) updates.description = args.description;
 
     await ctx.db.patch(args.id, updates);

@@ -89,7 +89,7 @@ export default function StudyPage() {
                             <h1 className="text-2xl font-bold text-text-primary mb-2">No cards to study</h1>
                             <p className="text-text-secondary mb-6">This deck doesn&apos;t have any cards yet.</p>
                             <Link
-                                href={`/decks/${deck._id}/edit`}
+                                href={`/decks/${deck._id}`}
                                 className="inline-block bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
                             >
                                 Add Cards

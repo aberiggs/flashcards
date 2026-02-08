@@ -111,3 +111,82 @@ export const dashboardStats = query({
     };
   },
 });
+
+/**
+ * Returns stats for a single deck: memory stages and review forecast.
+ * Verifies user ownership of the deck. timeZone should be an IANA string.
+ */
+export const deckStats = query({
+  args: {
+    deckId: v.id("decks"),
+    timeZone: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const deck = await ctx.db.get(args.deckId);
+    if (!deck || deck.userId !== userId) return null;
+
+    const cards = await ctx.db
+      .query("cards")
+      .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
+      .collect();
+
+    const todayStart = getStartOfTodayInTimezone(args.timeZone);
+    const todayEnd = todayStart + MS_PER_DAY;
+    const tomorrowEnd = todayStart + 2 * MS_PER_DAY;
+    const threeDaysEnd = todayStart + 4 * MS_PER_DAY;
+    const sevenDaysEnd = todayStart + 8 * MS_PER_DAY;
+
+    let newCount = 0;
+    let learningCount = 0;
+    let reviewingCount = 0;
+    let masteredCount = 0;
+
+    let todayCount = 0;
+    let tomorrowCount = 0;
+    let in3DaysCount = 0;
+    let in7DaysCount = 0;
+
+    for (const card of cards) {
+      const reps = card.repetitions ?? 0;
+      const stage = getMemoryStage(reps);
+      if (stage === "new") newCount++;
+      else if (stage === "learning") learningCount++;
+      else if (stage === "reviewing") reviewingCount++;
+      else masteredCount++;
+
+      const nextReview = card.nextReview;
+      if (typeof nextReview !== "number") {
+        todayCount++;
+        continue;
+      }
+
+      if (nextReview <= todayEnd) {
+        todayCount++;
+      } else if (nextReview <= tomorrowEnd) {
+        tomorrowCount++;
+      } else if (nextReview <= threeDaysEnd) {
+        in3DaysCount++;
+      } else if (nextReview <= sevenDaysEnd) {
+        in7DaysCount++;
+      }
+    }
+
+    return {
+      memoryStages: {
+        new: newCount,
+        learning: learningCount,
+        reviewing: reviewingCount,
+        mastered: masteredCount,
+      },
+      reviewForecast: {
+        today: todayCount,
+        tomorrow: tomorrowCount,
+        in3Days: in3DaysCount,
+        in7Days: in7DaysCount,
+      },
+    };
+  },
+});

@@ -32,18 +32,6 @@ export default function OptionsPage() {
                                     </span>
                                 </div>
                             </div>
-
-                            <div className="text-sm text-text-secondary">
-                                <p className="mb-2">
-                                    <strong>Light:</strong> Always use light theme
-                                </p>
-                                <p className="mb-2">
-                                    <strong>Dark:</strong> Always use dark theme
-                                </p>
-                                <p>
-                                    <strong>System:</strong> Follow your device&apos;s theme setting
-                                </p>
-                            </div>
                         </div>
                     </section>
 

@@ -27,14 +27,6 @@ export default function DecksPage() {
         })
         : [];
 
-    const handleStudy = (deckId: string) => {
-        router.push(`/decks/${deckId}/study`);
-    };
-
-    const handleEdit = (deckId: string) => {
-        router.push(`/decks/${deckId}/edit`);
-    };
-
     const handleOpenModal = () => {
         setIsModalOpen(true);
     };
@@ -89,8 +81,7 @@ export default function DecksPage() {
                         <DeckCard
                             key={deck._id}
                             deck={deck}
-                            onStudy={handleStudy}
-                            onEdit={handleEdit}
+                            onClick={(deckId) => router.push(`/decks/${deckId}`)}
                         />
                     ))}
                 </div>

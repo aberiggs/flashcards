@@ -14,8 +14,7 @@ interface DeckWithStats {
 
 interface DeckCardProps {
     deck: DeckWithStats;
-    onStudy?: (deckId: string) => void;
-    onEdit?: (deckId: string) => void;
+    onClick?: (deckId: string) => void;
 }
 
 function formatLastStudied(timestamp: number) {
@@ -55,11 +54,15 @@ function formatNextReviewIn(timestamp: number) {
     return `in ${Math.floor(diffDays / 30)} months`;
 }
 
-export function DeckCard({ deck, onStudy, onEdit }: DeckCardProps) {
+export function DeckCard({ deck, onClick }: DeckCardProps) {
     const hasDue = (deck.dueCount ?? 0) > 0;
 
     return (
-        <Card variant="hover" className="flex flex-col min-h-[220px]">
+        <Card
+            variant="hover"
+            className="flex flex-col min-h-[220px]"
+            onClick={onClick ? () => onClick(deck._id) : undefined}
+        >
             <div className="flex-1 flex flex-col min-w-0">
                 <div className="flex items-start justify-between gap-3 mb-3">
                     <h3 className="text-lg font-semibold text-text-primary group-hover:text-accent-primary transition-colors truncate">
@@ -101,31 +104,6 @@ export function DeckCard({ deck, onStudy, onEdit }: DeckCardProps) {
                         </span>
                     </div>
                 </div>
-            </div>
-
-            <div className="mt-5 pt-4 border-t border-border-primary flex gap-2">
-                <button
-                    onClick={() => hasDue && onStudy?.(deck._id)}
-                    disabled={!hasDue}
-                    className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium cursor-pointer
-                        transition-all duration-200 ease-out
-                        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface-primary
-                        ${!hasDue
-                            ? 'bg-surface-tertiary text-text-tertiary cursor-not-allowed focus:ring-border-primary'
-                            : 'bg-accent-primary text-text-inverse hover:bg-accent-primary-hover focus:ring-accent-primary'
-                        }`}
-                >
-                    Study
-                </button>
-                <button
-                    onClick={() => onEdit?.(deck._id)}
-                    className="flex-1 py-2.5 px-3 rounded-lg text-sm font-medium cursor-pointer bg-surface-secondary text-text-primary border border-border-primary
-                        hover:bg-surface-tertiary hover:border-border-secondary
-                        focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary
-                        transition-all duration-200"
-                >
-                    Edit
-                </button>
             </div>
         </Card>
     );
