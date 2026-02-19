@@ -24,4 +24,32 @@ export default defineSchema({
   })
     .index("by_deck", ["deckId"])
     .index("by_deck_next_review", ["deckId", "nextReview"]),
+
+  studySessions: defineTable({
+    userId: v.id("users"),
+    deckId: v.id("decks"),
+    startedAt: v.number(),
+    completedAt: v.optional(v.number()),
+    cardsStudied: v.number(),
+    cardsCorrect: v.number(),
+    cardsIncorrect: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_started", ["userId", "startedAt"]),
+
+  studyEvents: defineTable({
+    userId: v.id("users"),
+    sessionId: v.id("studySessions"),
+    cardId: v.id("cards"),
+    deckId: v.id("decks"),
+    quality: v.number(),
+    timestamp: v.number(),
+  })
+    .index("by_session", ["sessionId"])
+    .index("by_user_timestamp", ["userId", "timestamp"]),
+
+  userSettings: defineTable({
+    userId: v.id("users"),
+    openAiApiKey: v.optional(v.string()),
+  }).index("by_user", ["userId"]),
 });

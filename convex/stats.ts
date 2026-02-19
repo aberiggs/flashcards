@@ -11,6 +11,20 @@ function getMemoryStage(repetitions: number): "new" | "learning" | "reviewing" |
   return "mastered";
 }
 
+/** Get a YYYY-MM-DD day key for a timestamp in the given timezone. */
+function getDayKey(timestamp: number, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(timestamp));
+  const year = parts.find((p) => p.type === "year")?.value ?? "0000";
+  const month = parts.find((p) => p.type === "month")?.value ?? "01";
+  const day = parts.find((p) => p.type === "day")?.value ?? "01";
+  return `${year}-${month}-${day}`;
+}
+
 /** Get start of today (midnight) in the given timezone as a UTC timestamp. */
 function getStartOfTodayInTimezone(timeZone: string): number {
   const now = new Date();
@@ -188,5 +202,96 @@ export const deckStats = query({
         in7Days: in7DaysCount,
       },
     };
+  },
+});
+
+/**
+ * Returns gamification stats: streak, today's cards, week's cards, accuracy.
+ */
+export const gamificationStats = query({
+  args: { timeZone: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const ninetyDaysAgo = Date.now() - 90 * MS_PER_DAY;
+    const sessions = await ctx.db
+      .query("studySessions")
+      .withIndex("by_user_started", (q) =>
+        q.eq("userId", userId).gte("startedAt", ninetyDaysAgo)
+      )
+      .collect();
+
+    const completedSessions = sessions.filter((s) => s.completedAt != null);
+
+    const todayStart = getStartOfTodayInTimezone(args.timeZone);
+    const weekStart = todayStart - 6 * MS_PER_DAY;
+
+    // Build set of days with completed sessions for streak
+    const dayKeys = new Set<string>();
+    for (const s of completedSessions) {
+      dayKeys.add(getDayKey(s.startedAt, args.timeZone));
+    }
+
+    // Count streak backwards from today
+    let streak = 0;
+    let checkTime = todayStart;
+    while (true) {
+      const key = getDayKey(checkTime, args.timeZone);
+      if (dayKeys.has(key)) {
+        streak++;
+        checkTime -= MS_PER_DAY;
+      } else {
+        break;
+      }
+    }
+
+    let todayCards = 0;
+    let weekCards = 0;
+    let totalCorrect = 0;
+    let totalStudied = 0;
+
+    for (const s of completedSessions) {
+      if (s.startedAt >= todayStart) todayCards += s.cardsStudied;
+      if (s.startedAt >= weekStart) weekCards += s.cardsStudied;
+      totalCorrect += s.cardsCorrect;
+      totalStudied += s.cardsStudied;
+    }
+
+    const accuracyRate =
+      totalStudied > 0
+        ? Math.round((totalCorrect / totalStudied) * 100)
+        : null;
+
+    return { streak, todayCards, weekCards, accuracyRate };
+  },
+});
+
+/**
+ * Returns 90 days of per-day card counts for the activity heatmap.
+ */
+export const activityHistory = query({
+  args: { timeZone: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const ninetyDaysAgo = Date.now() - 90 * MS_PER_DAY;
+    const sessions = await ctx.db
+      .query("studySessions")
+      .withIndex("by_user_started", (q) =>
+        q.eq("userId", userId).gte("startedAt", ninetyDaysAgo)
+      )
+      .collect();
+
+    const completedSessions = sessions.filter((s) => s.completedAt != null);
+
+    const byDay: Record<string, number> = {};
+    for (const s of completedSessions) {
+      const key = getDayKey(s.startedAt, args.timeZone);
+      byDay[key] = (byDay[key] ?? 0) + s.cardsStudied;
+    }
+
+    return byDay;
   },
 });

@@ -3,6 +3,7 @@
 import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Info, Pencil, Trash2, X, RotateCcw } from 'lucide-react';
 import type { Id } from '../../../../convex/_generated/dataModel';
+import { MarkdownContent } from '@/components/ui/MarkdownContent';
 
 interface CardData {
     _id: Id<"cards">;
@@ -248,9 +249,9 @@ export function CardViewerModal({
                                             <span className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-4">
                                                 Front
                                             </span>
-                                            <p className="text-lg text-text-primary whitespace-pre-wrap break-words text-center leading-relaxed max-w-prose">
-                                                {card.front}
-                                            </p>
+                                            <div className="text-lg text-text-primary text-center leading-relaxed max-w-prose">
+                                                <MarkdownContent content={card.front} />
+                                            </div>
                                         </div>
                                     </div>
 
@@ -267,9 +268,9 @@ export function CardViewerModal({
                                             <span className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-4">
                                                 Back
                                             </span>
-                                            <p className="text-lg text-text-primary whitespace-pre-wrap break-words text-center leading-relaxed max-w-prose">
-                                                {card.back}
-                                            </p>
+                                            <div className="text-lg text-text-primary text-center leading-relaxed max-w-prose">
+                                                <MarkdownContent content={card.back} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

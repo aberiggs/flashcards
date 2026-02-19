@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Pencil, Trash2, Plus, Layers } from 'lucide-react';
+import { Pencil, Trash2, Plus, Layers, Sparkles } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../../convex/_generated/api';
 import type { Id } from '../../../../../convex/_generated/dataModel';
@@ -13,6 +13,7 @@ import { MemoryStagesWidget } from '@/components/features/dashboard/MemoryStages
 import { ReviewForecastWidget } from '@/components/features/dashboard/ReviewForecastWidget';
 import { CardPreview } from '@/components/features/decks/CardPreview';
 import { CardViewerModal } from '@/components/features/decks/CardViewerModal';
+import { GenerateCardsModal } from '@/components/features/decks/GenerateCardsModal';
 import Link from 'next/link';
 
 interface CardFormData {
@@ -48,6 +49,7 @@ export default function DeckDetailPage() {
     const [isDeleteDeckModalOpen, setIsDeleteDeckModalOpen] = useState(false);
     const [isDeleteCardModalOpen, setIsDeleteCardModalOpen] = useState(false);
     const [cardToDeleteId, setCardToDeleteId] = useState<Id<"cards"> | null>(null);
+    const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
     const [viewingCardIndex, setViewingCardIndex] = useState<number | null>(null);
     const [showingCardInfo, setShowingCardInfo] = useState(false);
     const [infoCardIndex, setInfoCardIndex] = useState(0);
@@ -301,14 +303,24 @@ export default function DeckDetailPage() {
                 <section>
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-text-primary">Cards</h2>
-                        <button
-                            type="button"
-                            onClick={() => setIsAddModalOpen(true)}
-                            className="inline-flex items-center gap-2 bg-accent-primary text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-primary-hover transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
-                        >
-                            <Plus className="w-4 h-4" aria-hidden />
-                            Add Card
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsGenerateModalOpen(true)}
+                                className="inline-flex items-center gap-2 border border-border-primary text-text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-surface-secondary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
+                            >
+                                <Sparkles className="w-4 h-4" aria-hidden />
+                                Generate with AI
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setIsAddModalOpen(true)}
+                                className="inline-flex items-center gap-2 bg-accent-primary text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-primary-hover transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
+                            >
+                                <Plus className="w-4 h-4" aria-hidden />
+                                Add Card
+                            </button>
+                        </div>
                     </div>
 
                     {cards.length === 0 ? (
@@ -580,6 +592,13 @@ export default function DeckDetailPage() {
                     </button>
                 </div>
             </Modal>
+
+            {/* Generate Cards Modal */}
+            <GenerateCardsModal
+                isOpen={isGenerateModalOpen}
+                onClose={() => setIsGenerateModalOpen(false)}
+                deckId={deckId}
+            />
         </div>
     );
 }

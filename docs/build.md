@@ -53,3 +53,29 @@ Data lives in Convex tables (`decks`, `cards`, plus auth tables). Study sessions
 ## Environment
 
 The app uses Convex environment variables (configured via `npx convex env set`) for auth providers. No `.env` file is required for basic development after `npx convex dev` links the project.
+
+## Production Deployment
+
+### Convex
+
+1. Run `npx convex deploy` to create/update the production deployment. On first run, this creates a production deployment for the project.
+2. Set environment variables in the Convex dashboard (or via `npx convex env set`):
+   - `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` — GitHub OAuth credentials
+   - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — Google OAuth credentials
+   - `SITE_URL` — your production URL (e.g., `https://yourapp.vercel.app`)
+
+### Vercel
+
+1. Create a new Vercel project linked to the GitHub repo.
+2. Set the environment variable `NEXT_PUBLIC_CONVEX_URL` to the production Convex deployment URL (the `.convex.cloud` URL from the Convex dashboard).
+3. Vercel auto-deploys on push to `main`.
+
+### CI/CD
+
+The `.github/workflows/deploy.yml` workflow runs lint + type-check on PRs, and deploys Convex functions on push to `main`. Add the `CONVEX_DEPLOY_KEY` secret to your GitHub repo (found in the Convex dashboard under Settings > Deploy keys).
+
+### OAuth Redirect URIs
+
+Update the callback URLs in your OAuth provider consoles to point to the production Convex site URL:
+- GitHub: `https://<prod-deployment>.convex.site/api/auth/callback/github`
+- Google: `https://<prod-deployment>.convex.site/api/auth/callback/google`
