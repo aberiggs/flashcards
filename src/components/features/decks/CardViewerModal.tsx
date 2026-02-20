@@ -2,21 +2,15 @@
 
 import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Info, Pencil, Trash2, X, RotateCcw } from 'lucide-react';
-import type { Id } from '../../../../convex/_generated/dataModel';
+import type { Doc, Id } from '../../../../convex/_generated/dataModel';
 import { MarkdownContent } from '@/components/ui/MarkdownContent';
 
-interface CardData {
-    _id: Id<"cards">;
-    front: string;
-    back: string;
-}
-
 interface CardViewerModalProps {
-    cards: CardData[];
+    cards: Doc<"cards">[];
     initialIndex: number;
     isOpen: boolean;
     onClose: () => void;
-    onEdit: (card: CardData) => void;
+    onEdit: (card: Doc<"cards">) => void;
     onDelete: (cardId: Id<"cards">) => void;
     /** When set, this content replaces the card viewer (e.g. edit form). Escape will call onCancelEdit. */
     editContent?: ReactNode | null;
