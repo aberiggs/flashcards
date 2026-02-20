@@ -217,36 +217,22 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
           </div>
 
           {/* Prompt input */}
-          {mode === 'topic' ? (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Topic
-              </label>
-              <input
-                type="text"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && prompt.trim()) handleGenerate();
-                }}
-                placeholder="e.g., Spanish food vocabulary, Japanese hiragana, French past tense..."
-                className="w-full bg-surface-secondary border border-border-primary rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent-primary"
-              />
-            </div>
-          ) : (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-text-secondary mb-1.5">
-                Notes
-              </label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                rows={6}
-                placeholder="Paste your notes, vocabulary lists, or study material here..."
-                className="w-full bg-surface-secondary border border-border-primary rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
-              />
-            </div>
-          )}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-text-secondary mb-1.5">
+              {mode === 'topic' ? 'Topic' : 'Notes'}
+            </label>
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              rows={6}
+              placeholder={
+                mode === 'topic'
+                  ? 'e.g., Spanish food vocabulary, Japanese hiragana, French past tense...'
+                  : 'Paste your notes, vocabulary lists, or study material here...'
+              }
+              className="w-full bg-surface-secondary border border-border-primary rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
+            />
+          </div>
 
           {/* Card count */}
           <div className="mb-6">

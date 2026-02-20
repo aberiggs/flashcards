@@ -1,5 +1,5 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import {
   computeNextReview,
@@ -18,6 +18,17 @@ export const getByDeck = query({
     const deck = await ctx.db.get(args.deckId);
     if (!deck || deck.userId !== userId) return [];
 
+    return await ctx.db
+      .query("cards")
+      .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
+      .collect();
+  },
+});
+
+// Internal version for use within actions (no auth check needed as called from authenticated context)
+export const getByDeckInternal = internalQuery({
+  args: { deckId: v.id("decks") },
+  handler: async (ctx, args) => {
     return await ctx.db
       .query("cards")
       .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
