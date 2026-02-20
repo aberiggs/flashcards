@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Authenticated, Unauthenticated, AuthLoading } from 'convex/react';
 import { PageLoader } from '@/components/ui/PageLoader';
+import { Footer } from '@/components/layout/Footer';
 
 function RedirectToHome() {
   const router = useRouter();
@@ -26,7 +27,12 @@ export default function ProtectedLayout({
       <Unauthenticated>
         <RedirectToHome />
       </Unauthenticated>
-      <Authenticated>{children}</Authenticated>
+      <Authenticated>
+        <div className="min-h-screen bg-background text-foreground flex flex-col">
+          {children}
+          <Footer />
+        </div>
+      </Authenticated>
     </>
   );
 }

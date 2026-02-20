@@ -70,6 +70,11 @@ export function CardViewerModal({
         if (!isOpen) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
+            // Disable keyboard shortcuts when in edit or info mode (only allow Escape)
+            if ((editContent != null || infoContent != null) && e.key !== 'Escape') {
+                return;
+            }
+
             switch (e.key) {
                 case 'ArrowLeft':
                     e.preventDefault();

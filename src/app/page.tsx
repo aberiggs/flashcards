@@ -5,26 +5,12 @@ import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/re
 import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "../../convex/_generated/api";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { Footer } from "@/components/layout/Footer";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { MemoryStagesWidget } from "@/components/features/dashboard/MemoryStagesWidget";
 import { ReviewForecastWidget } from "@/components/features/dashboard/ReviewForecastWidget";
 import { StreakWidget } from "@/components/features/dashboard/StreakWidget";
 import { ActivityHeatmapWidget } from "@/components/features/dashboard/ActivityHeatmapWidget";
-
-function BuiltByFooter() {
-  return (
-    <footer className="mt-auto py-8 text-center">
-      <a
-        href="https://www.aberiggsiv.dev/"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-text-tertiary text-sm hover:text-text-secondary transition-colors"
-      >
-        Built by Sprocket Riggs
-      </a>
-    </footer>
-  );
-}
 
 function AuthenticatedContent() {
   const timeZone =
@@ -79,7 +65,7 @@ function AuthenticatedContent() {
         </div>
       </main>
 
-      <BuiltByFooter />
+      <Footer />
     </div>
   );
 }
@@ -183,7 +169,7 @@ function SignInPage() {
         </div>
       </main>
 
-      <BuiltByFooter />
+      <Footer />
     </div>
   );
 }

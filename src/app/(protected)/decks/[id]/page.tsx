@@ -76,7 +76,11 @@ export default function DeckDetailPage() {
     }, [editingName]);
 
     useEffect(() => {
-        if (editingDescription) descInputRef.current?.focus();
+        if (editingDescription && descInputRef.current) {
+            descInputRef.current.focus();
+            // Move cursor to the end of the text
+            descInputRef.current.setSelectionRange(descInputRef.current.value.length, descInputRef.current.value.length);
+        }
     }, [editingDescription]);
 
     if (deckWithCards === undefined) {
