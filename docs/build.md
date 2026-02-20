@@ -2,13 +2,12 @@
 
 ## How the environments work
 
-This app has three distinct environments, each with its own isolated Convex backend
+This app has two environments, each with its own isolated Convex backend
 (separate database, functions, and configuration):
 
 ```
-local dev  ──►  Convex dev deployment       (your personal dev backend, hot-reloads)
-pull request ──►  Convex preview deployment  (ephemeral per-PR backend, auto-deleted after 5 days)
-main branch ──►  Convex production deployment + Vercel  (live app)
+local dev   ──►  Convex dev deployment    (your personal dev backend, hot-reloads)
+main branch ──►  Convex prod deployment + Vercel  (live app)
 ```
 
 The key thing to understand: **Convex deployments are in the cloud even during local dev.**
@@ -140,18 +139,11 @@ The CI workflow deploys your Convex backend on every push to `main`, but does
    This replaces Vercel's default `npm run build`. The Convex CLI handles deploying
    functions and injecting the right `NEXT_PUBLIC_CONVEX_URL` before the build runs.
 
-3. Add environment variables in Vercel → Settings → Environment Variables:
+3. Add the `CONVEX_DEPLOY_KEY` environment variable in Vercel → Settings → Environment Variables:
 
    | Variable | Value | Environment |
    |----------|-------|-------------|
    | `CONVEX_DEPLOY_KEY` | Production deploy key (from Convex dashboard) | Production only |
-   | `CONVEX_DEPLOY_KEY` | Preview deploy key (from Convex dashboard) | Preview only |
-
-   The production and preview keys are different keys from the Convex dashboard.
-   Using the same variable name with different values scoped to different Vercel
-   environments is intentional — the Convex CLI reads `CONVEX_DEPLOY_KEY` and
-   knows from the key type whether it's deploying to production or creating a
-   preview deployment.
 
 4. Set auth environment variables for production in the **Convex dashboard**
    (not in Vercel — auth secrets belong to the Convex backend, not the frontend):
@@ -194,14 +186,4 @@ idempotent. If you want to simplify, you can remove the `deploy` job from
 `.github/workflows/deploy.yml` and let Vercel own the production Convex deploy
 entirely, keeping GitHub Actions purely for the `check` job.
 
-### Preview deployments (per PR)
 
-When Vercel builds a preview deployment for a PR, it uses the Preview-scoped
-`CONVEX_DEPLOY_KEY`. The Convex CLI detects it's running in a GitHub PR
-environment, reads the branch name, and automatically creates an isolated
-Convex backend named after that branch. The preview frontend is wired to that
-isolated backend.
-
-Preview Convex backends are automatically deleted 5 days after creation
-(14 days on Convex's Professional plan). They have no shared data with
-production or dev.

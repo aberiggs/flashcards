@@ -40,5 +40,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# convex
-convex/_generated
+# convex generated files are committed intentionally —
+# they are deterministic from the schema and needed for type-checking in CI
