@@ -16,6 +16,11 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Generate convex/_generated/ types so tsc can resolve Convex imports.
+      # This directory is gitignored and must be produced before type-checking.
+      - run: npx convex codegen
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
       - run: npm run lint
       - run: npx tsc --noEmit
 
@@ -30,6 +35,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Deploys Convex functions and runs `npm run build` in one step.
+      # Convex CLI handles codegen and injects NEXT_PUBLIC_CONVEX_URL automatically.
       - run: npx convex deploy --cmd 'npm run build'
         env:
           CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}

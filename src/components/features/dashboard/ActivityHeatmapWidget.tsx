@@ -2,6 +2,7 @@
 
 interface ActivityHeatmapWidgetProps {
   data: Record<string, number>;
+  timeZone?: string;
 }
 
 function getIntensityLevel(count: number): number {
@@ -18,16 +19,30 @@ const INTENSITY_STYLES: Record<number, React.CSSProperties> = {
   3: { backgroundColor: 'var(--chart-activity)' },
 };
 
-export function ActivityHeatmapWidget({ data }: ActivityHeatmapWidgetProps) {
-  // Build 90-day grid ending today
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+function getDayKey(timestamp: number, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(timestamp));
+  const year = parts.find((p) => p.type === "year")?.value ?? "0000";
+  const month = parts.find((p) => p.type === "month")?.value ?? "01";
+  const day = parts.find((p) => p.type === "day")?.value ?? "01";
+  return `${year}-${month}-${day}`;
+}
+
+export function ActivityHeatmapWidget({ data, timeZone }: ActivityHeatmapWidgetProps) {
+  const tz = timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+  // Build 90-day grid ending today (in the user's timezone)
+  const todayKey = getDayKey(Date.now(), tz);
+  const todayMs = new Date(todayKey + "T00:00:00").getTime();
 
   const days: { date: string; count: number; dayOfWeek: number }[] = [];
   for (let i = 89; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const key = getDayKey(todayMs - i * 24 * 60 * 60 * 1000, tz);
+    const d = new Date(key + "T00:00:00");
     days.push({
       date: key,
       count: data[key] ?? 0,
@@ -65,7 +80,7 @@ export function ActivityHeatmapWidget({ data }: ActivityHeatmapWidgetProps) {
   for (let wi = 0; wi < weeks.length; wi++) {
     const firstReal = weeks[wi].find((d) => d.date !== '');
     if (firstReal) {
-      const month = new Date(firstReal.date).toLocaleString('default', {
+      const month = new Date(firstReal.date + "T00:00:00").toLocaleString('default', {
         month: 'short',
       });
       if (month !== lastMonth) {

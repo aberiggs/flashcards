@@ -57,7 +57,7 @@ function AuthenticatedContent() {
         )}
         {activity && (
           <div className="mb-6">
-            <ActivityHeatmapWidget data={activity} />
+            <ActivityHeatmapWidget data={activity} timeZone={timeZone} />
           </div>
         )}
 

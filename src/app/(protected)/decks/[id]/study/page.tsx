@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BookOpen, Check, HelpCircle, Lightbulb, X, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../../../convex/_generated/api';
@@ -43,12 +43,33 @@ export default function StudyPage() {
     // mid-session (which would show the same card again after studying it)
     const [sessionCards, setSessionCards] = useState<NonNullable<typeof dueCards> | null>(null);
 
+    // Keep a ref to current session state so the cleanup effect can read it without stale closures
+    const sessionStateRef = useRef({ sessionId: null as Id<"studySessions"> | null, cardsCorrect: 0, cardsIncorrect: 0, sessionComplete: false });
+    sessionStateRef.current = { sessionId, cardsCorrect, cardsIncorrect, sessionComplete };
+
     useEffect(() => {
         if (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete) {
             setSessionCards(dueCards);
             startSessionMutation({ deckId }).then(setSessionId);
         }
     }, [dueCards, sessionCards, sessionComplete, deckId, startSessionMutation]);
+
+    // Complete the session if the user navigates away mid-session
+    useEffect(() => {
+        return () => {
+            const { sessionId: sid, cardsCorrect: correct, cardsIncorrect: incorrect, sessionComplete: done } = sessionStateRef.current;
+            const reviewed = correct + incorrect;
+            if (sid && !done && reviewed > 0) {
+                completeSessionMutation({
+                    sessionId: sid,
+                    cardsStudied: reviewed,
+                    cardsCorrect: correct,
+                    cardsIncorrect: incorrect,
+                });
+            }
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const studyCards = sessionCards ?? [];
 

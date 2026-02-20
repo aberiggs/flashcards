@@ -33,12 +33,14 @@ function getStartOfTodayInTimezone(timeZone: string): number {
     hour: "numeric",
     minute: "numeric",
     second: "numeric",
+    fractionalSecondDigits: 3,
     hour12: false,
   }).formatToParts(now);
   const hour = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
   const minute = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
   const second = parseInt(parts.find((p) => p.type === "second")?.value ?? "0", 10);
-  const msSinceMidnight = (hour * 3600 + minute * 60 + second) * 1000;
+  const ms = parseInt(parts.find((p) => p.type === "fractionalSecond")?.value ?? "0", 10);
+  const msSinceMidnight = (hour * 3600 + minute * 60 + second) * 1000 + ms;
   return now.getTime() - msSinceMidnight;
 }
 
