@@ -48,7 +48,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
   const [editFront, setEditFront] = useState('');
   const [editBack, setEditBack] = useState('');
 
-  const resetState = () => {
+  const resetState = useCallback(() => {
     setPhase('input');
     setPrompt('');
     setError(null);
@@ -57,12 +57,12 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
     setReviewIndex(0);
     setIsFlipped(false);
     setIsEditing(false);
-  };
+  }, []);
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     resetState();
     onClose();
-  };
+  }, [resetState, onClose]);
 
   // ── Input phase helpers ──────────────────────────────────────────────────
 
@@ -125,15 +125,6 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
   const closeEdit = useCallback(() => {
     setIsEditing(false);
   }, []);
-
-  const saveEdit = useCallback(() => {
-    setReviewCards((prev) =>
-      prev.map((c, i) =>
-        i === reviewIndex ? { ...c, front: editFront, back: editBack } : c
-      )
-    );
-    setIsEditing(false);
-  }, [reviewIndex, editFront, editBack]);
 
   const advanceOrFinish = useCallback((nextIndex: number) => {
     if (nextIndex >= reviewCards.length) {
@@ -210,7 +201,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [phase, isOpen, isEditing, handleFlip, handleApprove, handleReject, openEdit, closeEdit]);
+  }, [phase, isOpen, isEditing, handleClose, handleFlip, handleApprove, handleReject, openEdit, closeEdit]);
 
   // ── Insert a single approved card immediately ────────────────────────────
 
@@ -389,7 +380,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
 
   // ── Input / generating / loading phases (use the shared Modal wrapper) ───
 
-  const title = phase === 'generating' ? 'Generate Cards with AI' : 'Generate Cards with AI';
+  const title = 'Generate Cards with AI';
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title={title} size="lg">
