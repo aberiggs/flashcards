@@ -2,6 +2,8 @@
 
 A lightweight study tool that focuses on one thing: flashcards
 
+Try it [here](https://flashcards-aberiggs-projects.vercel.app/)!
+
 ## Purpose
 
 I built this so I didn't have to deal with clunky interfaces or annoying paywalls. It's not as nearly as feature rich as something like Quizlet, but it reduces friction so I can spend more time actually studying and less time searching for a tool that meets my needs.
