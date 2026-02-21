@@ -4,17 +4,16 @@ import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Info, Pencil, Trash2, X, RotateCcw } from 'lucide-react';
 import type { Doc, Id } from '../../../../convex/_generated/dataModel';
 import { MarkdownContent } from '@/components/ui/MarkdownContent';
+import { FlipCard } from './FlipCard';
+import { CardEditForm } from './CardEditForm';
 
 interface CardViewerModalProps {
     cards: Doc<"cards">[];
     initialIndex: number;
     isOpen: boolean;
     onClose: () => void;
-    onEdit: (card: Doc<"cards">) => void;
+    onEdit: (card: Doc<"cards">, front: string, back: string) => void;
     onDelete: (cardId: Id<"cards">) => void;
-    /** When set, this content replaces the card viewer (e.g. edit form). Escape will call onCancelEdit. */
-    editContent?: ReactNode | null;
-    onCancelEdit?: () => void;
     /** When set, this content replaces the card viewer (e.g. card info). Escape will call onCancelInfo. */
     infoContent?: ReactNode | null;
     onCancelInfo?: () => void;
@@ -29,92 +28,91 @@ export function CardViewerModal({
     onClose,
     onEdit,
     onDelete,
-    editContent = null,
-    onCancelEdit,
     infoContent = null,
     onCancelInfo,
     onShowInfo,
 }: CardViewerModalProps) {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const [isFlipped, setIsFlipped] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editFront, setEditFront] = useState('');
+    const [editBack, setEditBack] = useState('');
 
     // Sync currentIndex when initialIndex changes (opening a different card)
     useEffect(() => {
         setCurrentIndex(initialIndex);
         setIsFlipped(false);
+        setIsEditing(false);
     }, [initialIndex]);
+
+    const safeIndex = Math.min(currentIndex, cards.length - 1);
+    const card = cards[safeIndex];
+
+    const openEdit = useCallback(() => {
+        if (!card) return;
+        setEditFront(card.front);
+        setEditBack(card.back);
+        setIsEditing(true);
+    }, [card]);
+
+    const closeEdit = useCallback(() => setIsEditing(false), []);
+
+    const saveEdit = useCallback(() => {
+        if (!card) return;
+        onEdit(card, editFront, editBack);
+        setIsEditing(false);
+    }, [card, editFront, editBack, onEdit]);
 
     const canGoPrev = currentIndex > 0;
     const canGoNext = currentIndex < cards.length - 1;
 
     const goToPrev = useCallback(() => {
-        if (canGoPrev) {
-            setCurrentIndex((i) => i - 1);
-            setIsFlipped(false);
-        }
+        if (canGoPrev) { setCurrentIndex((i) => i - 1); setIsFlipped(false); setIsEditing(false); }
     }, [canGoPrev]);
 
     const goToNext = useCallback(() => {
-        if (canGoNext) {
-            setCurrentIndex((i) => i + 1);
-            setIsFlipped(false);
-        }
+        if (canGoNext) { setCurrentIndex((i) => i + 1); setIsFlipped(false); setIsEditing(false); }
     }, [canGoNext]);
 
     const handleFlip = useCallback(() => {
-        setIsFlipped((prev) => !prev);
-    }, []);
+        if (!isEditing) setIsFlipped((prev) => !prev);
+    }, [isEditing]);
 
     // Keyboard navigation
     useEffect(() => {
         if (!isOpen) return;
 
         const handleKeyDown = (e: KeyboardEvent) => {
-            // Disable keyboard shortcuts when in edit or info mode (only allow Escape)
-            if ((editContent != null || infoContent != null) && e.key !== 'Escape') {
+            const tag = (e.target as HTMLElement).tagName;
+            const inTextarea = tag === 'TEXTAREA' || tag === 'INPUT';
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                if (isEditing) closeEdit();
+                else if (infoContent != null && onCancelInfo) onCancelInfo();
+                else onClose();
                 return;
             }
+            if (inTextarea || isEditing || infoContent != null) return;
 
             switch (e.key) {
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    goToPrev();
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    goToNext();
-                    break;
-                case ' ':
-                    e.preventDefault();
-                    handleFlip();
-                    break;
-                case 'Escape':
-                    e.preventDefault();
-                    if (editContent != null && onCancelEdit) {
-                        onCancelEdit();
-                    } else if (infoContent != null && onCancelInfo) {
-                        onCancelInfo();
-                    } else {
-                        onClose();
-                    }
-                    break;
+                case 'ArrowLeft':  e.preventDefault(); goToPrev(); break;
+                case 'ArrowRight': e.preventDefault(); goToNext(); break;
+                case ' ':          e.preventDefault(); handleFlip(); break;
             }
         };
 
         document.addEventListener('keydown', handleKeyDown);
         document.body.style.overflow = 'hidden';
-
         return () => {
             document.removeEventListener('keydown', handleKeyDown);
             document.body.style.overflow = 'unset';
         };
-    }, [isOpen, goToPrev, goToNext, handleFlip, onClose, editContent, onCancelEdit, infoContent, onCancelInfo]);
+    }, [isOpen, isEditing, infoContent, goToPrev, goToNext, handleFlip, onClose, onCancelInfo, closeEdit]);
 
     if (!isOpen || cards.length === 0) return null;
 
-    // Guard against out-of-bounds if cards array changes while open
-    const safeIndex = Math.min(currentIndex, cards.length - 1);
-    const card = cards[safeIndex];
+    const showSidebar = !isEditing && infoContent == null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -124,10 +122,10 @@ export function CardViewerModal({
                 onClick={onClose}
             />
 
-            {/* Modal shell - narrower when showing edit or info */}
-            <div className={`relative flex items-center gap-3 w-full mx-4 ${editContent != null || infoContent != null ? 'max-w-xl' : 'max-w-3xl'}`}>
-                {/* Prev arrow - hide when editing or showing info */}
-                {editContent == null && infoContent == null && (
+            {/* Shell — wider when nav arrows are visible */}
+            <div className={`relative flex items-center gap-3 w-full mx-4 ${showSidebar ? 'max-w-3xl' : 'max-w-xl'}`}>
+                {/* Prev arrow */}
+                {showSidebar && (
                     <button
                         type="button"
                         onClick={goToPrev}
@@ -141,31 +139,26 @@ export function CardViewerModal({
                     </button>
                 )}
 
-                {/* Card container */}
+                {/* Card frame */}
                 <div className="flex-1 h-[80vh] max-h-[600px] flex flex-col bg-surface-primary border border-border-primary rounded-xl shadow-xl overflow-hidden">
-                    {editContent != null ? (
-                        <>
-                            {/* Edit mode header */}
-                            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border-primary">
-                                <h2 className="text-lg font-semibold text-text-primary">Edit Card</h2>
+
+                    {/* ── Header ── */}
+                    <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border-primary">
+                        {isEditing ? (
+                            <>
+                                <span className="text-sm font-medium text-text-primary">Edit card</span>
                                 <button
                                     type="button"
-                                    onClick={onCancelEdit}
+                                    onClick={closeEdit}
                                     className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                                     aria-label="Back to card"
                                 >
                                     <ChevronLeft className="w-4 h-4" aria-hidden />
                                 </button>
-                            </div>
-                            <div className="flex-1 min-h-0 overflow-y-auto p-6">
-                                {editContent}
-                            </div>
-                        </>
-                    ) : infoContent != null ? (
-                        <>
-                            {/* Card info header */}
-                            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border-primary">
-                                <h2 className="text-lg font-semibold text-text-primary">Card info</h2>
+                            </>
+                        ) : infoContent != null ? (
+                            <>
+                                <span className="text-sm font-medium text-text-primary">Card info</span>
                                 <button
                                     type="button"
                                     onClick={onCancelInfo}
@@ -174,19 +167,12 @@ export function CardViewerModal({
                                 >
                                     <ChevronLeft className="w-4 h-4" aria-hidden />
                                 </button>
-                            </div>
-                            <div className="flex-1 min-h-0 overflow-y-auto p-6">
-                                {infoContent}
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            {/* Viewer header bar */}
-                            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-border-primary">
+                            </>
+                        ) : (
+                            <>
                                 <span className="text-sm text-text-tertiary font-medium">
                                     {safeIndex + 1} / {cards.length}
                                 </span>
-
                                 <div className="flex items-center gap-1">
                                     <button
                                         type="button"
@@ -198,7 +184,7 @@ export function CardViewerModal({
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => onEdit(card)}
+                                        onClick={openEdit}
                                         className="p-2 rounded-lg text-text-secondary hover:text-accent-primary hover:bg-accent-primary/10 transition-colors cursor-pointer"
                                         aria-label="Edit card"
                                     >
@@ -222,61 +208,61 @@ export function CardViewerModal({
                                         <X className="w-4 h-4" aria-hidden />
                                     </button>
                                 </div>
-                            </div>
+                            </>
+                        )}
+                    </div>
 
-                            {/* Card content with flip */}
-                            <div
-                                className="relative flex-1 min-h-0"
-                                style={{ perspective: '1200px' }}
-                            >
-                                <div
-                                    className="absolute inset-0 transition-transform duration-500"
-                                    style={{
-                                        transformStyle: 'preserve-3d',
-                                        transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-                                    }}
+                    {/* ── Body ── */}
+                    {isEditing ? (
+                        <div className="flex-1 min-h-0 overflow-y-auto p-6">
+                            <CardEditForm
+                                front={editFront}
+                                back={editBack}
+                                onFrontChange={setEditFront}
+                                onBackChange={setEditBack}
+                                autoFocus
+                            />
+                        </div>
+                    ) : infoContent != null ? (
+                        <div className="flex-1 min-h-0 overflow-y-auto p-6">
+                            {infoContent}
+                        </div>
+                    ) : (
+                        <div className="flex-1 min-h-0">
+                            <FlipCard
+                                front={<MarkdownContent content={card.front} />}
+                                back={<MarkdownContent content={card.back} />}
+                                isFlipped={isFlipped}
+                                clickToFlip
+                                onFlip={handleFlip}
+                            />
+                        </div>
+                    )}
+
+                    {/* ── Footer ── */}
+                    <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-border-primary">
+                        {isEditing ? (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={closeEdit}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium border border-border-primary text-text-secondary hover:bg-surface-secondary transition-colors cursor-pointer"
                                 >
-                                    {/* Front face */}
-                                    <div
-                                        className="absolute inset-0 flex flex-col items-center p-8 overflow-y-auto"
-                                        style={{
-                                            backfaceVisibility: 'hidden',
-                                            WebkitBackfaceVisibility: 'hidden',
-                                        }}
-                                    >
-                                        <div className="flex-1 flex flex-col items-center justify-center w-full">
-                                            <span className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-4">
-                                                Front
-                                            </span>
-                                            <div className="text-lg text-text-primary text-center leading-relaxed max-w-prose">
-                                                <MarkdownContent content={card.front} />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Back face */}
-                                    <div
-                                        className="absolute inset-0 flex flex-col items-center p-8 overflow-y-auto bg-surface-primary"
-                                        style={{
-                                            backfaceVisibility: 'hidden',
-                                            WebkitBackfaceVisibility: 'hidden',
-                                            transform: 'rotateY(180deg)',
-                                        }}
-                                    >
-                                        <div className="flex-1 flex flex-col items-center justify-center w-full">
-                                            <span className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-4">
-                                                Back
-                                            </span>
-                                            <div className="text-lg text-text-primary text-center leading-relaxed max-w-prose">
-                                                <MarkdownContent content={card.back} />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Footer bar */}
-                            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-border-primary">
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={saveEdit}
+                                    disabled={!editFront.trim() || !editBack.trim()}
+                                    className="px-4 py-2 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                                >
+                                    Save Changes
+                                </button>
+                            </>
+                        ) : infoContent != null ? (
+                            <div />
+                        ) : (
+                            <>
                                 {/* Mobile nav arrows */}
                                 <div className="flex items-center gap-2 sm:hidden">
                                     <button
@@ -303,20 +289,18 @@ export function CardViewerModal({
                                 <button
                                     type="button"
                                     onClick={handleFlip}
-                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
-                                               bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors cursor-pointer
-                                               focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-surface-secondary border border-border-primary text-text-secondary hover:bg-surface-tertiary transition-colors cursor-pointer"
                                 >
                                     <RotateCcw className="w-4 h-4" aria-hidden />
                                     Flip
                                 </button>
-                            </div>
-                        </>
-                    )}
+                            </>
+                        )}
+                    </div>
                 </div>
 
-                {/* Next arrow - hide when editing or showing info */}
-                {editContent == null && infoContent == null && (
+                {/* Next arrow */}
+                {showSidebar && (
                     <button
                         type="button"
                         onClick={goToNext}

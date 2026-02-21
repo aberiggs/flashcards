@@ -22,10 +22,15 @@ export const bulkInsertCards = internalMutation({
   },
 });
 
+const MAX_CARDS = 50;
+const AUTO_MIN_CARDS = 1;
+const AUTO_MAX_CARDS = 50;
+
 export const generateCards = action({
   args: {
     deckId: v.id("decks"),
     prompt: v.string(),
+    // When count is omitted, the LLM decides (auto mode)
     count: v.optional(v.number()),
   },
   handler: async (
@@ -47,16 +52,31 @@ export const generateCards = action({
       deckId: args.deckId,
     });
 
-    const count = args.count ?? 10;
-    
-    // Build system prompt with existing cards context
-    let systemPrompt = `You are a flashcard generator. Given a topic or notes, create exactly ${count} flashcard pairs suitable for study and memorization.
+    const isAuto = args.count === undefined || args.count === null;
+    const count = isAuto ? null : Math.min(args.count!, MAX_CARDS);
+
+    // Build system prompt
+    let systemPrompt: string;
+    if (isAuto) {
+      systemPrompt = `You are an expert flashcard generator. Given a topic or study notes, your job is to decide the right number of flashcards and generate them.
+
+Decide on a card count based on the content:
+- For a short topic phrase (e.g. "Spanish food vocabulary"): generate ${AUTO_MIN_CARDS}–15 cards covering the most important concepts.
+- For a medium-length description or partial notes: generate 10–20 cards that cover all key ideas without repetition.
+- For dense or lengthy notes with many distinct facts: generate up to ${AUTO_MAX_CARDS} cards, one per distinct concept.
+- Never generate fewer than ${AUTO_MIN_CARDS} or more than ${AUTO_MAX_CARDS} cards.
+- Prefer quality over quantity: do not pad with trivial or redundant cards.
+
 Return ONLY valid JSON in this exact format, with no markdown fencing or explanation:
 [{"front": "question or prompt text", "back": "answer text"}, ...]`;
+    } else {
+      systemPrompt = `You are a flashcard generator. Given a topic or notes, create exactly ${count} flashcard pairs suitable for study and memorization.
+Return ONLY valid JSON in this exact format, with no markdown fencing or explanation:
+[{"front": "question or prompt text", "back": "answer text"}, ...]`;
+    }
 
     // Add existing cards context if any exist (limit to 20 to conserve tokens)
     if (existingCards && existingCards.length > 0) {
-      // Format existing cards concisely to conserve tokens
       const cardsSummary = existingCards
         .slice(0, 20)
         .map((card: any) => `Q: ${card.front.slice(0, 80)}${card.front.length > 80 ? '...' : ''} | A: ${card.back.slice(0, 80)}${card.back.length > 80 ? '...' : ''}`)
@@ -128,7 +148,7 @@ ${cardsSummary}`;
           c.front.trim() !== "" &&
           c.back.trim() !== ""
       )
-      .slice(0, 20)
+      .slice(0, MAX_CARDS)
       .map((c) => ({ front: c.front.trim(), back: c.back.trim() }));
   },
 });

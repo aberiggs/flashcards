@@ -13,6 +13,7 @@ import { MemoryStagesWidget } from '@/components/features/dashboard/MemoryStages
 import { ReviewForecastWidget } from '@/components/features/dashboard/ReviewForecastWidget';
 import { CardPreview } from '@/components/features/decks/CardPreview';
 import { CardViewerModal } from '@/components/features/decks/CardViewerModal';
+import { CardEditForm } from '@/components/features/decks/CardEditForm';
 import { GenerateCardsModal } from '@/components/features/decks/GenerateCardsModal';
 import Link from 'next/link';
 
@@ -44,8 +45,7 @@ export default function DeckDetailPage() {
     const [deckName, setDeckName] = useState('');
     const [deckDescription, setDeckDescription] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-    const [editingCardId, setEditingCardId] = useState<Id<"cards"> | null>(null);
-    const [cardForm, setCardForm] = useState<CardFormData>({ front: '', back: '' });
+    const [addForm, setAddForm] = useState<CardFormData>({ front: '', back: '' });
     const [isDeleteDeckModalOpen, setIsDeleteDeckModalOpen] = useState(false);
     const [isDeleteCardModalOpen, setIsDeleteCardModalOpen] = useState(false);
     const [cardToDeleteId, setCardToDeleteId] = useState<Id<"cards"> | null>(null);
@@ -138,26 +138,24 @@ export default function DeckDetailPage() {
     };
 
     const handleAddCard = async () => {
-        if (cardForm.front.trim() && cardForm.back.trim()) {
+        if (addForm.front.trim() && addForm.back.trim()) {
             await addCardMutation({
                 deckId,
-                front: cardForm.front.trim(),
-                back: cardForm.back.trim(),
+                front: addForm.front.trim(),
+                back: addForm.back.trim(),
             });
-            setCardForm({ front: '', back: '' });
+            setAddForm({ front: '', back: '' });
             setIsAddModalOpen(false);
         }
     };
 
-    const handleEditCard = async () => {
-        if (editingCardId && cardForm.front.trim() && cardForm.back.trim()) {
+    const handleEditCard = async (card: (typeof cards)[number], front: string, back: string) => {
+        if (front.trim() && back.trim()) {
             await updateCardMutation({
-                id: editingCardId,
-                front: cardForm.front.trim(),
-                back: cardForm.back.trim(),
+                id: card._id,
+                front: front.trim(),
+                back: back.trim(),
             });
-            setEditingCardId(null);
-            setCardForm({ front: '', back: '' });
         }
     };
 
@@ -175,20 +173,14 @@ export default function DeckDetailPage() {
         router.push('/decks');
     };
 
-    const openEditModal = (card: (typeof cards)[number]) => {
-        setEditingCardId(card._id);
-        setCardForm({ front: card.front, back: card.back });
-    };
-
     const openDeleteCardModal = (cardId: Id<"cards">) => {
         setCardToDeleteId(cardId);
         setIsDeleteCardModalOpen(true);
     };
 
-    const closeModals = () => {
+    const closeAddModal = () => {
         setIsAddModalOpen(false);
-        setEditingCardId(null);
-        setCardForm({ front: '', back: '' });
+        setAddForm({ front: '', back: '' });
     };
 
     return (
@@ -356,68 +348,24 @@ export default function DeckDetailPage() {
                 </section>
             </main>
 
-            {/* Card Viewer Modal - swaps to edit form when Edit is clicked */}
+            {/* Card Viewer Modal */}
             <CardViewerModal
                 cards={cards}
                 initialIndex={viewingCardIndex ?? 0}
                 isOpen={viewingCardIndex !== null}
                 onClose={() => {
                     setViewingCardIndex(null);
-                    setEditingCardId(null);
                     setShowingCardInfo(false);
                 }}
-                onEdit={(card) => openEditModal(card)}
+                onEdit={handleEditCard}
                 onDelete={(cardId) => {
                     setViewingCardIndex(null);
                     openDeleteCardModal(cardId);
                 }}
-                editContent={
-                    viewingCardIndex !== null && editingCardId !== null ? (
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-text-primary mb-2">Front</label>
-                                <textarea
-                                    value={cardForm.front}
-                                    onChange={(e) => setCardForm((prev) => ({ ...prev, front: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-border-primary rounded-lg bg-surface-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary min-h-[120px]"
-                                    placeholder="Enter the question or prompt"
-                                    rows={6}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-text-primary mb-2">Back</label>
-                                <textarea
-                                    value={cardForm.back}
-                                    onChange={(e) => setCardForm((prev) => ({ ...prev, back: e.target.value }))}
-                                    className="w-full px-3 py-2 border border-border-primary rounded-lg bg-surface-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary min-h-[120px]"
-                                    placeholder="Enter the answer"
-                                    rows={6}
-                                />
-                            </div>
-                            <div className="flex gap-2 justify-end">
-                                <button
-                                    type="button"
-                                    onClick={() => setEditingCardId(null)}
-                                    className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => handleEditCard()}
-                                    className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors cursor-pointer"
-                                >
-                                    Save Changes
-                                </button>
-                            </div>
-                        </div>
-                    ) : null
-                }
-                onCancelEdit={() => setEditingCardId(null)}
                 infoContent={
                     viewingCardIndex !== null && showingCardInfo && cards.length > 0 ? (() => {
                         const safeInfoIndex = Math.min(infoCardIndex, cards.length - 1);
-                        const infoCard = cards[safeInfoIndex] as typeof cards[number] & { nextReview?: number; repetitions?: number };
+                        const infoCard = cards[safeInfoIndex];
                         const reps = infoCard.repetitions ?? 0;
                         const stage = getMemoryStage(reps);
                         const nextReview = infoCard.nextReview;
@@ -449,92 +397,17 @@ export default function DeckDetailPage() {
             />
 
             {/* Add Card Modal */}
-            <Modal isOpen={isAddModalOpen} onClose={closeModals} title="Add New Card" size="lg">
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-text-primary mb-2">Front</label>
-                        <textarea
-                            value={cardForm.front}
-                            onChange={(e) => setCardForm((prev) => ({ ...prev, front: e.target.value }))}
-                            className="w-full px-3 py-2 border border-border-primary rounded-lg bg-surface-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary min-h-[120px]"
-                            placeholder="Enter the question or prompt"
-                            rows={6}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-text-primary mb-2">Back</label>
-                        <textarea
-                            value={cardForm.back}
-                            onChange={(e) => setCardForm((prev) => ({ ...prev, back: e.target.value }))}
-                            className="w-full px-3 py-2 border border-border-primary rounded-lg bg-surface-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary min-h-[120px]"
-                            placeholder="Enter the answer"
-                            rows={6}
-                        />
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                        <button
-                            type="button"
-                            onClick={closeModals}
-                            className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleAddCard}
-                            className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors cursor-pointer"
-                        >
-                            Add Card
-                        </button>
-                    </div>
-                </div>
-            </Modal>
-
-            {/* Edit Card Modal - only when not already in card viewer (e.g. future edit-from-list) */}
-            <Modal
-                isOpen={editingCardId !== null && viewingCardIndex === null}
-                onClose={closeModals}
-                title="Edit Card"
-                size="lg"
-            >
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-text-primary mb-2">Front</label>
-                        <textarea
-                            value={cardForm.front}
-                            onChange={(e) => setCardForm((prev) => ({ ...prev, front: e.target.value }))}
-                            className="w-full px-3 py-2 border border-border-primary rounded-lg bg-surface-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary min-h-[120px]"
-                            placeholder="Enter the question or prompt"
-                            rows={6}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-text-primary mb-2">Back</label>
-                        <textarea
-                            value={cardForm.back}
-                            onChange={(e) => setCardForm((prev) => ({ ...prev, back: e.target.value }))}
-                            className="w-full px-3 py-2 border border-border-primary rounded-lg bg-surface-primary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary min-h-[120px]"
-                            placeholder="Enter the answer"
-                            rows={6}
-                        />
-                    </div>
-                    <div className="flex gap-2 justify-end">
-                        <button
-                            type="button"
-                            onClick={closeModals}
-                            className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleEditCard}
-                            className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors cursor-pointer"
-                        >
-                            Save Changes
-                        </button>
-                    </div>
-                </div>
+            <Modal isOpen={isAddModalOpen} onClose={closeAddModal} title="Add New Card" size="lg">
+                <CardEditForm
+                    front={addForm.front}
+                    back={addForm.back}
+                    onFrontChange={(v) => setAddForm((f) => ({ ...f, front: v }))}
+                    onBackChange={(v) => setAddForm((f) => ({ ...f, back: v }))}
+                    onCancel={closeAddModal}
+                    onSave={handleAddCard}
+                    saveLabel="Add Card"
+                    autoFocus
+                />
             </Modal>
 
             {/* Delete Card Confirmation Modal */}

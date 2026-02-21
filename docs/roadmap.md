@@ -23,13 +23,14 @@ Take a look at what’s built and what’s next.
 
 ### Auth
 
-- [x] **Sign in** — GitHub OAuth.
+- [x] **Sign in** — GitHub OAuth and Google OAuth (both available on the sign-in page).
 - [x] **Sign out** — Sign out in the header when authenticated.
 - [x] **Auth state** — Loading and unauthenticated states with appropriate UI.
 
 ### Settings
 
 - [x] **Options** — Settings page with light/dark/system theme toggle.
+- [x] **OpenAI API key management** — Save and remove a personal OpenAI API key from the settings page; stored securely server-side and never returned in full.
 
 ### Dashboard & stats
 
@@ -37,20 +38,34 @@ Take a look at what’s built and what’s next.
 - [x] **Memory stages** — Pie chart of cards by stage (new, learning, reviewing, mastered) based on SM-2 repetitions.
 - [x] **Review forecast** — Bar chart of cards due today, tomorrow, in 3 days, and in 7 days (timezone-aware).
 - [x] **Decks page summary** — Stats bar with deck count, total cards, and due count (“all caught up” when none due).
+- [x] **Streak & activity stats** — Streak counter, today/week card counts, and overall accuracy rate shown on the dashboard.
+- [x] **Activity heatmap** — 90-day GitHub-style heatmap of daily cards studied, with intensity levels and month labels.
+
+### AI generation
+
+- [x] **Generate from topic** — Generate flashcards from a concept or topic the user describes (e.g. "Spanish food vocabulary").
+- [x] **Generate from notes** — Generate flashcards from pasted study material or notes.
+- [x] **Auto card count** — AI analyzes content depth and decides how many cards to generate (1–50); chosen count is shown transparently in the preview step.
+- [x] **Free-form card count** — Users can specify any number of cards from 1 to 50; entering more than 50 shows a friendly suggestion to split into multiple generations.
+- [x] **Deduplication** — Existing cards in the deck are passed to the AI so it avoids generating duplicates or near-duplicates.
+- [x] **Preview and edit before saving** — Generated cards are shown in an editable preview; users can modify or delete individual cards before adding them to the deck.
 
 ### Backend (Convex)
 
 - [x] **Convex setup** — Project wired to Convex with schema, queries, and mutations.
-- [x] **Auth** — Convex Auth with GitHub provider; user-scoped data.
+- [x] **Auth** — Convex Auth with GitHub and Google providers; user-scoped data.
 - [x] **Decks & cards** — Create, read, update, and delete for decks and cards.
 - [x] **Time tracking** — `lastStudied` on cards, aggregated for decks; updated when a card is studied.
 - [x] **Stats API** — `dashboardStats` query for memory stages and review forecast (timezone-aware).
+- [x] **Session tracking** — `studySessions` and `studyEvents` tables record every study session and card result; used for streak and activity data.
+- [x] **Gamification API** — `gamificationStats` and `activityHistory` queries power the streak widget and activity heatmap.
 
 ### Landing & polish
 
 - [x] **Landing page** — Unauthenticated page with tagline, feature highlights, and sign-in CTA.
 - [x] **Chart theming** — Chart colors adapt to light/dark theme via CSS variables.
 - [x] **Empty states** — Dashboard widgets show helpful messages when there is no data.
+- [x] **Markdown in cards** — Card front and back content renders as Markdown (paragraphs, bold, italic, lists, inline code).
 
 ---
 
@@ -58,7 +73,6 @@ Take a look at what’s built and what’s next.
 
 ### Auth
 
-- [ ] **Google OAuth** — Sign in with Google in addition to (or instead of) GitHub.
 - [ ] **Beta gate** — Only allow access to the app for beta testers (until the app is ready for public release).
 
 ### Flashcard & study
@@ -75,14 +89,13 @@ Take a look at what’s built and what’s next.
 
 ### AI
 
-- [ ] **Generate from concepts** — Create flashcards from core concepts or topics the user specifies.
-- [ ] **Generate from content** — Create flashcards from notes, URLs, or pasted text.
 - [ ] **AI-assisted explanations** — AI-assisted explanations of concepts and terms. It may also suggest additional resources or lessons.
+- [ ] **Card generation templates** — Have prompt templates that can be used to help in generating cards that are consistent with a certain theme.
 
 ### Flashcard features
 
 - [ ] **Multimedia in cards** — Images, audio, or video in card content (e.g. image on front/back, pronunciation audio). Requires file storage (e.g. Convex file storage) and schema updates.
-- [ ] **Markdown / MDX in cards** — Render card content as Markdown (headings, lists, code blocks, links). Optional: MDX for embedded components or interactive snippets; start with Markdown for simplicity, add MDX later if needed.
+- [ ] **Extended Markdown in cards** — Headings, tables, syntax-highlighted code blocks, and links (basic Markdown already renders; this extends it further). Optional MDX for interactive snippets.
 - [ ] **Custom card schema** — User-defined fields (e.g. front, back, image, examples) and optional custom HTML/CSS/JS.
 - [ ] **Per-deck / per-card stats** — Accuracy, streak, and time spent per deck or per card (beyond current aggregate dashboard).
 - [ ] **Rich card components** — Highlighted terms linked to explanations; concept web / related-terms view.
@@ -93,11 +106,11 @@ Take a look at what’s built and what’s next.
 
 ### Other
 
-- [ ] **Daily goal or streak** — e.g. “Study N cards today” or streak counter to encourage consistent habit.
+- [ ] **Daily goal** — Set a target number of cards to study each day; progress indicator shown on the dashboard.
 - [ ] **Learning communities** — Shared decks or groups.
 - [ ] **Learning paths** — Ordered sequences of decks or lessons.
 - [ ] **Deck sharing** — Publish or share decks (read-only or copy).
 - [ ] **Deck rating** — Rate or review shared decks.
 - [ ] **Deck modes** — Multiple study modes (e.g. flashcards, matching, typing).
 - [ ] **Loading & polish** — Better loading states and transitions.
-- [ ] **Advanced themes** - Allow for customization of the app theme along with a larger variety of default themes.
+- [ ] **Advanced themes** — Allow for customization of the app theme along with a larger variety of default themes.
