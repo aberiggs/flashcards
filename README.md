@@ -2,7 +2,7 @@
 
 A lightweight study tool that focuses on one thing: flashcards
 
-Try it [here](https://flashcards-aberiggs-projects.vercel.app/)!
+Try it [here](https://flashcards-azure-eight.vercel.app/)!
 
 ## Purpose
 
