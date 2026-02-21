@@ -1,12 +1,10 @@
 # Flashcards
 
-A lightweight study tool that does one thing well: create decks, study cards, and let SM-2 schedule reviews so you remember what matters.
-
-Built for learners who want to spend time studying—not wrestling with clunky UIs or fighting with card creation. Simple, focused, and designed so you can actually retain what you learn.
+A lightweight study tool that focuses on one thing: flashcards
 
 ## Purpose
 
-Flashcards helps you build and maintain long-term retention using spaced repetition. You create decks with front-and-back cards, study them, and rate your confidence. The app schedules when to review each card so you see it again right when you're about to forget—instead of cramming or over-reviewing.
+I built this so I didn't have to deal with clunky interfaces or annoying paywalls. It's not as nearly as feature rich as something like Quizlet, but it reduces friction so I can spend more time actually studying and less time searching for a tool that meets my needs.
 
 ## Features
 
@@ -17,13 +15,7 @@ Flashcards helps you build and maintain long-term retention using spaced repetit
 - **Theme** — Light, dark, and system themes via the Options page.
 - **Auth** — Sign in with GitHub; your data is scoped to your account and stays private.
 
-## Tech stack
-
-- [Next.js](https://nextjs.org) 15 (App Router, Turbopack in dev)
-- React 19
-- [Convex](https://convex.dev) — backend, auth, real-time database
-- TypeScript
-- Tailwind CSS 4
+You can find more in the [roadmap](docs/roadmap.md)!
 
 ## Docs
 
