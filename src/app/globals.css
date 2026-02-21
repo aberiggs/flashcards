@@ -34,7 +34,9 @@
   --chart-reviewing: #8b5cf6;
   --chart-mastered: #10b981;
   --chart-bar: #3b82f6;
-  
+  --chart-streak: #f59e0b;
+  --chart-activity: #3b82f6;
+
   /* Shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -74,7 +76,9 @@
   --chart-reviewing: #a78bfa;
   --chart-mastered: #34d399;
   --chart-bar: #60a5fa;
-  
+  --chart-streak: #fbbf24;
+  --chart-activity: #60a5fa;
+
   /* Shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
@@ -108,7 +112,9 @@
     --chart-reviewing: #a78bfa;
     --chart-mastered: #34d399;
     --chart-bar: #60a5fa;
-    
+    --chart-streak: #fbbf24;
+    --chart-activity: #60a5fa;
+
     /* Accent colors */
     --accent-primary: #3b82f6;
     --accent-primary-hover: #60a5fa;

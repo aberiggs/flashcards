@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BookOpen, Check, HelpCircle, Lightbulb, X, AlertCircle } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../../../convex/_generated/api';
@@ -9,9 +9,17 @@ import type { Id } from '../../../../../../convex/_generated/dataModel';
 import { Card } from '@/components/ui/Card';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PageLoader } from '@/components/ui/PageLoader';
+import { MarkdownContent } from '@/components/ui/MarkdownContent';
 import Link from 'next/link';
 
 type ConfidenceLevel = 'wrong' | 'close' | 'hard' | 'easy';
+
+const qualityFromConfidence: Record<ConfidenceLevel, number> = {
+    wrong: 0,
+    close: 2,
+    hard: 3,
+    easy: 5,
+};
 
 export default function StudyPage() {
     const { id } = useParams();
@@ -21,19 +29,47 @@ export default function StudyPage() {
     const dueCards = useQuery(api.cards.getDueByDeck, { deckId });
     const allCards = useQuery(api.cards.getByDeck, { deckId });
     const recordReviewMutation = useMutation(api.cards.recordReview);
+    const startSessionMutation = useMutation(api.sessions.startSession);
+    const completeSessionMutation = useMutation(api.sessions.completeSession);
+    const recordEventMutation = useMutation(api.sessions.recordEvent);
 
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
     const [sessionComplete, setSessionComplete] = useState(false);
+    const [sessionId, setSessionId] = useState<Id<"studySessions"> | null>(null);
+    const [cardsCorrect, setCardsCorrect] = useState(0);
+    const [cardsIncorrect, setCardsIncorrect] = useState(0);
     // Freeze study order at session start so Convex live updates don't re-sort
     // mid-session (which would show the same card again after studying it)
     const [sessionCards, setSessionCards] = useState<NonNullable<typeof dueCards> | null>(null);
 
+    // Keep a ref to current session state so the cleanup effect can read it without stale closures
+    const sessionStateRef = useRef({ sessionId: null as Id<"studySessions"> | null, cardsCorrect: 0, cardsIncorrect: 0, sessionComplete: false });
+    sessionStateRef.current = { sessionId, cardsCorrect, cardsIncorrect, sessionComplete };
+
     useEffect(() => {
         if (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete) {
             setSessionCards(dueCards);
+            startSessionMutation({ deckId }).then(setSessionId);
         }
-    }, [dueCards, sessionCards, sessionComplete]);
+    }, [dueCards, sessionCards, sessionComplete, deckId, startSessionMutation]);
+
+    // Complete the session if the user navigates away mid-session
+    useEffect(() => {
+        return () => {
+            const { sessionId: sid, cardsCorrect: correct, cardsIncorrect: incorrect, sessionComplete: done } = sessionStateRef.current;
+            const reviewed = correct + incorrect;
+            if (sid && !done && reviewed > 0) {
+                completeSessionMutation({
+                    sessionId: sid,
+                    cardsStudied: reviewed,
+                    cardsCorrect: correct,
+                    cardsIncorrect: incorrect,
+                });
+            }
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const studyCards = sessionCards ?? [];
 
@@ -137,7 +173,10 @@ export default function StudyPage() {
                         <Check className="w-8 h-8 text-green-600" aria-hidden />
                     </div>
                     <h1 className="text-2xl font-bold text-text-primary mb-2">Study session complete!</h1>
-                    <p className="text-text-secondary mb-6">Great job studying {studyCards.length} cards.</p>
+                    <p className="text-text-secondary mb-2">Great job studying {studyCards.length} cards.</p>
+                    <p className="text-text-tertiary mb-6">
+                        {cardsCorrect} correct, {cardsIncorrect} to review again
+                    </p>
                     <Link
                         href="/decks"
                         className="inline-block bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
@@ -153,16 +192,44 @@ export default function StudyPage() {
     const progress = ((currentCardIndex + 1) / studyCards.length) * 100;
 
     const handleConfidence = async (confidence: ConfidenceLevel) => {
+        const quality = qualityFromConfidence[confidence];
+        const isCorrect = quality >= 3;
+
+        if (isCorrect) {
+            setCardsCorrect((c) => c + 1);
+        } else {
+            setCardsIncorrect((c) => c + 1);
+        }
+
         await recordReviewMutation({
             id: currentCard._id,
             confidence,
         });
+
+        if (sessionId) {
+            await recordEventMutation({
+                sessionId,
+                cardId: currentCard._id,
+                deckId,
+                quality,
+            });
+        }
 
         // Move to next card or complete session
         if (currentCardIndex < studyCards.length - 1) {
             setCurrentCardIndex(currentCardIndex + 1);
             setShowAnswer(false);
         } else {
+            const finalCorrect = isCorrect ? cardsCorrect + 1 : cardsCorrect;
+            const finalIncorrect = isCorrect ? cardsIncorrect : cardsIncorrect + 1;
+            if (sessionId) {
+                await completeSessionMutation({
+                    sessionId,
+                    cardsStudied: studyCards.length,
+                    cardsCorrect: finalCorrect,
+                    cardsIncorrect: finalIncorrect,
+                });
+            }
             setSessionComplete(true);
         }
     };
@@ -207,9 +274,9 @@ export default function StudyPage() {
                                 <h2 className="text-2xl font-semibold text-text-primary mb-4">
                                     Question
                                 </h2>
-                                <p className="text-lg text-text-secondary mb-8 leading-relaxed">
-                                    {currentCard.front}
-                                </p>
+                                <div className="text-lg text-text-secondary mb-8 leading-relaxed">
+                                    <MarkdownContent content={currentCard.front} />
+                                </div>
                                 <button
                                     onClick={handleShowAnswer}
                                     className="bg-accent-primary text-text-inverse px-6 py-3 rounded-md hover:bg-accent-primary-hover transition-colors text-lg font-medium cursor-pointer"
@@ -226,9 +293,9 @@ export default function StudyPage() {
                                 <h2 className="text-2xl font-semibold text-text-primary mb-4">
                                     Answer
                                 </h2>
-                                <p className="text-lg text-text-secondary mb-8 leading-relaxed">
-                                    {currentCard.back}
-                                </p>
+                                <div className="text-lg text-text-secondary mb-8 leading-relaxed">
+                                    <MarkdownContent content={currentCard.back} />
+                                </div>
 
                                 <div className="space-y-4">
                                     <p className="text-text-tertiary font-medium">
