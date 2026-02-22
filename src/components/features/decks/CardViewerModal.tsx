@@ -115,11 +115,12 @@ export function CardViewerModal({
     const showSidebar = !isEditing && infoContent == null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Card viewer">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm cursor-pointer"
                 onClick={onClose}
+                aria-hidden
             />
 
             {/* Shell — wider when nav arrows are visible */}
@@ -264,24 +265,24 @@ export function CardViewerModal({
                         ) : (
                             <>
                                 {/* Mobile nav arrows */}
-                                <div className="flex items-center gap-2 sm:hidden">
+                                <div className="flex items-center gap-1 sm:hidden">
                                     <button
                                         type="button"
                                         onClick={goToPrev}
                                         disabled={!canGoPrev}
-                                        className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                                         aria-label="Previous card"
                                     >
-                                        <ChevronLeft className="w-4 h-4" aria-hidden />
+                                        <ChevronLeft className="w-5 h-5" aria-hidden />
                                     </button>
                                     <button
                                         type="button"
                                         onClick={goToNext}
                                         disabled={!canGoNext}
-                                        className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                                         aria-label="Next card"
                                     >
-                                        <ChevronRight className="w-4 h-4" aria-hidden />
+                                        <ChevronRight className="w-5 h-5" aria-hidden />
                                     </button>
                                 </div>
                                 <div className="hidden sm:block" />
@@ -289,7 +290,7 @@ export function CardViewerModal({
                                 <button
                                     type="button"
                                     onClick={handleFlip}
-                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-surface-secondary border border-border-primary text-text-secondary hover:bg-surface-tertiary transition-colors cursor-pointer"
+                                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-surface-secondary border border-border-primary text-text-secondary hover:bg-surface-tertiary transition-colors cursor-pointer"
                                 >
                                     <RotateCcw className="w-4 h-4" aria-hidden />
                                     Flip

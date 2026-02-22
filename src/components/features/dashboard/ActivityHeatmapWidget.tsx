@@ -111,7 +111,7 @@ export function ActivityHeatmapWidget({ data, timeZone }: ActivityHeatmapWidgetP
             return (
               <div key={wi} className="w-[13px] shrink-0">
                 {label && (
-                  <span className="text-[10px] text-text-tertiary">
+                  <span className="text-xs text-text-tertiary leading-none">
                     {label.label}
                   </span>
                 )}
@@ -147,7 +147,7 @@ export function ActivityHeatmapWidget({ data, timeZone }: ActivityHeatmapWidgetP
 
       {/* Legend */}
       <div className="flex items-center gap-1 mt-3 justify-end">
-        <span className="text-[10px] text-text-tertiary mr-1">Less</span>
+        <span className="text-xs text-text-tertiary mr-1">Less</span>
         {[0, 1, 2, 3].map((level) => (
           <div
             key={level}
@@ -155,7 +155,7 @@ export function ActivityHeatmapWidget({ data, timeZone }: ActivityHeatmapWidgetP
             style={INTENSITY_STYLES[level]}
           />
         ))}
-        <span className="text-[10px] text-text-tertiary ml-1">More</span>
+        <span className="text-xs text-text-tertiary ml-1">More</span>
       </div>
     </div>
   );

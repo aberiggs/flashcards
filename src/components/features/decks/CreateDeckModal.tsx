@@ -80,16 +80,16 @@ export function CreateDeckModal({ isOpen, onClose }: CreateDeckModalProps) {
                     <button
                         type="button"
                         onClick={handleClose}
-                        className="flex-1 bg-surface-secondary text-text-primary border border-border-primary py-2 px-4 rounded-md cursor-pointer
-              hover:bg-surface-tertiary hover:scale-105 active:scale-95 transform transition-all duration-200 ease-out
+                        className="flex-1 bg-surface-secondary text-text-primary border border-border-primary py-2.5 px-4 rounded-lg cursor-pointer
+              hover:bg-surface-tertiary transition-colors duration-200
               focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2"
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
-                        className="flex-1 bg-accent-primary text-text-inverse py-2 px-4 rounded-md font-medium cursor-pointer
-              hover:bg-accent-primary-hover hover:scale-105 active:scale-95 transform transition-all duration-200 ease-out
+                        className="flex-1 bg-accent-primary text-text-inverse py-2.5 px-4 rounded-lg font-medium cursor-pointer
+              hover:bg-accent-primary-hover transition-colors duration-200
               focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2"
                     >
                         Create Deck

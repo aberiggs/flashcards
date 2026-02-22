@@ -343,7 +343,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
                   <button
                     type="button"
                     onClick={handleReject}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-status-error-border bg-status-error-bg text-status-error-text hover:opacity-90 transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" aria-hidden />
                     Reject
@@ -364,7 +364,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
                   <button
                     type="button"
                     onClick={handleApprove}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-status-success-border bg-status-success-bg text-status-success-text hover:opacity-90 transition-colors cursor-pointer"
                   >
                     <Check className="w-4 h-4" aria-hidden />
                     Approve
@@ -407,7 +407,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
         /* Input phase */
         <div>
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+            <div className="mb-4 p-3 bg-status-error-bg border border-status-error-border rounded-lg text-sm text-status-error-text">
               {error}
             </div>
           )}
@@ -498,7 +498,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
               </p>
             )}
             {countError && (
-              <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-800">
+              <div className="mt-2 p-2.5 bg-status-warning-bg border border-status-warning-border rounded-lg text-xs text-status-warning-text">
                 {countError}
               </div>
             )}

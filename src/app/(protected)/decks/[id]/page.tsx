@@ -87,7 +87,7 @@ export default function DeckDetailPage() {
         return (
             <div className="min-h-screen bg-background text-foreground">
                 <AppHeader title="Deck" backHref="/decks" backLabel="Decks" />
-                <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <PageLoader message="Loading…" />
                 </main>
             </div>
@@ -98,7 +98,7 @@ export default function DeckDetailPage() {
         return (
             <div className="min-h-screen bg-background text-foreground">
                 <AppHeader title="Deck" backHref="/decks" backLabel="Decks" />
-                <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
+                <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
                     <div className="text-center">
                         <h1 className="text-2xl font-bold text-text-primary mb-4">Deck not found</h1>
                         <Link
@@ -187,7 +187,7 @@ export default function DeckDetailPage() {
         <div className="min-h-screen bg-background text-foreground">
             <AppHeader title={deckWithCards.name} backHref="/decks" backLabel="Decks" />
 
-            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Section A: Deck Header */}
                 <section className="mb-8">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
@@ -303,7 +303,7 @@ export default function DeckDetailPage() {
                             <button
                                 type="button"
                                 onClick={() => setIsGenerateModalOpen(true)}
-                                className="inline-flex items-center gap-2 border border-border-primary text-text-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-surface-secondary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
+                                className="inline-flex items-center gap-2 border border-border-primary text-text-primary px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-surface-secondary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
                             >
                                 <Sparkles className="w-4 h-4" aria-hidden />
                                 Generate with AI
@@ -311,7 +311,7 @@ export default function DeckDetailPage() {
                             <button
                                 type="button"
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="inline-flex items-center gap-2 bg-accent-primary text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-primary-hover transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
+                                className="inline-flex items-center gap-2 bg-accent-primary text-text-inverse px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-accent-primary-hover transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
                             >
                                 <Plus className="w-4 h-4" aria-hidden />
                                 Add Card
@@ -325,7 +325,7 @@ export default function DeckDetailPage() {
                             <button
                                 type="button"
                                 onClick={() => setIsAddModalOpen(true)}
-                                className="bg-accent-primary text-text-inverse px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent-primary-hover transition-colors cursor-pointer"
+                                className="bg-accent-primary text-text-inverse px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-accent-primary-hover transition-colors cursor-pointer"
                             >
                                 Add Your First Card
                             </button>

@@ -19,11 +19,12 @@ interface CardShellProps {
  */
 export function CardShell({ header, children, footer, onBackdropClick }: CardShellProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true">
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm cursor-pointer"
         onClick={onBackdropClick}
+        aria-hidden
       />
 
       {/* Card frame */}

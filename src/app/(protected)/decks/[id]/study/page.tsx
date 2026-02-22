@@ -78,7 +78,7 @@ export default function StudyPage() {
         return (
             <div className="min-h-screen bg-background text-foreground">
                 <AppHeader title="Study" backHref="/decks" backLabel="Decks" />
-                <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <PageLoader message="Loading…" />
                 </main>
             </div>
@@ -89,7 +89,7 @@ export default function StudyPage() {
         return (
             <div className="min-h-screen bg-background text-foreground">
                 <AppHeader title="Study" backHref="/decks" backLabel="Decks" />
-                <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
+                <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
                     <div className="text-center">
                         <h1 className="text-2xl font-bold text-text-primary mb-4">Deck not found</h1>
                         <Link
@@ -117,7 +117,7 @@ export default function StudyPage() {
                         backHref="/decks"
                         backLabel="Decks"
                     />
-                    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
+                    <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
                         <div className="text-center">
                             <div className="w-16 h-16 mx-auto mb-4 bg-surface-secondary rounded-full flex items-center justify-center">
                                 <BookOpen className="w-8 h-8 text-text-tertiary" aria-hidden />
@@ -143,7 +143,7 @@ export default function StudyPage() {
                         backHref="/decks"
                         backLabel="Decks"
                     />
-                    <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
+                    <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
                         <div className="text-center">
                             <div className="w-16 h-16 mx-auto mb-4 bg-surface-secondary rounded-full flex items-center justify-center">
                                 <AlertCircle className="w-8 h-8 text-text-tertiary" aria-hidden />
@@ -169,8 +169,8 @@ export default function StudyPage() {
         return (
             <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
                 <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 bg-green-50 rounded-full flex items-center justify-center">
-                        <Check className="w-8 h-8 text-green-600" aria-hidden />
+                    <div className="w-16 h-16 mx-auto mb-4 bg-status-success-bg rounded-full flex items-center justify-center">
+                        <Check className="w-8 h-8 text-status-success-text" aria-hidden />
                     </div>
                     <h1 className="text-2xl font-bold text-text-primary mb-2">Study session complete!</h1>
                     <p className="text-text-secondary mb-2">Great job studying {studyCards.length} cards.</p>
@@ -247,7 +247,7 @@ export default function StudyPage() {
             />
 
             {/* Main Content */}
-            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Floating Progress Bar */}
                 <div className="mb-6">
                     <div className="flex justify-between items-center mb-2">
@@ -263,7 +263,7 @@ export default function StudyPage() {
                         />
                     </div>
                 </div>
-                <Card variant="default" className="min-h-[400px] flex flex-col">
+                <Card variant="default" className="min-h-[300px] sm:min-h-[400px] flex flex-col">
                     <div className="flex-1 flex flex-col justify-center">
                         {!showAnswer ? (
                             // Front of card
@@ -305,14 +305,14 @@ export default function StudyPage() {
                                         <div className="flex gap-4">
                                             <button
                                                 onClick={() => handleConfidence('wrong')}
-                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-red-50 text-red-700 border border-red-200 px-4 py-4 rounded-lg hover:bg-red-100 transition-colors cursor-pointer"
+                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-status-error-bg text-status-error-text border border-status-error-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
                                             >
                                                 <X className="w-5 h-5 shrink-0" aria-hidden />
                                                 <span className="font-medium">Wrong</span>
                                             </button>
                                             <button
                                                 onClick={() => handleConfidence('close')}
-                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-orange-50 text-orange-700 border border-orange-200 px-4 py-4 rounded-lg hover:bg-orange-100 transition-colors cursor-pointer"
+                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-status-close-bg text-status-close-text border border-status-close-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
                                             >
                                                 <AlertCircle className="w-5 h-5 shrink-0" aria-hidden />
                                                 <span className="font-medium">Close</span>
@@ -325,14 +325,14 @@ export default function StudyPage() {
                                         <div className="flex gap-4">
                                             <button
                                                 onClick={() => handleConfidence('hard')}
-                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-yellow-50 text-yellow-700 border border-yellow-200 px-4 py-4 rounded-lg hover:bg-yellow-100 transition-colors cursor-pointer"
+                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-status-warning-bg text-status-warning-text border border-status-warning-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
                                             >
                                                 <HelpCircle className="w-5 h-5 shrink-0" aria-hidden />
                                                 <span className="font-medium">Hard</span>
                                             </button>
                                             <button
                                                 onClick={() => handleConfidence('easy')}
-                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-green-50 text-green-700 border border-green-200 px-4 py-4 rounded-lg hover:bg-green-100 transition-colors cursor-pointer"
+                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-status-success-bg text-status-success-text border border-status-success-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
                                             >
                                                 <Check className="w-5 h-5 shrink-0" aria-hidden />
                                                 <span className="font-medium">Easy</span>
