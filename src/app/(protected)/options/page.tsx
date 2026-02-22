@@ -36,10 +36,10 @@ export default function OptionsPage() {
             <AppHeader title="Options" />
 
             {/* Main Content */}
-            <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="space-y-8">
                     {/* Appearance */}
-                    <section className="bg-surface-primary border border-border-primary rounded-lg p-6">
+                    <section className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-6">
                         <h2 className="text-2xl font-semibold text-text-primary mb-4">
                             Appearance
                         </h2>
@@ -60,7 +60,7 @@ export default function OptionsPage() {
                     </section>
 
                     {/* AI Card Generation */}
-                    <section className="bg-surface-primary border border-border-primary rounded-lg p-6">
+                    <section className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-6">
                         <div className="flex items-center gap-2 mb-2">
                             <Key className="w-5 h-5 text-text-secondary" aria-hidden />
                             <h2 className="text-2xl font-semibold text-text-primary">
@@ -79,7 +79,7 @@ export default function OptionsPage() {
                                 </span>
                                 <button
                                     onClick={handleRemoveKey}
-                                    className="inline-flex items-center gap-1.5 text-sm text-accent-error hover:opacity-80 transition-opacity cursor-pointer"
+                                    className="inline-flex items-center gap-1.5 text-sm text-accent-error hover:opacity-80 transition-opacity cursor-pointer px-3 py-2 rounded-lg hover:bg-accent-error/10"
                                 >
                                     <Trash2 className="w-3.5 h-3.5" aria-hidden />
                                     Remove
@@ -100,7 +100,7 @@ export default function OptionsPage() {
                                 <button
                                     onClick={handleSaveKey}
                                     disabled={!apiKeyInput.trim() || saving}
-                                    className="bg-accent-primary text-text-inverse px-4 py-2 rounded-md text-sm font-medium hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                                    className="bg-accent-primary text-text-inverse px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                                 >
                                     {saving ? 'Saving...' : 'Save Key'}
                                 </button>
@@ -109,7 +109,7 @@ export default function OptionsPage() {
                     </section>
 
                     {/* Theme Demo */}
-                    <section className="bg-surface-primary border border-border-primary rounded-lg p-6">
+                    <section className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-6">
                         <h2 className="text-2xl font-semibold text-text-primary mb-4">
                             Theme Preview
                         </h2>
@@ -191,7 +191,7 @@ export default function OptionsPage() {
                     </section>
 
                     {/* Component Examples */}
-                    <section className="bg-surface-primary border border-border-primary rounded-lg p-6">
+                    <section className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-6">
                         <h2 className="text-2xl font-semibold text-text-primary mb-4">
                             Component Examples
                         </h2>
@@ -238,63 +238,8 @@ export default function OptionsPage() {
                         </div>
                     </section>
 
-                    {/* App Settings */}
-                    <section className="bg-surface-primary border border-border-primary rounded-lg p-6">
-                        <h2 className="text-2xl font-semibold text-text-primary mb-4">
-                            App Settings
-                        </h2>
-
-                        <div className="space-y-4">
-                            {/* Study Settings */}
-                            <div>
-                                <h3 className="text-lg font-medium text-text-primary mb-3">Study Preferences</h3>
-                                <div className="space-y-3">
-                                    <label className="flex items-center space-x-3">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-border-primary text-accent-primary focus:ring-accent-primary"
-                                        />
-                                        <span className="text-text-primary">Auto-advance to next card</span>
-                                    </label>
-
-                                    <label className="flex items-center space-x-3">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-border-primary text-accent-primary focus:ring-accent-primary"
-                                        />
-                                        <span className="text-text-primary">Show progress bar</span>
-                                    </label>
-
-                                    <label className="flex items-center space-x-3">
-                                        <input
-                                            type="checkbox"
-                                            className="rounded border-border-primary text-accent-primary focus:ring-accent-primary"
-                                        />
-                                        <span className="text-text-primary">Enable keyboard shortcuts</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                            {/* Data Settings */}
-                            <div>
-                                <h3 className="text-lg font-medium text-text-primary mb-3">Data Management</h3>
-                                <div className="space-y-3">
-                                    <button className="bg-accent-primary text-text-inverse py-2 px-4 rounded-md hover:bg-accent-primary-hover transition-colors cursor-pointer">
-                                        Export Flashcards
-                                    </button>
-                                    <button className="bg-surface-primary text-text-primary border border-border-primary py-2 px-4 rounded-md hover:bg-surface-secondary transition-colors cursor-pointer">
-                                        Import Flashcards
-                                    </button>
-                                    <button className="bg-accent-error text-text-inverse py-2 px-4 rounded-md hover:opacity-90 transition-colors cursor-pointer">
-                                        Clear All Data
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
                     {/* About Section */}
-                    <section className="bg-surface-primary border border-border-primary rounded-lg p-6">
+                    <section className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-6">
                         <h2 className="text-2xl font-semibold text-text-primary mb-4">
                             About
                         </h2>

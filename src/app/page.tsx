@@ -25,7 +25,7 @@ function AuthenticatedContent() {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <AppHeader />
 
-      <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in-up">
         <div className="text-center mb-12">
           <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mb-4">
             Welcome back
@@ -75,7 +75,7 @@ function SignInPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-12">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 py-12 animate-fade-in-up">
         <div className="max-w-2xl w-full mx-auto text-center mb-12">
           <h1 className="text-4xl sm:text-5xl font-bold text-text-primary mb-4">
             Flashcards
@@ -93,28 +93,28 @@ function SignInPage() {
 
         {/* Feature highlights */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl w-full mb-12">
-          <div className="bg-surface-primary border border-border-primary rounded-lg p-5 text-left">
+          <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
             <div className="text-2xl mb-2">📚</div>
             <h3 className="font-semibold text-text-primary mb-1">Decks & Cards</h3>
             <p className="text-sm text-text-secondary">
               Straightforward deck and card creation—no setup headaches. Add front and back, edit or remove as needed.
             </p>
           </div>
-          <div className="bg-surface-primary border border-border-primary rounded-lg p-5 text-left">
+          <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
             <div className="text-2xl mb-2">🔄</div>
             <h3 className="font-semibold text-text-primary mb-1">Spaced Repetition</h3>
             <p className="text-sm text-text-secondary">
               SM-2 algorithm schedules reviews. Rate each card (wrong, close, hard, easy) and we handle the rest.
             </p>
           </div>
-          <div className="bg-surface-primary border border-border-primary rounded-lg p-5 text-left">
+          <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
             <div className="text-2xl mb-2">📊</div>
             <h3 className="font-semibold text-text-primary mb-1">Progress & Due Dates</h3>
             <p className="text-sm text-text-secondary">
               See due counts per deck, track when you last studied, and keep your reviews organized.
             </p>
           </div>
-          <div className="bg-surface-primary border border-border-primary rounded-lg p-5 text-left">
+          <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
             <div className="text-2xl mb-2">⚙️</div>
             <h3 className="font-semibold text-text-primary mb-1">Theme & Auth</h3>
             <p className="text-sm text-text-secondary">
@@ -125,14 +125,14 @@ function SignInPage() {
 
         {/* Sign in CTA */}
         <div className="w-full max-w-md">
-          <div className="bg-surface-primary border border-border-primary rounded-lg p-8 shadow-sm">
+           <div className="bg-surface-primary border border-border-primary rounded-xl p-8 shadow-sm">
             <h2 className="text-xl font-semibold text-text-primary mb-6 text-center">
               Sign in to get started
             </h2>
 
             <button
               onClick={() => void signIn("google")}
-              className="w-full flex items-center justify-center gap-3 bg-white text-gray-800 border border-gray-300 py-3 px-4 rounded-md font-medium hover:bg-gray-50 transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 bg-surface-primary text-text-primary border border-border-secondary py-3 px-4 rounded-lg font-medium hover:bg-surface-secondary transition-colors cursor-pointer"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
@@ -145,16 +145,16 @@ function SignInPage() {
 
             <div className="relative my-3">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-border-primary" />
               </div>
-              <div className="relative flex justify-center text-xs text-gray-500">
+              <div className="relative flex justify-center text-xs text-text-tertiary">
                 <span className="bg-surface-primary px-2">or</span>
               </div>
             </div>
 
             <button
               onClick={() => void signIn("github")}
-              className="w-full flex items-center justify-center gap-3 bg-[#24292F] text-white py-3 px-4 rounded-md font-medium hover:bg-[#3b3f46] transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-3 bg-[#24292F] text-white border border-border-primary py-3 px-4 rounded-lg font-medium hover:bg-[#3b3f46] transition-colors cursor-pointer"
             >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path

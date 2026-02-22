@@ -60,7 +60,7 @@ export function CardEditForm({
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+              className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
             >
               Cancel
             </button>
@@ -70,7 +70,7 @@ export function CardEditForm({
               type="button"
               onClick={onSave}
               disabled={!front.trim() || !back.trim()}
-              className="px-4 py-2 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+              className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
               {saveLabel}
             </button>

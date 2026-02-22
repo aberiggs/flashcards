@@ -31,7 +31,7 @@ export function FlipCard({ front, back, isFlipped, clickToFlip, onFlip }: FlipCa
       >
         {/* Front face */}
         <div
-          className="absolute inset-0 flex flex-col items-center justify-center p-8 overflow-y-auto"
+          className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto"
           style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden' }}
         >
           <span className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-4">
@@ -44,7 +44,7 @@ export function FlipCard({ front, back, isFlipped, clickToFlip, onFlip }: FlipCa
 
         {/* Back face */}
         <div
-          className="absolute inset-0 flex flex-col items-center justify-center p-8 overflow-y-auto bg-surface-primary"
+          className="absolute inset-0 flex flex-col items-center justify-center p-4 sm:p-8 overflow-y-auto bg-surface-primary"
           style={{
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',

@@ -112,32 +112,33 @@ export function CardViewerModal({
 
     if (!isOpen || cards.length === 0) return null;
 
-    const showSidebar = !isEditing && infoContent == null;
+    const showNavArrows = !isEditing && infoContent == null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Card viewer">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm cursor-pointer"
                 onClick={onClose}
+                aria-hidden
             />
 
-            {/* Shell — wider when nav arrows are visible */}
-            <div className={`relative flex items-center gap-3 w-full mx-4 ${showSidebar ? 'max-w-3xl' : 'max-w-xl'}`}>
-                {/* Prev arrow */}
-                {showSidebar && (
-                    <button
-                        type="button"
-                        onClick={goToPrev}
-                        disabled={!canGoPrev}
-                        className="shrink-0 p-2 rounded-full bg-surface-primary/80 border border-border-primary text-text-secondary
-                                   hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer
-                                   disabled:opacity-30 disabled:cursor-not-allowed hidden sm:flex items-center justify-center"
-                        aria-label="Previous card"
-                    >
-                        <ChevronLeft className="w-5 h-5" aria-hidden />
-                    </button>
-                )}
+            {/* Shell — always max-w-3xl so card width never shifts between modes */}
+            <div className="relative flex items-center gap-3 w-full mx-4 max-w-3xl">
+                {/* Prev arrow — always occupies space, invisible when not applicable */}
+                <button
+                    type="button"
+                    onClick={goToPrev}
+                    disabled={!canGoPrev || !showNavArrows}
+                    className={`shrink-0 p-2 rounded-full bg-surface-primary/80 border border-border-primary text-text-secondary
+                               hover:text-text-primary hover:bg-surface-secondary active:bg-surface-tertiary transition-colors cursor-pointer
+                               disabled:opacity-30 disabled:cursor-not-allowed hidden sm:flex items-center justify-center
+                               ${!showNavArrows ? 'invisible' : ''}`}
+                    aria-label="Previous card"
+                    tabIndex={showNavArrows ? 0 : -1}
+                >
+                    <ChevronLeft className="w-5 h-5" aria-hidden />
+                </button>
 
                 {/* Card frame */}
                 <div className="flex-1 h-[80vh] max-h-[600px] flex flex-col bg-surface-primary border border-border-primary rounded-xl shadow-xl overflow-hidden">
@@ -233,86 +234,90 @@ export function CardViewerModal({
                                 front={<MarkdownContent content={card.front} />}
                                 back={<MarkdownContent content={card.back} />}
                                 isFlipped={isFlipped}
-                                clickToFlip
                                 onFlip={handleFlip}
                             />
                         </div>
                     )}
 
                     {/* ── Footer ── */}
-                    <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-border-primary">
+                    <div className="shrink-0 grid grid-cols-3 items-center px-5 py-3 border-t border-border-primary">
                         {isEditing ? (
                             <>
                                 <button
                                     type="button"
                                     onClick={closeEdit}
-                                    className="px-4 py-2 rounded-lg text-sm font-medium border border-border-primary text-text-secondary hover:bg-surface-secondary transition-colors cursor-pointer"
+                                    className="justify-self-start px-4 py-2 rounded-lg text-sm font-medium border border-border-primary text-text-secondary hover:bg-surface-secondary transition-colors cursor-pointer"
                                 >
                                     Cancel
                                 </button>
+                                <div />
                                 <button
                                     type="button"
                                     onClick={saveEdit}
                                     disabled={!editFront.trim() || !editBack.trim()}
-                                    className="px-4 py-2 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                                    className="justify-self-end px-4 py-2 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                                 >
                                     Save Changes
                                 </button>
                             </>
                         ) : infoContent != null ? (
-                            <div />
+                            <div className="col-span-3" />
                         ) : (
                             <>
-                                {/* Mobile nav arrows */}
-                                <div className="flex items-center gap-2 sm:hidden">
+                                {/* Mobile nav arrows (left slot) */}
+                                <div className="flex items-center gap-1 sm:hidden">
                                     <button
                                         type="button"
                                         onClick={goToPrev}
                                         disabled={!canGoPrev}
-                                        className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary active:bg-surface-tertiary transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                                         aria-label="Previous card"
                                     >
-                                        <ChevronLeft className="w-4 h-4" aria-hidden />
+                                        <ChevronLeft className="w-5 h-5" aria-hidden />
                                     </button>
                                     <button
                                         type="button"
                                         onClick={goToNext}
                                         disabled={!canGoNext}
-                                        className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                                        className="flex items-center justify-center min-h-[44px] min-w-[44px] rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary active:bg-surface-tertiary transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
                                         aria-label="Next card"
                                     >
-                                        <ChevronRight className="w-4 h-4" aria-hidden />
+                                        <ChevronRight className="w-5 h-5" aria-hidden />
                                     </button>
                                 </div>
                                 <div className="hidden sm:block" />
 
+                                {/* Flip button (center slot) */}
                                 <button
                                     type="button"
                                     onClick={handleFlip}
-                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-surface-secondary border border-border-primary text-text-secondary hover:bg-surface-tertiary transition-colors cursor-pointer"
+                                    className="justify-self-center inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-surface-secondary border border-border-primary text-text-secondary hover:bg-surface-tertiary active:bg-border-primary transition-colors cursor-pointer"
                                 >
                                     <RotateCcw className="w-4 h-4" aria-hidden />
-                                    Flip
+                                    <span className="hidden sm:inline">Flip</span>
                                 </button>
+
+                                {/* Right spacer */}
+                                <div />
                             </>
                         )}
                     </div>
                 </div>
 
-                {/* Next arrow */}
-                {showSidebar && (
-                    <button
-                        type="button"
-                        onClick={goToNext}
-                        disabled={!canGoNext}
-                        className="shrink-0 p-2 rounded-full bg-surface-primary/80 border border-border-primary text-text-secondary
-                                   hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer
-                                   disabled:opacity-30 disabled:cursor-not-allowed hidden sm:flex items-center justify-center"
-                        aria-label="Next card"
-                    >
-                        <ChevronRight className="w-5 h-5" aria-hidden />
-                    </button>
-                )}
+                {/* Next arrow — always occupies space, invisible when not applicable */}
+                <button
+                    type="button"
+                    onClick={goToNext}
+                    disabled={!canGoNext || !showNavArrows}
+                    className={`shrink-0 p-2 rounded-full bg-surface-primary/80 border border-border-primary text-text-secondary
+                               hover:text-text-primary hover:bg-surface-secondary active:bg-surface-tertiary transition-colors cursor-pointer
+                               disabled:opacity-30 disabled:cursor-not-allowed hidden sm:flex items-center justify-center
+                               ${!showNavArrows ? 'invisible' : ''}`}
+                    aria-label="Next card"
+                    tabIndex={showNavArrows ? 0 : -1}
+                >
+                    <ChevronRight className="w-5 h-5" aria-hidden />
+                </button>
             </div>
         </div>
     );

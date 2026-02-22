@@ -1,26 +1,28 @@
 @import "tailwindcss";
 
-/* Light theme (default) */
+/* ────────────────────────────────────────────────────────
+   Light theme (default)
+   ──────────────────────────────────────────────────────── */
 :root {
   /* Base colors */
   --background: #ffffff;
   --foreground: #171717;
-  
+
   /* Surface colors */
   --surface-primary: #ffffff;
   --surface-secondary: #f8fafc;
   --surface-tertiary: #f1f5f9;
-  
+
   /* Border colors */
   --border-primary: #e2e8f0;
   --border-secondary: #cbd5e1;
-  
+
   /* Text colors */
   --text-primary: #171717;
   --text-secondary: #475569;
   --text-tertiary: #64748b;
   --text-inverse: #ffffff;
-  
+
   /* Accent colors */
   --accent-primary: #3b82f6;
   --accent-primary-hover: #2563eb;
@@ -28,7 +30,24 @@
   --accent-warning: #f59e0b;
   --accent-error: #ef4444;
 
-  /* Chart colors - light mode */
+  /* Status colors — semantic surfaces for alerts, badges, and buttons */
+  --status-error-bg: #fef2f2;
+  --status-error-border: #fecaca;
+  --status-error-text: #b91c1c;
+  --status-success-bg: #f0fdf4;
+  --status-success-border: #bbf7d0;
+  --status-success-text: #15803d;
+  --status-warning-bg: #fffbeb;
+  --status-warning-border: #fde68a;
+  --status-warning-text: #92400e;
+  --status-info-bg: #eff6ff;
+  --status-info-border: #bfdbfe;
+  --status-info-text: #1d4ed8;
+  --status-close-bg: #fff7ed;
+  --status-close-border: #fed7aa;
+  --status-close-text: #9a3412;
+
+  /* Chart colors */
   --chart-new: #3b82f6;
   --chart-learning: #f59e0b;
   --chart-reviewing: #8b5cf6;
@@ -43,26 +62,28 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
-/* Dark theme */
+/* ────────────────────────────────────────────────────────
+   Dark theme — explicit toggle
+   ──────────────────────────────────────────────────────── */
 [data-theme="dark"] {
   --background: #0a0a0a;
   --foreground: #ededed;
-  
+
   /* Surface colors */
   --surface-primary: #1a1a1a;
   --surface-secondary: #262626;
   --surface-tertiary: #404040;
-  
+
   /* Border colors */
   --border-primary: #404040;
   --border-secondary: #525252;
-  
+
   /* Text colors */
   --text-primary: #ededed;
   --text-secondary: #a3a3a3;
   --text-tertiary: #737373;
   --text-inverse: #171717;
-  
+
   /* Accent colors */
   --accent-primary: #3b82f6;
   --accent-primary-hover: #60a5fa;
@@ -70,7 +91,24 @@
   --accent-warning: #f59e0b;
   --accent-error: #ef4444;
 
-  /* Chart colors - slightly softer in dark mode */
+  /* Status colors — dark mode variants */
+  --status-error-bg: #2a1215;
+  --status-error-border: #5c2020;
+  --status-error-text: #fca5a5;
+  --status-success-bg: #0f2a1a;
+  --status-success-border: #1a5c32;
+  --status-success-text: #86efac;
+  --status-warning-bg: #2a2010;
+  --status-warning-border: #5c4a1a;
+  --status-warning-text: #fde68a;
+  --status-info-bg: #101d2e;
+  --status-info-border: #1e3a5f;
+  --status-info-text: #93c5fd;
+  --status-close-bg: #2a1a10;
+  --status-close-border: #5c351a;
+  --status-close-text: #fdba74;
+
+  /* Chart colors — slightly softer in dark mode */
   --chart-new: #60a5fa;
   --chart-learning: #fbbf24;
   --chart-reviewing: #a78bfa;
@@ -85,28 +123,54 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4);
 }
 
-/* System preference detection (fallback) */
+/* ────────────────────────────────────────────────────────
+   Dark theme — system preference fallback
+   ──────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     --background: #0a0a0a;
     --foreground: #ededed;
-    
+
     /* Surface colors */
     --surface-primary: #1a1a1a;
     --surface-secondary: #262626;
     --surface-tertiary: #404040;
-    
+
     /* Border colors */
     --border-primary: #404040;
     --border-secondary: #525252;
-    
+
     /* Text colors */
     --text-primary: #ededed;
     --text-secondary: #a3a3a3;
     --text-tertiary: #737373;
     --text-inverse: #171717;
 
-    /* Chart colors - slightly softer in dark mode */
+    /* Accent colors */
+    --accent-primary: #3b82f6;
+    --accent-primary-hover: #60a5fa;
+    --accent-success: #10b981;
+    --accent-warning: #f59e0b;
+    --accent-error: #ef4444;
+
+    /* Status colors — dark mode variants */
+    --status-error-bg: #2a1215;
+    --status-error-border: #5c2020;
+    --status-error-text: #fca5a5;
+    --status-success-bg: #0f2a1a;
+    --status-success-border: #1a5c32;
+    --status-success-text: #86efac;
+    --status-warning-bg: #2a2010;
+    --status-warning-border: #5c4a1a;
+    --status-warning-text: #fde68a;
+    --status-info-bg: #101d2e;
+    --status-info-border: #1e3a5f;
+    --status-info-text: #93c5fd;
+    --status-close-bg: #2a1a10;
+    --status-close-border: #5c351a;
+    --status-close-text: #fdba74;
+
+    /* Chart colors — slightly softer in dark mode */
     --chart-new: #60a5fa;
     --chart-learning: #fbbf24;
     --chart-reviewing: #a78bfa;
@@ -115,13 +179,6 @@
     --chart-streak: #fbbf24;
     --chart-activity: #60a5fa;
 
-    /* Accent colors */
-    --accent-primary: #3b82f6;
-    --accent-primary-hover: #60a5fa;
-    --accent-success: #10b981;
-    --accent-warning: #f59e0b;
-    --accent-error: #ef4444;
-    
     /* Shadow */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
@@ -129,7 +186,9 @@
   }
 }
 
-/* Tailwind theme integration */
+/* ────────────────────────────────────────────────────────
+   Tailwind v4 theme integration
+   ──────────────────────────────────────────────────────── */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -147,6 +206,21 @@
   --color-accent-success: var(--accent-success);
   --color-accent-warning: var(--accent-warning);
   --color-accent-error: var(--accent-error);
+  --color-status-error-bg: var(--status-error-bg);
+  --color-status-error-border: var(--status-error-border);
+  --color-status-error-text: var(--status-error-text);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-success-border: var(--status-success-border);
+  --color-status-success-text: var(--status-success-text);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-warning-border: var(--status-warning-border);
+  --color-status-warning-text: var(--status-warning-text);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-info-border: var(--status-info-border);
+  --color-status-info-text: var(--status-info-text);
+  --color-status-close-bg: var(--status-close-bg);
+  --color-status-close-border: var(--status-close-border);
+  --color-status-close-text: var(--status-close-text);
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
@@ -154,7 +228,9 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Base styles */
+/* ────────────────────────────────────────────────────────
+   Base styles
+   ──────────────────────────────────────────────────────── */
 body {
   background: var(--background);
   color: var(--foreground);
@@ -162,7 +238,7 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Scrollbar - themed to match light/dark mode */
+/* Scrollbar — themed to match light/dark mode */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--border-secondary) var(--surface-secondary);
@@ -186,9 +262,9 @@ body {
   background: var(--text-tertiary);
 }
 
-/* Smooth transitions for theme changes */
+/* Smooth transitions for theme changes (scoped to bg + border only) */
 * {
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 /* Page loader indeterminate bar */
@@ -202,4 +278,30 @@ body {
   100% {
     transform: translateX(-100%);
   }
+}
+
+/* Entrance animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@theme inline {
+  --animate-fade-in-up: fade-in-up 0.4s ease-out both;
+  --animate-fade-in: fade-in 0.3s ease-out both;
 }

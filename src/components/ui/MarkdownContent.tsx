@@ -27,11 +27,27 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
           ol: ({ children }) => (
             <ol className="list-decimal list-inside space-y-1">{children}</ol>
           ),
-          code: ({ children }) => (
-            <code className="font-mono text-sm bg-surface-secondary px-1 py-0.5 rounded">
+          pre: ({ children }) => (
+            <pre className="bg-surface-secondary border border-border-primary rounded-lg p-3 overflow-x-auto text-sm my-2">
               {children}
-            </code>
+            </pre>
           ),
+          code: ({ className: codeClassName, children }) => {
+            // Fenced code blocks get a className like "language-js" from react-markdown
+            const isBlock = Boolean(codeClassName);
+            if (isBlock) {
+              return (
+                <code className="font-mono text-sm text-text-primary">
+                  {children}
+                </code>
+              );
+            }
+            return (
+              <code className="font-mono text-sm bg-surface-secondary px-1.5 py-0.5 rounded">
+                {children}
+              </code>
+            );
+          },
         }}
       >
         {content}

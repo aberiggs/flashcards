@@ -328,46 +328,46 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
                   </div>
                 ) : (
                   <div className="flex-1 min-h-0">
-                    <FlipCard
-                      front={currentCard?.front}
-                      back={currentCard?.back}
-                      isFlipped={isFlipped}
-                      clickToFlip
-                      onFlip={handleFlip}
-                    />
+                      <FlipCard
+                        front={currentCard?.front}
+                        back={currentCard?.back}
+                        isFlipped={isFlipped}
+                        onFlip={handleFlip}
+                      />
                   </div>
                 )}
 
                 {/* Footer — reject / flip / approve */}
-                <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-border-primary">
+                <div className="shrink-0 grid grid-cols-3 items-center px-5 py-3 border-t border-border-primary">
                   <button
                     type="button"
                     onClick={handleReject}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 transition-colors cursor-pointer"
+                    className="justify-self-start inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-status-error-border bg-status-error-bg text-status-error-text hover:opacity-90 active:opacity-75 transition-colors cursor-pointer"
                   >
                     <X className="w-4 h-4" aria-hidden />
-                    Reject
+                    <span className="hidden sm:inline">Reject</span>
                   </button>
 
-                  {!isEditing && (
+                  {!isEditing ? (
                     <button
                       type="button"
                       onClick={handleFlip}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-surface-secondary border border-border-primary text-text-secondary hover:bg-surface-tertiary transition-colors cursor-pointer"
+                      className="justify-self-center inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-surface-secondary border border-border-primary text-text-secondary hover:bg-surface-tertiary active:bg-border-primary transition-colors cursor-pointer"
                     >
                       <RotateCcw className="w-4 h-4" aria-hidden />
-                      Flip
+                      <span className="hidden sm:inline">Flip</span>
                     </button>
+                  ) : (
+                    <div />
                   )}
-                  {isEditing && <div />}
 
                   <button
                     type="button"
                     onClick={handleApprove}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-green-200 bg-green-50 text-green-700 hover:bg-green-100 transition-colors cursor-pointer"
+                    className="justify-self-end inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-status-success-border bg-status-success-bg text-status-success-text hover:opacity-90 active:opacity-75 transition-colors cursor-pointer"
                   >
                     <Check className="w-4 h-4" aria-hidden />
-                    Approve
+                    <span className="hidden sm:inline">Approve</span>
                   </button>
                 </div>
               </>
@@ -407,7 +407,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
         /* Input phase */
         <div>
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-700">
+            <div className="mb-4 p-3 bg-status-error-bg border border-status-error-border rounded-lg text-sm text-status-error-text">
               {error}
             </div>
           )}
@@ -498,7 +498,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
               </p>
             )}
             {countError && (
-              <div className="mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-md text-xs text-amber-800">
+              <div className="mt-2 p-2.5 bg-status-warning-bg border border-status-warning-border rounded-lg text-xs text-status-warning-text">
                 {countError}
               </div>
             )}

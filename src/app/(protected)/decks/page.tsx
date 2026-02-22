@@ -39,7 +39,7 @@ export default function DecksPage() {
         return (
             <div className="min-h-screen bg-background text-foreground">
                 <AppHeader title="My Decks" />
-                <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <PageLoader message="Loading decks…" />
                 </main>
             </div>
@@ -54,7 +54,7 @@ export default function DecksPage() {
             <AppHeader title="My Decks" />
 
             {/* Main Content */}
-            <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Stats summary card */}
                 <div className="mb-8 rounded-xl border border-border-primary bg-surface-primary p-4 sm:p-5 shadow-sm">
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
