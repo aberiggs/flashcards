@@ -57,6 +57,10 @@ export const recordEvent = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const session = await ctx.db.get(args.sessionId);
+    if (!session || session.userId !== userId)
+      throw new Error("Session not found");
+
     await ctx.db.insert("studyEvents", {
       userId,
       sessionId: args.sessionId,

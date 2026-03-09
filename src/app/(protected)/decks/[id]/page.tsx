@@ -8,6 +8,7 @@ import { api } from '../../../../../convex/_generated/api';
 import type { Id } from '../../../../../convex/_generated/dataModel';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
+import { getMemoryStage } from '@/lib/memoryStage';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { MemoryStagesWidget } from '@/components/features/dashboard/MemoryStagesWidget';
@@ -53,18 +54,14 @@ export default function DeckDetailPage() {
     const [isDeleteCardModalOpen, setIsDeleteCardModalOpen] = useState(false);
     const [cardToDeleteId, setCardToDeleteId] = useState<Id<"cards"> | null>(null);
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+    const [isDeletingCard, setIsDeletingCard] = useState(false);
+    const [isDeletingDeck, setIsDeletingDeck] = useState(false);
     const [viewingCardIndex, setViewingCardIndex] = useState<number | null>(null);
     const [showingCardInfo, setShowingCardInfo] = useState(false);
     const [infoCardIndex, setInfoCardIndex] = useState(0);
 
     const nameInputRef = useRef<HTMLInputElement>(null);
 
-    function getMemoryStage(repetitions: number): 'New' | 'Learning' | 'Reviewing' | 'Mastered' {
-        if (repetitions === 0) return 'New';
-        if (repetitions <= 2) return 'Learning';
-        if (repetitions <= 5) return 'Reviewing';
-        return 'Mastered';
-    }
     const descInputRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -186,6 +183,7 @@ export default function DeckDetailPage() {
 
     const handleDeleteCardConfirm = async () => {
         if (cardToDeleteId) {
+            setIsDeletingCard(true);
             try {
                 await deleteCardMutation({ id: cardToDeleteId });
                 toast.success('Card deleted');
@@ -193,17 +191,21 @@ export default function DeckDetailPage() {
                 setIsDeleteCardModalOpen(false);
             } catch (err) {
                 toast.error(err instanceof Error ? err.message : 'Failed to delete card');
+            } finally {
+                setIsDeletingCard(false);
             }
         }
     };
 
     const handleDeleteDeckConfirm = async () => {
+        setIsDeletingDeck(true);
         try {
             await deleteDeckMutation({ id: deckId });
             setIsDeleteDeckModalOpen(false);
             router.push('/decks');
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Failed to delete deck');
+            setIsDeletingDeck(false);
         }
     };
 
@@ -470,9 +472,10 @@ export default function DeckDetailPage() {
                     <button
                         type="button"
                         onClick={handleDeleteCardConfirm}
-                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer"
+                        disabled={isDeletingCard}
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        Delete
+                        {isDeletingCard ? 'Deleting…' : 'Delete'}
                     </button>
                 </div>
             </Modal>
@@ -497,9 +500,10 @@ export default function DeckDetailPage() {
                     <button
                         type="button"
                         onClick={handleDeleteDeckConfirm}
-                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer"
+                        disabled={isDeletingDeck}
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        Delete deck
+                        {isDeletingDeck ? 'Deleting…' : 'Delete deck'}
                     </button>
                 </div>
             </Modal>

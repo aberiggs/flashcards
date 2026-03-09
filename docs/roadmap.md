@@ -66,6 +66,14 @@ Take a look at what’s built and what’s next.
 - [x] **Chart theming** — Chart colors adapt to light/dark theme via CSS variables.
 - [x] **Empty states** — Dashboard widgets show helpful messages when there is no data.
 - [x] **Markdown in cards** — Card front and back content renders as Markdown (paragraphs, bold, italic, lists, inline code).
+- [x] **Toast notifications** — Global toast system for mutation feedback (success/error/info/warning); auto-dismisses after 4 s, dismissible on click. Wired to all key actions: create/delete deck, add/edit/delete card, save API key, AI generation.
+
+### Code quality
+
+- [x] **Error handling** — try/catch on all mutations with error toasts; delete buttons disabled during in-flight requests to prevent double-submit.
+- [x] **Cascade delete** — Deleting a deck now also removes all associated study sessions and events.
+- [x] **Session ownership** — `recordEvent` verifies the session belongs to the caller before inserting.
+- [x] **Type hygiene** — Removed `any` from AI card mapping; removed unused `DeckStats` type; extracted shared `getMemoryStage` utility to `src/lib/memoryStage.ts`.
 
 ---
 
@@ -73,24 +81,22 @@ Take a look at what’s built and what’s next.
 
 ### Auth
 
-- [ ] **Beta gate** — Only allow access to the app for beta testers (until the app is ready for public release).
-
 ### Flashcard & study
 
 - [ ] **Card browser with search** — Browse and search cards outside the SRS study flow (e.g. by deck, text, due status). Better edit UX (inline or side-panel edit) instead of the current modal-on-edit-page flow; good for review and bulk edits.
 - [ ] **Search** — Search across decks or within a deck (e.g. by front/back text); powers the card browser and filters.
 - [ ] **Keyboard shortcuts (study)** — e.g. space to reveal, 1/2/3 for confidence, arrows to navigate; faster flow for power users.
 - [ ] **Deck tags and filtering** — Add tags to decks for easier organization and filtering.
-- [ ] **Cram mode** - Changes from the SRS system to a more aggressive mode of reviewing cards.
-
 ### Spaced repetition & scheduling
-
-- [ ] **Configurable intervals** — User settings for how aggressively or gently to space reviews (e.g. interval multiplier, max interval, steps for learning).
 
 ### AI
 
 - [ ] **AI-assisted explanations** — AI-assisted explanations of concepts and terms. It may also suggest additional resources or lessons.
 - [ ] **Card generation templates** — Have prompt templates that can be used to help in generating cards that are consistent with a certain theme.
+
+### Flashcard & study
+
+- [ ] **Card level badges & sorting** — Show memory stage badges (New, Learning, Reviewing, Mastered) on card tiles in the deck view. Add sort options: by stage, next review date, date added, or alphabetical.
 
 ### Flashcard features
 

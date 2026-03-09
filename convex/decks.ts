@@ -136,7 +136,7 @@ export const update = mutation({
   },
 });
 
-// Delete a deck and all its cards
+// Delete a deck and all its cards, sessions, and events
 export const remove = mutation({
   args: { id: v.id("decks") },
   handler: async (ctx, args) => {
@@ -154,6 +154,26 @@ export const remove = mutation({
 
     for (const card of cards) {
       await ctx.db.delete(card._id);
+    }
+
+    // Delete all study sessions for this deck (and their events)
+    const sessions = await ctx.db
+      .query("studySessions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const deckSessions = sessions.filter((s) => s.deckId === args.id);
+
+    for (const session of deckSessions) {
+      // Delete all events for this session
+      const events = await ctx.db
+        .query("studyEvents")
+        .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+        .collect();
+      for (const event of events) {
+        await ctx.db.delete(event._id);
+      }
+      await ctx.db.delete(session._id);
     }
 
     // Delete the deck itself

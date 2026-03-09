@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { action, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 
 export const bulkInsertCards = internalMutation({
   args: {
@@ -79,7 +80,7 @@ Return ONLY valid JSON in this exact format, with no markdown fencing or explana
     if (existingCards && existingCards.length > 0) {
       const cardsSummary = existingCards
         .slice(0, 20)
-        .map((card: any) => `Q: ${card.front.slice(0, 80)}${card.front.length > 80 ? '...' : ''} | A: ${card.back.slice(0, 80)}${card.back.length > 80 ? '...' : ''}`)
+        .map((card: Doc<"cards">) => `Q: ${card.front.slice(0, 80)}${card.front.length > 80 ? '...' : ''} | A: ${card.back.slice(0, 80)}${card.back.length > 80 ? '...' : ''}`)
         .join('\n');
       
       systemPrompt += `
