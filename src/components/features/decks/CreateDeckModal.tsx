@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
+import { useToast } from '@/components/ui/Toast';
 
 interface CreateDeckModalProps {
     isOpen: boolean;
@@ -12,6 +13,7 @@ interface CreateDeckModalProps {
 
 export function CreateDeckModal({ isOpen, onClose }: CreateDeckModalProps) {
     const createDeck = useMutation(api.decks.create);
+    const { toast } = useToast();
     const [deckName, setDeckName] = useState('');
     const [error, setError] = useState('');
 
@@ -36,12 +38,17 @@ export function CreateDeckModal({ isOpen, onClose }: CreateDeckModalProps) {
         }
 
         setError('');
-        await createDeck({
-            name: trimmedName,
-            description: 'Add your first card to get started',
-        });
-        setDeckName('');
-        onClose();
+        try {
+            await createDeck({
+                name: trimmedName,
+                description: 'Add your first card to get started',
+            });
+            toast.success(`Deck "${trimmedName}" created`);
+            setDeckName('');
+            onClose();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'An unexpected error occurred');
+        }
     };
 
     const handleClose = () => {
