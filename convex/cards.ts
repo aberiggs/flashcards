@@ -7,6 +7,9 @@ import {
   type ConfidenceLevel,
 } from "./sm2";
 
+const MAX_CARDS_PER_DECK = 500;
+const MAX_CARDS_PER_USER = 5_000;
+
 // Get all cards for a deck
 export const getByDeck = query({
   args: { deckId: v.id("decks") },
@@ -33,6 +36,38 @@ export const getByDeckInternal = internalQuery({
       .query("cards")
       .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
       .collect();
+  },
+});
+
+// Internal: count cards in a single deck
+export const countByDeckInternal = internalQuery({
+  args: { deckId: v.id("decks") },
+  handler: async (ctx, args) => {
+    const cards = await ctx.db
+      .query("cards")
+      .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
+      .collect();
+    return cards.length;
+  },
+});
+
+// Internal: count all cards belonging to a user across all their decks
+export const countByUserInternal = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const decks = await ctx.db
+      .query("decks")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    let total = 0;
+    for (const deck of decks) {
+      const cards = await ctx.db
+        .query("cards")
+        .withIndex("by_deck", (q) => q.eq("deckId", deck._id))
+        .collect();
+      total += cards.length;
+    }
+    return total;
   },
 });
 
@@ -99,6 +134,41 @@ export const create = mutation({
 
     const deck = await ctx.db.get(args.deckId);
     if (!deck || deck.userId !== userId) throw new Error("Deck not found");
+
+    // Check per-deck cap
+    const deckCardCount = await ctx.db
+      .query("cards")
+      .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
+      .collect()
+      .then((c) => c.length);
+
+    if (deckCardCount >= MAX_CARDS_PER_DECK) {
+      throw new Error(
+        `This deck has reached the limit of ${MAX_CARDS_PER_DECK} cards. Split your content across multiple decks for better organization.`
+      );
+    }
+
+    // Check total user cap
+    const decks = await ctx.db
+      .query("decks")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    let totalCards = 0;
+    for (const d of decks) {
+      const count = await ctx.db
+        .query("cards")
+        .withIndex("by_deck", (q) => q.eq("deckId", d._id))
+        .collect()
+        .then((c) => c.length);
+      totalCards += count;
+      if (totalCards >= MAX_CARDS_PER_USER) break;
+    }
+
+    if (totalCards >= MAX_CARDS_PER_USER) {
+      throw new Error(
+        `You've reached the limit of ${MAX_CARDS_PER_USER.toLocaleString()} total cards. Remove unused cards to make room.`
+      );
+    }
 
     // Update deck's updatedAt
     await ctx.db.patch(args.deckId, { updatedAt: Date.now() });

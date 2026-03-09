@@ -2,6 +2,8 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
+const MAX_DECKS_PER_USER = 50;
+
 // List all decks for the authenticated user, with stats
 export const list = query({
   args: {},
@@ -101,6 +103,17 @@ export const create = mutation({
 
     const trimmedName = args.name.trim();
     if (!trimmedName) throw new Error("Deck name cannot be empty");
+
+    const existingDecks = await ctx.db
+      .query("decks")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    if (existingDecks.length >= MAX_DECKS_PER_USER) {
+      throw new Error(
+        `You've reached the limit of ${MAX_DECKS_PER_USER} decks. Delete an existing deck to create a new one.`
+      );
+    }
 
     return await ctx.db.insert("decks", {
       name: trimmedName,

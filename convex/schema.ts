@@ -52,4 +52,9 @@ export default defineSchema({
     userId: v.id("users"),
     openAiApiKey: v.optional(v.string()),
   }).index("by_user", ["userId"]),
+
+  aiGenerations: defineTable({
+    userId: v.id("users"),
+    timestamp: v.number(),
+  }).index("by_user_timestamp", ["userId", "timestamp"]),
 });

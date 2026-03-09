@@ -46,8 +46,16 @@ export default function DecksPage() {
         );
     }
 
+    const MAX_DECKS = 50;
+    const MAX_CARDS = 5_000;
+
     const totalCards = decks.reduce((total, deck) => total + deck.cardCount, 0);
     const totalDue = decks.reduce((total, deck) => total + (deck.dueCount ?? 0), 0);
+
+    const deckUsagePct = decks.length / MAX_DECKS;
+    const cardUsagePct = totalCards / MAX_CARDS;
+    const deckNearLimit = deckUsagePct >= 0.8;
+    const cardNearLimit = cardUsagePct >= 0.8;
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -58,15 +66,19 @@ export default function DecksPage() {
                 {/* Stats summary card */}
                 <div className="mb-8 rounded-xl border border-border-primary bg-surface-primary p-4 sm:p-5 shadow-sm">
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
-                        <span className="text-text-secondary">
-                            <span className="font-medium text-text-primary">{decks.length}</span> decks
+                        <span className={deckNearLimit ? 'text-status-warning-text font-medium' : 'text-text-secondary'}>
+                            <span className="font-medium">{decks.length}</span>
+                            <span className="text-text-tertiary">/{MAX_DECKS}</span>
+                            {' '}decks
                         </span>
-                        <span className="text-text-secondary">
-                            <span className="font-medium text-text-primary">{totalCards}</span> cards
+                        <span className={cardNearLimit ? 'text-status-warning-text font-medium' : 'text-text-secondary'}>
+                            <span className="font-medium">{totalCards.toLocaleString()}</span>
+                            <span className="text-text-tertiary">/{MAX_CARDS.toLocaleString()}</span>
+                            {' '}cards
                         </span>
                         {totalDue > 0 ? (
                             <span className="text-accent-primary font-medium">
-                                {totalDue} cards ready for review
+                                {totalDue} ready for review
                             </span>
                         ) : (
                             <span className="text-text-tertiary">All caught up</span>
