@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Layers, ChevronLeft, Settings, LogOut, Menu, X, Home, BookOpen } from 'lucide-react';
 import { useAuthActions } from '@convex-dev/auth/react';
+import { SearchBar } from './SearchBar';
 
 const NAV_LINKS = [
   { href: '/', label: 'Home', icon: Home },
@@ -60,9 +61,9 @@ export function AppHeader({ title, backHref, backLabel }: AppHeaderProps) {
         role="banner"
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14">
+          <div className="flex items-center h-14 gap-3">
             {/* Left: brand + nav or back + title */}
-            <div className="flex items-center gap-4 sm:gap-6 min-w-0">
+            <div className="flex items-center gap-4 sm:gap-6 min-w-0 flex-1">
               {backHref ? (
                 <>
                   <Link
@@ -127,6 +128,9 @@ export function AppHeader({ title, backHref, backLabel }: AppHeaderProps) {
                 </>
               )}
             </div>
+
+            {/* Center: search bar */}
+            <SearchBar />
 
             {/* Right: settings, sign out */}
             <div className="flex items-center gap-1 shrink-0">

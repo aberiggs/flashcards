@@ -13,6 +13,7 @@ import type * as auth from "../auth.js";
 import type * as cards from "../cards.js";
 import type * as decks from "../decks.js";
 import type * as http from "../http.js";
+import type * as search from "../search.js";
 import type * as sessions from "../sessions.js";
 import type * as settings from "../settings.js";
 import type * as sm2 from "../sm2.js";
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   cards: typeof cards;
   decks: typeof decks;
   http: typeof http;
+  search: typeof search;
   sessions: typeof sessions;
   settings: typeof settings;
   sm2: typeof sm2;

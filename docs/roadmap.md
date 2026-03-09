@@ -60,6 +60,10 @@ Take a look at what’s built and what’s next.
 - [x] **Session tracking** — `studySessions` and `studyEvents` tables record every study session and card result; used for streak and activity data.
 - [x] **Gamification API** — `gamificationStats` and `activityHistory` queries power the streak widget and activity heatmap.
 
+### Search
+
+- [x] **Global search** — Cmd/Ctrl+K or header search bar searches across all decks and cards. Results grouped into Decks and Cards sections; deck results show name and card count, card results show front text and parent deck. Keyboard-navigable (↑/↓/Enter/Escape). 300 ms debounce. Collapses to an icon on mobile with a full-screen overlay on tap.
+
 ### Landing & polish
 
 - [x] **Landing page** — Unauthenticated page with tagline, feature highlights, and sign-in CTA.
@@ -92,7 +96,6 @@ Take a look at what’s built and what’s next.
 ### Flashcard & study
 
 - [ ] **Card browser with search** — Browse and search cards outside the SRS study flow (e.g. by deck, text, due status). Better edit UX (inline or side-panel edit) instead of the current modal-on-edit-page flow; good for review and bulk edits.
-- [ ] **Search** — Search across decks or within a deck (e.g. by front/back text); powers the card browser and filters.
 - [ ] **Keyboard shortcuts (study)** — e.g. space to reveal, 1/2/3 for confidence, arrows to navigate; faster flow for power users.
 - [ ] **Deck tags and filtering** — Add tags to decks for easier organization and filtering.
 ### Spaced repetition & scheduling
