@@ -37,7 +37,6 @@ export const getByDeckInternal = internalQuery({
   },
 });
 
-
 // Get cards due for review in a deck (no nextReview or nextReview <= now)
 export const getDueByDeck = query({
   args: { deckId: v.id("decks") },

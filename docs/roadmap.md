@@ -89,7 +89,7 @@ Take a look at what’s built and what’s next.
 - [x] **Deck cap** — 50 decks per user enforced in `decks.create`; clear error message on breach.
 - [x] **Per-deck card cap** — 500 cards per deck enforced in `cards.create` and `ai.bulkInsertCards`; clear error message on breach.
 - [x] **Total card cap** — 5,000 cards per user enforced in `cards.create` and `ai.bulkInsertCards`.
-- [x] **AI generation rate limit** — 10 AI generations per hour per user; tracked in a dedicated `aiGenerations` table; clear error message on breach.
+- [ ] ~~**AI generation rate limit**~~ — Removed; users supply their own API key so server-side rate limiting is unnecessary.
 - [x] **Usage display** — Decks list stats bar shows current usage against caps (e.g. "3/50 decks", "142/5,000 cards"); highlights in warning color when above 80%.
 
 ---

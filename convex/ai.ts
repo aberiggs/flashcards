@@ -9,7 +9,6 @@ const MAX_CARDS = 50;
 const AUTO_MIN_CARDS = 1;
 const AUTO_MAX_CARDS = 50;
 
-
 export const bulkInsertCards = internalMutation({
   args: {
     deckId: v.id("decks"),
