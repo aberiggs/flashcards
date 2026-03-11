@@ -60,6 +60,10 @@ Take a look at what’s built and what’s next.
 - [x] **Session tracking** — `studySessions` and `studyEvents` tables record every study session and card result; used for streak and activity data.
 - [x] **Gamification API** — `gamificationStats` and `activityHistory` queries power the streak widget and activity heatmap.
 
+### Import / export
+
+- [x] **Per-deck export** — Export any deck as CSV (`front`, `back` columns, RFC 4180) or JSON (full backup with SM-2 state). Triggered from an "Export" button in the deck detail header; download happens entirely client-side via `Blob` + `URL.createObjectURL`. Internal IDs are stripped from the output.
+
 ### Search
 
 - [x] **Global search** — Cmd/Ctrl+K or header search bar searches across all decks and cards. Results grouped into Decks and Cards sections; deck results show name and card count, card results show front text and parent deck. Keyboard-navigable (↑/↓/Enter/Escape). 300 ms debounce. Collapses to an icon on mobile with a full-screen overlay on tap.
@@ -119,7 +123,7 @@ Take a look at what’s built and what’s next.
 
 ### Data & portability
 
-- [ ] **Export / import** — Export decks (e.g. CSV, JSON) for backup or portability; import from file or from other formats (e.g. Anki-style).
+- [ ] **Import** — Import decks from CSV (Anki-style) or JSON (app's own format); preview before inserting; header auto-detection.
 
 ### Other
 

@@ -17,6 +17,7 @@ import { CardPreview } from '@/components/features/decks/CardPreview';
 import { CardViewerModal } from '@/components/features/decks/CardViewerModal';
 import { CardEditForm } from '@/components/features/decks/CardEditForm';
 import { GenerateCardsModal } from '@/components/features/decks/GenerateCardsModal';
+import { ExportDeckButton } from '@/components/features/decks/ExportDeckButton';
 import Link from 'next/link';
 
 interface CardFormData {
@@ -289,6 +290,11 @@ export default function DeckDetailPage() {
                                     Study
                                 </span>
                             )}
+                            <ExportDeckButton
+                                deckName={deckWithCards.name}
+                                description={deckWithCards.description}
+                                cards={cards}
+                            />
                             <button
                                 type="button"
                                 onClick={() => setIsDeleteDeckModalOpen(true)}
