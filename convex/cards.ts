@@ -6,9 +6,7 @@ import {
   qualityFromConfidence,
   type ConfidenceLevel,
 } from "./sm2";
-
-const MAX_CARDS_PER_DECK = 500;
-const MAX_CARDS_PER_USER = 5_000;
+import { MAX_CARDS_PER_DECK, MAX_CARDS_PER_USER } from "./limits";
 
 // Get all cards for a deck
 export const getByDeck = query({
@@ -39,37 +37,6 @@ export const getByDeckInternal = internalQuery({
   },
 });
 
-// Internal: count cards in a single deck
-export const countByDeckInternal = internalQuery({
-  args: { deckId: v.id("decks") },
-  handler: async (ctx, args) => {
-    const cards = await ctx.db
-      .query("cards")
-      .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
-      .collect();
-    return cards.length;
-  },
-});
-
-// Internal: count all cards belonging to a user across all their decks
-export const countByUserInternal = internalQuery({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    const decks = await ctx.db
-      .query("decks")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
-    let total = 0;
-    for (const deck of decks) {
-      const cards = await ctx.db
-        .query("cards")
-        .withIndex("by_deck", (q) => q.eq("deckId", deck._id))
-        .collect();
-      total += cards.length;
-    }
-    return total;
-  },
-});
 
 // Get cards due for review in a deck (no nextReview or nextReview <= now)
 export const getDueByDeck = query({

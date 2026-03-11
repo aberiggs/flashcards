@@ -1,10 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { mutation } from "./_generated/server";
 import { v } from "convex/values";
-
-const MAX_DECKS_PER_USER = 50;
-const MAX_CARDS_PER_DECK = 500;
-const MAX_CARDS_PER_USER = 5_000;
+import { MAX_DECKS_PER_USER, MAX_CARDS_PER_DECK, MAX_CARDS_PER_USER } from "./limits";
 
 export const importDeck = mutation({
   args: {

@@ -1,41 +1,14 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { action, internalMutation, internalQuery } from "./_generated/server";
+import { action, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
+import { MAX_CARDS_PER_DECK, MAX_CARDS_PER_USER } from "./limits";
 
-const MAX_CARDS_PER_DECK = 500;
-const MAX_CARDS_PER_USER = 5_000;
-const MAX_AI_GENERATIONS_PER_HOUR = 10;
 const MAX_CARDS = 50;
 const AUTO_MIN_CARDS = 1;
 const AUTO_MAX_CARDS = 50;
 
-// Internal: log a completed AI generation for rate limiting
-export const logGeneration = internalMutation({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    await ctx.db.insert("aiGenerations", {
-      userId: args.userId,
-      timestamp: Date.now(),
-    });
-  },
-});
-
-// Internal: count AI generations in the last hour for a user
-export const countRecentGenerations = internalQuery({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    const oneHourAgo = Date.now() - 60 * 60 * 1000;
-    const rows = await ctx.db
-      .query("aiGenerations")
-      .withIndex("by_user_timestamp", (q) =>
-        q.eq("userId", args.userId).gte("timestamp", oneHourAgo)
-      )
-      .collect();
-    return rows.length;
-  },
-});
 
 export const bulkInsertCards = internalMutation({
   args: {
@@ -117,17 +90,6 @@ export const generateCards = action({
   ): Promise<Array<{ front: string; back: string }>> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
-
-    // Check AI generation rate limit
-    const recentGenerations = await ctx.runQuery(
-      internal.ai.countRecentGenerations,
-      { userId }
-    );
-    if (recentGenerations >= MAX_AI_GENERATIONS_PER_HOUR) {
-      throw new Error(
-        `AI generation limit reached (${MAX_AI_GENERATIONS_PER_HOUR} per hour). Please try again later.`
-      );
-    }
 
     const settings = await ctx.runQuery(internal.settings.getInternal, {
       userId,
@@ -240,9 +202,6 @@ ${cardsSummary}`;
       )
       .slice(0, MAX_CARDS)
       .map((c) => ({ front: c.front.trim(), back: c.back.trim() }));
-
-    // Log this generation for rate limiting
-    await ctx.runMutation(internal.ai.logGeneration, { userId });
 
     return filtered;
   },

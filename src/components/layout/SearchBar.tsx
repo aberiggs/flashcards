@@ -301,7 +301,7 @@ export function SearchBar() {
 
   // Shared input element
   const inputEl = (
-    <div className="relative flex items-center" ref={containerRef}>
+    <div className="relative flex items-center">
       <div className="relative flex items-center w-full">
         <Search
           className="absolute left-2.5 w-4 h-4 text-text-tertiary pointer-events-none"

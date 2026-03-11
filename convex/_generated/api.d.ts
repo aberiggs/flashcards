@@ -14,6 +14,7 @@ import type * as cards from "../cards.js";
 import type * as decks from "../decks.js";
 import type * as http from "../http.js";
 import type * as import_ from "../import.js";
+import type * as limits from "../limits.js";
 import type * as search from "../search.js";
 import type * as sessions from "../sessions.js";
 import type * as settings from "../settings.js";
@@ -33,6 +34,7 @@ declare const fullApi: ApiFromModules<{
   decks: typeof decks;
   http: typeof http;
   import: typeof import_;
+  limits: typeof limits;
   search: typeof search;
   sessions: typeof sessions;
   settings: typeof settings;

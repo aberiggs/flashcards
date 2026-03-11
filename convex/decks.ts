@@ -1,8 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-
-const MAX_DECKS_PER_USER = 50;
+import { MAX_DECKS_PER_USER } from "./limits";
 
 // List all decks for the authenticated user, with stats
 export const list = query({
@@ -170,12 +169,10 @@ export const remove = mutation({
     }
 
     // Delete all study sessions for this deck (and their events)
-    const sessions = await ctx.db
+    const deckSessions = await ctx.db
       .query("studySessions")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .withIndex("by_deck", (q) => q.eq("deckId", args.id))
       .collect();
-
-    const deckSessions = sessions.filter((s) => s.deckId === args.id);
 
     for (const session of deckSessions) {
       // Delete all events for this session

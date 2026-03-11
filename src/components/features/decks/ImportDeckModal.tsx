@@ -39,6 +39,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
     const [deckName, setDeckName] = useState('');
     const [nameError, setNameError] = useState('');
     const [isDragging, setIsDragging] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,6 +52,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
         setDeckName('');
         setNameError('');
         setIsDragging(false);
+        setIsImporting(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -105,6 +107,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
         }
 
         setNameError('');
+        setIsImporting(true);
         setStep('importing');
 
         try {
@@ -120,6 +123,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
             onClose();
         } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Import failed.');
+            setIsImporting(false);
             setStep('preview');
         }
     };
@@ -151,6 +155,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
                     parsed={parsed}
                     deckName={deckName}
                     nameError={nameError}
+                    isLoading={isImporting}
                     onNameChange={(v) => { setDeckName(v); if (nameError) setNameError(''); }}
                     onBack={reset}
                     onImport={() => void handleImport()}
@@ -267,6 +272,7 @@ interface PreviewStepProps {
     parsed: ParsedDeck;
     deckName: string;
     nameError: string;
+    isLoading: boolean;
     onNameChange: (v: string) => void;
     onBack: () => void;
     onImport: () => void;
@@ -276,6 +282,7 @@ function PreviewStep({
     parsed,
     deckName,
     nameError,
+    isLoading,
     onNameChange,
     onBack,
     onImport,
@@ -339,9 +346,10 @@ function PreviewStep({
                 <button
                     type="button"
                     onClick={onImport}
-                    className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2"
+                    disabled={isLoading}
+                    className="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    Import {parsed.cards.length} card{parsed.cards.length !== 1 ? 's' : ''}
+                    {isLoading ? 'Importing…' : `Import ${parsed.cards.length} card${parsed.cards.length !== 1 ? 's' : ''}`}
                 </button>
             </div>
         </div>
