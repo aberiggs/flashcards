@@ -1,7 +1,0 @@
-front,back
-"Hello, world — what does this phrase test?","Commas inside a field: the field must be quoted per RFC 4180"
-"What does a ""quoted"" word look like in CSV?","Double-quotes are escaped by doubling them: "" becomes a literal quote character"
-"Multi-line front:
-Line two of the question","Multi-line fields must also be quoted — newlines inside quotes are valid RFC 4180"
-Simple unquoted front,Simple unquoted back — no special characters here
-"Front with both, a comma and a ""quote""","Back with both, a comma and a ""quote"" — the trickiest case"

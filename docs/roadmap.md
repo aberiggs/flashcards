@@ -63,6 +63,7 @@ Take a look at what’s built and what’s next.
 ### Import / export
 
 - [x] **Per-deck export** — Export any deck as CSV (`front`, `back` columns, RFC 4180) or JSON (full backup with SM-2 state). Triggered from an "Export" button in the deck detail header; download happens entirely client-side via `Blob` + `URL.createObjectURL`. Internal IDs are stripped from the output.
+- [x] **Import** — Import decks from CSV/TXT or JSON via an "Import" button on the decks page. Header row auto-detected; supports common column-name synonyms (`front`/`question`/`term`, `back`/`answer`/`definition`). JSON import restores full SM-2 state. Preview step shows card count and first 3 cards with an editable deck name before confirming. Subject to all resource caps (deck and card limits).
 
 ### Search
 
@@ -121,9 +122,6 @@ Take a look at what’s built and what’s next.
 - [ ] **Per-deck / per-card stats** — Accuracy, streak, and time spent per deck or per card (beyond current aggregate dashboard).
 - [ ] **Rich card components** — Highlighted terms linked to explanations; concept web / related-terms view.
 
-### Data & portability
-
-- [ ] **Import** — Import decks from CSV (Anki-style) or JSON (app's own format); preview before inserting; header auto-detection.
 
 ### Other
 
