@@ -6,6 +6,7 @@ import {
   qualityFromConfidence,
   type ConfidenceLevel,
 } from "./sm2";
+import { MAX_CARDS_PER_DECK, MAX_CARDS_PER_USER } from "./limits";
 
 // Get all cards for a deck
 export const getByDeck = query({
@@ -99,6 +100,41 @@ export const create = mutation({
 
     const deck = await ctx.db.get(args.deckId);
     if (!deck || deck.userId !== userId) throw new Error("Deck not found");
+
+    // Check per-deck cap
+    const deckCardCount = await ctx.db
+      .query("cards")
+      .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
+      .collect()
+      .then((c) => c.length);
+
+    if (deckCardCount >= MAX_CARDS_PER_DECK) {
+      throw new Error(
+        `This deck has reached the limit of ${MAX_CARDS_PER_DECK} cards. Split your content across multiple decks for better organization.`
+      );
+    }
+
+    // Check total user cap
+    const decks = await ctx.db
+      .query("decks")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    let totalCards = 0;
+    for (const d of decks) {
+      const count = await ctx.db
+        .query("cards")
+        .withIndex("by_deck", (q) => q.eq("deckId", d._id))
+        .collect()
+        .then((c) => c.length);
+      totalCards += count;
+      if (totalCards >= MAX_CARDS_PER_USER) break;
+    }
+
+    if (totalCards >= MAX_CARDS_PER_USER) {
+      throw new Error(
+        `You've reached the limit of ${MAX_CARDS_PER_USER.toLocaleString()} total cards. Remove unused cards to make room.`
+      );
+    }
 
     // Update deck's updatedAt
     await ctx.db.patch(args.deckId, { updatedAt: Date.now() });

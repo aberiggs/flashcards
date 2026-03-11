@@ -6,10 +6,12 @@ import { api } from '../../../../convex/_generated/api';
 import { useTheme } from '@/components/theme/ThemeProvider';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { AppHeader } from '@/components/layout/AppHeader';
+import { useToast } from '@/components/ui/Toast';
 import { Key, Trash2 } from 'lucide-react';
 
 export default function OptionsPage() {
     const { theme, resolvedTheme } = useTheme();
+    const { toast } = useToast();
     const settings = useQuery(api.settings.get);
     const saveApiKeyMutation = useMutation(api.settings.saveApiKey);
     const removeApiKeyMutation = useMutation(api.settings.removeApiKey);
@@ -22,13 +24,21 @@ export default function OptionsPage() {
         try {
             await saveApiKeyMutation({ apiKey: apiKeyInput.trim() });
             setApiKeyInput('');
+            toast.success('API key saved');
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to save API key');
         } finally {
             setSaving(false);
         }
     };
 
     const handleRemoveKey = async () => {
-        await removeApiKeyMutation();
+        try {
+            await removeApiKeyMutation();
+            toast.success('API key removed');
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to remove API key');
+        }
     };
 
     return (

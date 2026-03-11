@@ -5,8 +5,3 @@
 //   Doc<"cards"> = a card document
 //   Id<"decks"> = a deck ID
 //   Id<"cards"> = a card ID
-
-export type DeckStats = {
-    cardCount: number;
-    lastStudied?: number;
-}

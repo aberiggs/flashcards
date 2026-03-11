@@ -1,3 +1,5 @@
+'use client';
+
 import { Plus, Layers, Clock, CalendarClock } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 

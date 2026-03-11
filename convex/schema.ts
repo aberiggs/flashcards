@@ -35,7 +35,8 @@ export default defineSchema({
     cardsIncorrect: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_user_started", ["userId", "startedAt"]),
+    .index("by_user_started", ["userId", "startedAt"])
+    .index("by_deck", ["deckId"]),
 
   studyEvents: defineTable({
     userId: v.id("users"),
@@ -52,4 +53,5 @@ export default defineSchema({
     userId: v.id("users"),
     openAiApiKey: v.optional(v.string()),
   }).index("by_user", ["userId"]),
+
 });

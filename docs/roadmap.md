@@ -60,12 +60,37 @@ Take a look at what’s built and what’s next.
 - [x] **Session tracking** — `studySessions` and `studyEvents` tables record every study session and card result; used for streak and activity data.
 - [x] **Gamification API** — `gamificationStats` and `activityHistory` queries power the streak widget and activity heatmap.
 
+### Import / export
+
+- [x] **Per-deck export** — Export any deck as CSV (`front`, `back` columns, RFC 4180) or JSON (full backup with SM-2 state). Triggered from an "Export" button in the deck detail header; download happens entirely client-side via `Blob` + `URL.createObjectURL`. Internal IDs are stripped from the output.
+- [x] **Import** — Import decks from CSV/TXT or JSON via an "Import" button on the decks page. Header row auto-detected; supports common column-name synonyms (`front`/`question`/`term`, `back`/`answer`/`definition`). JSON import restores full SM-2 state. Preview step shows card count and first 3 cards with an editable deck name before confirming. Subject to all resource caps (deck and card limits).
+
+### Search
+
+- [x] **Global search** — Cmd/Ctrl+K or header search bar searches across all decks and cards. Results grouped into Decks and Cards sections; deck results show name and card count, card results show front text and parent deck. Keyboard-navigable (↑/↓/Enter/Escape). 300 ms debounce. Collapses to an icon on mobile with a full-screen overlay on tap.
+
 ### Landing & polish
 
 - [x] **Landing page** — Unauthenticated page with tagline, feature highlights, and sign-in CTA.
 - [x] **Chart theming** — Chart colors adapt to light/dark theme via CSS variables.
 - [x] **Empty states** — Dashboard widgets show helpful messages when there is no data.
 - [x] **Markdown in cards** — Card front and back content renders as Markdown (paragraphs, bold, italic, lists, inline code).
+- [x] **Toast notifications** — Global toast system for mutation feedback (success/error/info/warning); auto-dismisses after 4 s, dismissible on click. Wired to all key actions: create/delete deck, add/edit/delete card, save API key, AI generation.
+
+### Code quality
+
+- [x] **Error handling** — try/catch on all mutations with error toasts; delete buttons disabled during in-flight requests to prevent double-submit.
+- [x] **Cascade delete** — Deleting a deck now also removes all associated study sessions and events.
+- [x] **Session ownership** — `recordEvent` verifies the session belongs to the caller before inserting.
+- [x] **Type hygiene** — Removed `any` from AI card mapping; removed unused `DeckStats` type; extracted shared `getMemoryStage` utility to `src/lib/memoryStage.ts`.
+
+### Resource caps
+
+- [x] **Deck cap** — 50 decks per user enforced in `decks.create`; clear error message on breach.
+- [x] **Per-deck card cap** — 500 cards per deck enforced in `cards.create` and `ai.bulkInsertCards`; clear error message on breach.
+- [x] **Total card cap** — 5,000 cards per user enforced in `cards.create` and `ai.bulkInsertCards`.
+- [ ] ~~**AI generation rate limit**~~ — Removed; users supply their own API key so server-side rate limiting is unnecessary.
+- [x] **Usage display** — Decks list stats bar shows current usage against caps (e.g. "3/50 decks", "142/5,000 cards"); highlights in warning color when above 80%.
 
 ---
 
@@ -73,24 +98,21 @@ Take a look at what’s built and what’s next.
 
 ### Auth
 
-- [ ] **Beta gate** — Only allow access to the app for beta testers (until the app is ready for public release).
-
 ### Flashcard & study
 
 - [ ] **Card browser with search** — Browse and search cards outside the SRS study flow (e.g. by deck, text, due status). Better edit UX (inline or side-panel edit) instead of the current modal-on-edit-page flow; good for review and bulk edits.
-- [ ] **Search** — Search across decks or within a deck (e.g. by front/back text); powers the card browser and filters.
 - [ ] **Keyboard shortcuts (study)** — e.g. space to reveal, 1/2/3 for confidence, arrows to navigate; faster flow for power users.
 - [ ] **Deck tags and filtering** — Add tags to decks for easier organization and filtering.
-- [ ] **Cram mode** - Changes from the SRS system to a more aggressive mode of reviewing cards.
-
 ### Spaced repetition & scheduling
-
-- [ ] **Configurable intervals** — User settings for how aggressively or gently to space reviews (e.g. interval multiplier, max interval, steps for learning).
 
 ### AI
 
 - [ ] **AI-assisted explanations** — AI-assisted explanations of concepts and terms. It may also suggest additional resources or lessons.
 - [ ] **Card generation templates** — Have prompt templates that can be used to help in generating cards that are consistent with a certain theme.
+
+### Flashcard & study
+
+- [ ] **Card level badges & sorting** — Show memory stage badges (New, Learning, Reviewing, Mastered) on card tiles in the deck view. Add sort options: by stage, next review date, date added, or alphabetical.
 
 ### Flashcard features
 
@@ -100,9 +122,6 @@ Take a look at what’s built and what’s next.
 - [ ] **Per-deck / per-card stats** — Accuracy, streak, and time spent per deck or per card (beyond current aggregate dashboard).
 - [ ] **Rich card components** — Highlighted terms linked to explanations; concept web / related-terms view.
 
-### Data & portability
-
-- [ ] **Export / import** — Export decks (e.g. CSV, JSON) for backup or portability; import from file or from other formats (e.g. Anki-style).
 
 ### Other
 

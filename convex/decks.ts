@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { MAX_DECKS_PER_USER } from "./limits";
 
 // List all decks for the authenticated user, with stats
 export const list = query({
@@ -102,6 +103,17 @@ export const create = mutation({
     const trimmedName = args.name.trim();
     if (!trimmedName) throw new Error("Deck name cannot be empty");
 
+    const existingDecks = await ctx.db
+      .query("decks")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    if (existingDecks.length >= MAX_DECKS_PER_USER) {
+      throw new Error(
+        `You've reached the limit of ${MAX_DECKS_PER_USER} decks. Delete an existing deck to create a new one.`
+      );
+    }
+
     return await ctx.db.insert("decks", {
       name: trimmedName,
       description: args.description,
@@ -136,7 +148,7 @@ export const update = mutation({
   },
 });
 
-// Delete a deck and all its cards
+// Delete a deck and all its cards, sessions, and events
 export const remove = mutation({
   args: { id: v.id("decks") },
   handler: async (ctx, args) => {
@@ -154,6 +166,24 @@ export const remove = mutation({
 
     for (const card of cards) {
       await ctx.db.delete(card._id);
+    }
+
+    // Delete all study sessions for this deck (and their events)
+    const deckSessions = await ctx.db
+      .query("studySessions")
+      .withIndex("by_deck", (q) => q.eq("deckId", args.id))
+      .collect();
+
+    for (const session of deckSessions) {
+      // Delete all events for this session
+      const events = await ctx.db
+        .query("studyEvents")
+        .withIndex("by_session", (q) => q.eq("sessionId", session._id))
+        .collect();
+      for (const event of events) {
+        await ctx.db.delete(event._id);
+      }
+      await ctx.db.delete(session._id);
     }
 
     // Delete the deck itself

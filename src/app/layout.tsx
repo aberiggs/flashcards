@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "../components/theme/ThemeProvider";
+import { ToastProvider } from "../components/ui/Toast";
 import ConvexClientProvider from "./ConvexClientProvider";
 
 const geistSans = Geist({
@@ -34,7 +35,9 @@ export default function RootLayout({
         >
           <ConvexClientProvider>
             <ThemeProvider>
-              {children}
+              <ToastProvider>
+                {children}
+              </ToastProvider>
             </ThemeProvider>
           </ConvexClientProvider>
           <Analytics />

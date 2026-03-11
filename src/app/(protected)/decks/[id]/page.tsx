@@ -7,6 +7,8 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../../convex/_generated/api';
 import type { Id } from '../../../../../convex/_generated/dataModel';
 import { Modal } from '@/components/ui/Modal';
+import { useToast } from '@/components/ui/Toast';
+import { getMemoryStage } from '@/lib/memoryStage';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { MemoryStagesWidget } from '@/components/features/dashboard/MemoryStagesWidget';
@@ -15,6 +17,7 @@ import { CardPreview } from '@/components/features/decks/CardPreview';
 import { CardViewerModal } from '@/components/features/decks/CardViewerModal';
 import { CardEditForm } from '@/components/features/decks/CardEditForm';
 import { GenerateCardsModal } from '@/components/features/decks/GenerateCardsModal';
+import { ExportDeckButton } from '@/components/features/decks/ExportDeckButton';
 import Link from 'next/link';
 
 interface CardFormData {
@@ -31,6 +34,8 @@ export default function DeckDetailPage() {
         typeof Intl !== "undefined"
             ? Intl.DateTimeFormat().resolvedOptions().timeZone
             : "UTC";
+
+    const { toast } = useToast();
 
     const deckWithCards = useQuery(api.decks.getWithCards, { id: deckId });
     const deckStats = useQuery(api.stats.deckStats, { deckId, timeZone });
@@ -50,18 +55,14 @@ export default function DeckDetailPage() {
     const [isDeleteCardModalOpen, setIsDeleteCardModalOpen] = useState(false);
     const [cardToDeleteId, setCardToDeleteId] = useState<Id<"cards"> | null>(null);
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+    const [isDeletingCard, setIsDeletingCard] = useState(false);
+    const [isDeletingDeck, setIsDeletingDeck] = useState(false);
     const [viewingCardIndex, setViewingCardIndex] = useState<number | null>(null);
     const [showingCardInfo, setShowingCardInfo] = useState(false);
     const [infoCardIndex, setInfoCardIndex] = useState(0);
 
     const nameInputRef = useRef<HTMLInputElement>(null);
 
-    function getMemoryStage(repetitions: number): 'New' | 'Learning' | 'Reviewing' | 'Mastered' {
-        if (repetitions === 0) return 'New';
-        if (repetitions <= 2) return 'Learning';
-        if (repetitions <= 5) return 'Reviewing';
-        return 'Mastered';
-    }
     const descInputRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -125,7 +126,13 @@ export default function DeckDetailPage() {
             return;
         }
         if (name !== deckWithCards.name) {
-            await updateDeckMutation({ id: deckId, name, description: deckWithCards.description ?? '' });
+            try {
+                await updateDeckMutation({ id: deckId, name, description: deckWithCards.description ?? '' });
+                toast.success('Deck name updated');
+            } catch (err) {
+                setDeckName(deckWithCards.name);
+                toast.error(err instanceof Error ? err.message : 'Failed to update deck name');
+            }
         }
     };
 
@@ -133,44 +140,74 @@ export default function DeckDetailPage() {
         setEditingDescription(false);
         const description = deckDescription.trim();
         if (description !== (deckWithCards.description ?? '')) {
-            await updateDeckMutation({ id: deckId, name: deckWithCards.name, description: description || undefined });
+            try {
+                await updateDeckMutation({ id: deckId, name: deckWithCards.name, description: description || undefined });
+                toast.success('Description updated');
+            } catch (err) {
+                setDeckDescription(deckWithCards.description ?? '');
+                toast.error(err instanceof Error ? err.message : 'Failed to update description');
+            }
         }
     };
 
     const handleAddCard = async () => {
         if (addForm.front.trim() && addForm.back.trim()) {
-            await addCardMutation({
-                deckId,
-                front: addForm.front.trim(),
-                back: addForm.back.trim(),
-            });
-            setAddForm({ front: '', back: '' });
-            setIsAddModalOpen(false);
+            try {
+                await addCardMutation({
+                    deckId,
+                    front: addForm.front.trim(),
+                    back: addForm.back.trim(),
+                });
+                toast.success('Card added');
+                setAddForm({ front: '', back: '' });
+                setIsAddModalOpen(false);
+            } catch (err) {
+                toast.error(err instanceof Error ? err.message : 'Failed to add card');
+            }
         }
     };
 
     const handleEditCard = async (card: (typeof cards)[number], front: string, back: string) => {
         if (front.trim() && back.trim()) {
-            await updateCardMutation({
-                id: card._id,
-                front: front.trim(),
-                back: back.trim(),
-            });
+            try {
+                await updateCardMutation({
+                    id: card._id,
+                    front: front.trim(),
+                    back: back.trim(),
+                });
+                toast.success('Card saved');
+            } catch (err) {
+                toast.error(err instanceof Error ? err.message : 'Failed to save card');
+            }
         }
     };
 
     const handleDeleteCardConfirm = async () => {
         if (cardToDeleteId) {
-            await deleteCardMutation({ id: cardToDeleteId });
-            setCardToDeleteId(null);
-            setIsDeleteCardModalOpen(false);
+            setIsDeletingCard(true);
+            try {
+                await deleteCardMutation({ id: cardToDeleteId });
+                toast.success('Card deleted');
+                setCardToDeleteId(null);
+                setIsDeleteCardModalOpen(false);
+            } catch (err) {
+                toast.error(err instanceof Error ? err.message : 'Failed to delete card');
+            } finally {
+                setIsDeletingCard(false);
+            }
         }
     };
 
     const handleDeleteDeckConfirm = async () => {
-        await deleteDeckMutation({ id: deckId });
-        setIsDeleteDeckModalOpen(false);
-        router.push('/decks');
+        setIsDeletingDeck(true);
+        try {
+            await deleteDeckMutation({ id: deckId });
+            setIsDeleteDeckModalOpen(false);
+            router.push('/decks');
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to delete deck');
+            setIsDeletingDeck(false);
+        }
     };
 
     const openDeleteCardModal = (cardId: Id<"cards">) => {
@@ -253,6 +290,11 @@ export default function DeckDetailPage() {
                                     Study
                                 </span>
                             )}
+                            <ExportDeckButton
+                                deckName={deckWithCards.name}
+                                description={deckWithCards.description}
+                                cards={cards}
+                            />
                             <button
                                 type="button"
                                 onClick={() => setIsDeleteDeckModalOpen(true)}
@@ -436,9 +478,10 @@ export default function DeckDetailPage() {
                     <button
                         type="button"
                         onClick={handleDeleteCardConfirm}
-                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer"
+                        disabled={isDeletingCard}
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        Delete
+                        {isDeletingCard ? 'Deleting…' : 'Delete'}
                     </button>
                 </div>
             </Modal>
@@ -463,9 +506,10 @@ export default function DeckDetailPage() {
                     <button
                         type="button"
                         onClick={handleDeleteDeckConfirm}
-                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer"
+                        disabled={isDeletingDeck}
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-error text-white hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        Delete deck
+                        {isDeletingDeck ? 'Deleting…' : 'Delete deck'}
                     </button>
                 </div>
             </Modal>

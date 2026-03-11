@@ -5,6 +5,7 @@ import { useQuery, useAction } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { Modal } from '@/components/ui/Modal';
+import { useToast } from '@/components/ui/Toast';
 import { Sparkles, Loader2, AlertCircle, RotateCcw, Check, X, Pencil, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { FlipCard } from './FlipCard';
@@ -31,6 +32,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
   const settings = useQuery(api.settings.get);
   const generateAction = useAction(api.ai.generateCards);
   const insertAction = useAction(api.ai.insertGeneratedCards);
+  const { toast } = useToast();
 
   const [phase, setPhase] = useState<Phase>('input');
   const [mode, setMode] = useState<'topic' | 'notes'>('topic');
@@ -275,7 +277,14 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
                 <div className="shrink-0 flex justify-end px-5 py-3 border-t border-border-primary">
                   <button
                     type="button"
-                    onClick={handleClose}
+                    onClick={() => {
+                      if (approvedCards.length > 0) {
+                        toast.success(
+                          `${approvedCards.length} card${approvedCards.length !== 1 ? 's' : ''} added to deck`
+                        );
+                      }
+                      handleClose();
+                    }}
                     className="px-4 py-2 text-sm font-medium bg-accent-primary text-text-inverse rounded-lg hover:bg-accent-primary-hover transition-colors cursor-pointer"
                   >
                     Done

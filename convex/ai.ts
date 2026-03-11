@@ -2,13 +2,67 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { action, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
+import { MAX_CARDS_PER_DECK, MAX_CARDS_PER_USER } from "./limits";
+
+const MAX_CARDS = 50;
+const AUTO_MIN_CARDS = 1;
+const AUTO_MAX_CARDS = 50;
 
 export const bulkInsertCards = internalMutation({
   args: {
     deckId: v.id("decks"),
+    userId: v.id("users"),
     cards: v.array(v.object({ front: v.string(), back: v.string() })),
   },
   handler: async (ctx, args) => {
+    // Check per-deck cap
+    const existingInDeck = await ctx.db
+      .query("cards")
+      .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
+      .collect()
+      .then((c) => c.length);
+
+    if (existingInDeck + args.cards.length > MAX_CARDS_PER_DECK) {
+      const available = MAX_CARDS_PER_DECK - existingInDeck;
+      if (available <= 0) {
+        throw new Error(
+          `This deck has reached the limit of ${MAX_CARDS_PER_DECK} cards. Split your content across multiple decks for better organization.`
+        );
+      }
+      throw new Error(
+        `Adding ${args.cards.length} cards would exceed this deck's limit of ${MAX_CARDS_PER_DECK}. Only ${available} more card${available === 1 ? "" : "s"} can be added.`
+      );
+    }
+
+    // Check total user cap
+    const decks = await ctx.db
+      .query("decks")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    let totalCards = 0;
+    for (const deck of decks) {
+      const count = await ctx.db
+        .query("cards")
+        .withIndex("by_deck", (q) => q.eq("deckId", deck._id))
+        .collect()
+        .then((c) => c.length);
+      totalCards += count;
+      if (totalCards >= MAX_CARDS_PER_USER) break;
+    }
+
+    if (totalCards + args.cards.length > MAX_CARDS_PER_USER) {
+      const available = MAX_CARDS_PER_USER - totalCards;
+      if (available <= 0) {
+        throw new Error(
+          `You've reached the limit of ${MAX_CARDS_PER_USER.toLocaleString()} total cards. Remove unused cards to make room.`
+        );
+      }
+      throw new Error(
+        `Adding ${args.cards.length} cards would exceed your total limit of ${MAX_CARDS_PER_USER.toLocaleString()} cards. Only ${available} more card${available === 1 ? "" : "s"} can be added.`
+      );
+    }
+
     const now = Date.now();
     for (const card of args.cards) {
       await ctx.db.insert("cards", {
@@ -21,10 +75,6 @@ export const bulkInsertCards = internalMutation({
     await ctx.db.patch(args.deckId, { updatedAt: now });
   },
 });
-
-const MAX_CARDS = 50;
-const AUTO_MIN_CARDS = 1;
-const AUTO_MAX_CARDS = 50;
 
 export const generateCards = action({
   args: {
@@ -79,9 +129,12 @@ Return ONLY valid JSON in this exact format, with no markdown fencing or explana
     if (existingCards && existingCards.length > 0) {
       const cardsSummary = existingCards
         .slice(0, 20)
-        .map((card: any) => `Q: ${card.front.slice(0, 80)}${card.front.length > 80 ? '...' : ''} | A: ${card.back.slice(0, 80)}${card.back.length > 80 ? '...' : ''}`)
-        .join('\n');
-      
+        .map(
+          (card: Doc<"cards">) =>
+            `Q: ${card.front.slice(0, 80)}${card.front.length > 80 ? "..." : ""} | A: ${card.back.slice(0, 80)}${card.back.length > 80 ? "..." : ""}`
+        )
+        .join("\n");
+
       systemPrompt += `
 
 IMPORTANT: Do NOT generate cards that are effectively the same as the existing cards below.
@@ -131,16 +184,14 @@ ${cardsSummary}`;
     try {
       cards = JSON.parse(jsonStr);
     } catch {
-      throw new Error(
-        "AI returned invalid JSON. Try rephrasing your prompt."
-      );
+      throw new Error("AI returned invalid JSON. Try rephrasing your prompt.");
     }
 
     if (!Array.isArray(cards)) {
       throw new Error("AI returned unexpected format. Try again.");
     }
 
-    return cards
+    const filtered = cards
       .filter(
         (c) =>
           typeof c.front === "string" &&
@@ -150,6 +201,8 @@ ${cardsSummary}`;
       )
       .slice(0, MAX_CARDS)
       .map((c) => ({ front: c.front.trim(), back: c.back.trim() }));
+
+    return filtered;
   },
 });
 
@@ -164,6 +217,7 @@ export const insertGeneratedCards = action({
 
     await ctx.runMutation(internal.ai.bulkInsertCards, {
       deckId: args.deckId,
+      userId,
       cards: args.cards,
     });
   },
