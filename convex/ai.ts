@@ -5,9 +5,9 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { MAX_CARDS_PER_DECK, MAX_CARDS_PER_USER } from "./limits";
 
-const MAX_CARDS = 50;
+const MAX_CARDS = 100;
 const AUTO_MIN_CARDS = 1;
-const AUTO_MAX_CARDS = 50;
+const AUTO_MAX_CARDS = 100;
 
 export const bulkInsertCards = internalMutation({
   args: {
@@ -156,7 +156,7 @@ ${cardsSummary}`;
           { role: "user", content: args.prompt },
         ],
         temperature: 0.7,
-        max_tokens: 4000,
+        max_tokens: 8000,
       }),
     });
 

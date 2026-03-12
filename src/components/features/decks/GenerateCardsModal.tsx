@@ -26,7 +26,7 @@ interface ReviewCard {
   decision?: boolean;
 }
 
-const MAX_CARDS = 50;
+const MAX_CARDS = 100;
 
 export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsModalProps) {
   const settings = useQuery(api.settings.get);
@@ -72,7 +72,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
     if (autoMode) return null;
     const parsed = parseInt(countInput, 10);
     if (isNaN(parsed) || parsed < 1) {
-      setCountError('Enter a number between 1 and 50.');
+      setCountError('Enter a number between 1 and 100.');
       return false;
     }
     if (parsed > MAX_CARDS) {
@@ -503,7 +503,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
             </div>
             {autoMode && (
               <p className="mt-2 text-xs text-text-tertiary">
-                AI will analyze your content and decide how many cards to generate (up to 50).
+                AI will analyze your content and decide how many cards to generate (up to 100).
               </p>
             )}
             {countError && (
