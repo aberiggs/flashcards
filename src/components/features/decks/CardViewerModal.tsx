@@ -151,7 +151,7 @@ export function CardViewerModal({
                                 <button
                                     type="button"
                                     onClick={closeEdit}
-                                    className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                                    className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                                     aria-label="Back to card"
                                 >
                                     <ChevronLeft className="w-4 h-4" aria-hidden />
@@ -163,7 +163,7 @@ export function CardViewerModal({
                                 <button
                                     type="button"
                                     onClick={onCancelInfo}
-                                    className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                                    className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                                     aria-label="Back to card"
                                 >
                                     <ChevronLeft className="w-4 h-4" aria-hidden />
@@ -174,11 +174,11 @@ export function CardViewerModal({
                                 <span className="text-sm text-text-tertiary font-medium">
                                     {safeIndex + 1} / {cards.length}
                                 </span>
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center">
                                     <button
                                         type="button"
                                         onClick={() => onShowInfo?.(safeIndex)}
-                                        className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                                         aria-label="Card info"
                                     >
                                         <Info className="w-4 h-4" aria-hidden />
@@ -186,7 +186,7 @@ export function CardViewerModal({
                                     <button
                                         type="button"
                                         onClick={openEdit}
-                                        className="p-2 rounded-lg text-text-secondary hover:text-accent-primary hover:bg-accent-primary/10 transition-colors cursor-pointer"
+                                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-secondary hover:text-accent-primary hover:bg-accent-primary/10 transition-colors cursor-pointer"
                                         aria-label="Edit card"
                                     >
                                         <Pencil className="w-4 h-4" aria-hidden />
@@ -194,7 +194,7 @@ export function CardViewerModal({
                                     <button
                                         type="button"
                                         onClick={() => onDelete(card._id)}
-                                        className="p-2 rounded-lg text-text-secondary hover:text-accent-error hover:bg-accent-error/10 transition-colors cursor-pointer"
+                                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-secondary hover:text-accent-error hover:bg-accent-error/10 transition-colors cursor-pointer"
                                         aria-label="Delete card"
                                     >
                                         <Trash2 className="w-4 h-4" aria-hidden />
@@ -203,7 +203,7 @@ export function CardViewerModal({
                                     <button
                                         type="button"
                                         onClick={onClose}
-                                        className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                                        className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                                         aria-label="Close"
                                     >
                                         <X className="w-4 h-4" aria-hidden />

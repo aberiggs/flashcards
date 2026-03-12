@@ -249,7 +249,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
                   <button
                     type="button"
                     onClick={handleClose}
-                    className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                    className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                     aria-label="Close"
                   >
                     <X className="w-4 h-4" aria-hidden />
@@ -299,11 +299,11 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
                   <span className="text-sm text-text-tertiary font-medium">
                     {reviewIndex + 1} / {reviewCards.length}
                   </span>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center">
                     <button
                       type="button"
                       onClick={isEditing ? closeEdit : openEdit}
-                      className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                      className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition-colors cursor-pointer ${
                         isEditing
                           ? 'text-accent-primary bg-accent-primary/10'
                           : 'text-text-secondary hover:text-accent-primary hover:bg-accent-primary/10'
@@ -316,7 +316,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
                     <button
                       type="button"
                       onClick={handleClose}
-                      className="p-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
+                      className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer"
                       aria-label="Close"
                     >
                       <X className="w-4 h-4" aria-hidden />
@@ -479,10 +479,10 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
             <label className="block text-sm font-medium text-text-secondary mb-1.5">
               Number of cards
             </label>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <button
                 onClick={() => setAutoMode(true)}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors cursor-pointer ${
+                className={`px-3 py-2 text-sm rounded-md transition-colors cursor-pointer ${
                   autoMode
                     ? 'bg-accent-primary text-text-inverse'
                     : 'bg-surface-secondary text-text-secondary border border-border-primary hover:bg-surface-tertiary'
@@ -502,7 +502,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
                     setAutoMode(false);
                     handleCountInputChange(e.target.value);
                   }}
-                  className={`w-20 bg-surface-secondary border rounded-md px-2 py-1.5 text-sm text-text-primary text-center focus:outline-none focus:ring-2 focus:ring-accent-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
+                  className={`w-20 bg-surface-secondary border rounded-md px-2 py-2 text-sm text-text-primary text-center focus:outline-none focus:ring-2 focus:ring-accent-primary transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                     !autoMode
                       ? 'border-accent-primary ring-1 ring-accent-primary'
                       : 'border-border-primary'

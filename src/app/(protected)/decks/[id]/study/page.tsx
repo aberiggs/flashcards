@@ -301,43 +301,35 @@ export default function StudyPage() {
                                     <p className="text-text-tertiary font-medium">
                                         How did you do?
                                     </p>
-                                    <div className="flex flex-wrap items-stretch gap-4 justify-center">
-                                        <div className="flex gap-4">
-                                            <button
-                                                onClick={() => handleConfidence('wrong')}
-                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-status-error-bg text-status-error-text border border-status-error-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
-                                            >
-                                                <X className="w-5 h-5 shrink-0" aria-hidden />
-                                                <span className="font-medium">Wrong</span>
-                                            </button>
-                                            <button
-                                                onClick={() => handleConfidence('close')}
-                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-status-close-bg text-status-close-text border border-status-close-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
-                                            >
-                                                <AlertCircle className="w-5 h-5 shrink-0" aria-hidden />
-                                                <span className="font-medium">Close</span>
-                                            </button>
-                                        </div>
-                                        <div
-                                            className="hidden sm:block w-px bg-border-primary self-stretch shrink-0"
-                                            aria-hidden
-                                        />
-                                        <div className="flex gap-4">
-                                            <button
-                                                onClick={() => handleConfidence('hard')}
-                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-status-warning-bg text-status-warning-text border border-status-warning-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
-                                            >
-                                                <HelpCircle className="w-5 h-5 shrink-0" aria-hidden />
-                                                <span className="font-medium">Hard</span>
-                                            </button>
-                                            <button
-                                                onClick={() => handleConfidence('easy')}
-                                                className="flex flex-col items-center justify-center gap-2 w-28 bg-status-success-bg text-status-success-text border border-status-success-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
-                                            >
-                                                <Check className="w-5 h-5 shrink-0" aria-hidden />
-                                                <span className="font-medium">Easy</span>
-                                            </button>
-                                        </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-md mx-auto w-full">
+                                        <button
+                                            onClick={() => handleConfidence('wrong')}
+                                            className="flex flex-col items-center justify-center gap-2 bg-status-error-bg text-status-error-text border border-status-error-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
+                                        >
+                                            <X className="w-5 h-5 shrink-0" aria-hidden />
+                                            <span className="font-medium">Wrong</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleConfidence('close')}
+                                            className="flex flex-col items-center justify-center gap-2 bg-status-close-bg text-status-close-text border border-status-close-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
+                                        >
+                                            <AlertCircle className="w-5 h-5 shrink-0" aria-hidden />
+                                            <span className="font-medium">Close</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleConfidence('hard')}
+                                            className="flex flex-col items-center justify-center gap-2 bg-status-warning-bg text-status-warning-text border border-status-warning-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
+                                        >
+                                            <HelpCircle className="w-5 h-5 shrink-0" aria-hidden />
+                                            <span className="font-medium">Hard</span>
+                                        </button>
+                                        <button
+                                            onClick={() => handleConfidence('easy')}
+                                            className="flex flex-col items-center justify-center gap-2 bg-status-success-bg text-status-success-text border border-status-success-border px-4 py-4 rounded-lg hover:opacity-90 transition-colors cursor-pointer"
+                                        >
+                                            <Check className="w-5 h-5 shrink-0" aria-hidden />
+                                            <span className="font-medium">Easy</span>
+                                        </button>
                                     </div>
                                 </div>
                             </div>

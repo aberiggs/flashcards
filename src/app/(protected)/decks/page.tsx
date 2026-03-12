@@ -100,7 +100,7 @@ export default function DecksPage() {
                             <button
                                 type="button"
                                 onClick={() => setIsInfoModalOpen(true)}
-                                className="flex items-center justify-center p-1.5 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary"
                                 aria-label="Usage limits info"
                             >
                                 <Info className="w-4 h-4" aria-hidden />
