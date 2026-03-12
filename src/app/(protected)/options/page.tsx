@@ -79,7 +79,15 @@ export default function OptionsPage() {
                         </div>
                         <p className="text-sm text-text-secondary mb-4">
                             Add your OpenAI API key to generate flashcards from topics or notes.
-                            Your key is stored securely and never shared.
+                            Your key is stored securely and never shared.{' '}
+                            <a
+                                href="https://platform.openai.com/api-keys"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-accent-primary hover:underline"
+                            >
+                                Get your API key from OpenAI
+                            </a>
                         </p>
 
                         {settings?.hasApiKey ? (

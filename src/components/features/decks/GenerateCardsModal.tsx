@@ -405,6 +405,17 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
           >
             Add API Key in Settings
           </Link>
+          <p className="mt-3 text-sm text-text-tertiary">
+            Don&apos;t have a key?{' '}
+            <a
+              href="https://platform.openai.com/api-keys"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent-primary hover:underline"
+            >
+              Learn how to get one
+            </a>
+          </p>
         </div>
       ) : phase === 'generating' ? (
         <div className="text-center py-12">
