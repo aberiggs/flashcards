@@ -12,6 +12,7 @@ import { PageLoader } from '@/components/ui/PageLoader';
 
 export default function DecksPage() {
     const decks = useQuery(api.decks.list);
+    const limits = useQuery(api.limits.getLimits);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const router = useRouter();
@@ -45,7 +46,7 @@ export default function DecksPage() {
         setIsImportModalOpen(false);
     };
 
-    if (decks === undefined) {
+    if (decks === undefined || limits === undefined) {
         return (
             <div className="min-h-screen bg-background text-foreground">
                 <AppHeader title="My Decks" />
@@ -56,14 +57,11 @@ export default function DecksPage() {
         );
     }
 
-    const MAX_DECKS = 50;
-    const MAX_CARDS = 5_000;
-
     const totalCards = decks.reduce((total, deck) => total + deck.cardCount, 0);
     const totalDue = decks.reduce((total, deck) => total + (deck.dueCount ?? 0), 0);
 
-    const deckUsagePct = decks.length / MAX_DECKS;
-    const cardUsagePct = totalCards / MAX_CARDS;
+    const deckUsagePct = decks.length / limits.maxDecks;
+    const cardUsagePct = totalCards / limits.maxCardsPerUser;
     const deckNearLimit = deckUsagePct >= 0.8;
     const cardNearLimit = cardUsagePct >= 0.8;
 
@@ -79,12 +77,12 @@ export default function DecksPage() {
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                             <span className={deckNearLimit ? 'text-status-warning-text font-medium' : 'text-text-secondary'}>
                                 <span className="font-medium">{decks.length}</span>
-                                <span className="text-text-tertiary">/{MAX_DECKS}</span>
+                                <span className="text-text-tertiary">/{limits.maxDecks}</span>
                                 {' '}decks
                             </span>
                             <span className={cardNearLimit ? 'text-status-warning-text font-medium' : 'text-text-secondary'}>
                                 <span className="font-medium">{totalCards.toLocaleString()}</span>
-                                <span className="text-text-tertiary">/{MAX_CARDS.toLocaleString()}</span>
+                                <span className="text-text-tertiary">/{limits.maxCardsPerUser.toLocaleString()}</span>
                                 {' '}cards
                             </span>
                             {totalDue > 0 ? (
