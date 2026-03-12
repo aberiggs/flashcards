@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useRouter } from 'next/navigation';
 import { useQuery } from 'convex/react';
+import { Info } from 'lucide-react';
 import { api } from '../../../../convex/_generated/api';
 import { CreateDeckCard, DeckCard } from '@/components/features/decks/DeckCard';
 import { CreateDeckModal } from '@/components/features/decks/CreateDeckModal';
 import { ImportDeckModal } from '@/components/features/decks/ImportDeckModal';
+import { Modal } from '@/components/ui/Modal';
 import { PageLoader } from '@/components/ui/PageLoader';
 
 export default function DecksPage() {
@@ -15,6 +17,7 @@ export default function DecksPage() {
     const limits = useQuery(api.limits.getLimits);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
     const router = useRouter();
 
     // Sort decks: most reviews due first, then by last studied (most recent first), then by creation date
@@ -93,13 +96,23 @@ export default function DecksPage() {
                                 <span className="text-text-tertiary">All caught up</span>
                             )}
                         </div>
-                        <button
-                            type="button"
-                            onClick={handleOpenImportModal}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border-primary text-text-secondary bg-surface-secondary hover:bg-surface-tertiary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary"
-                        >
-                            Import
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsInfoModalOpen(true)}
+                                className="flex items-center justify-center p-1.5 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-surface-secondary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                                aria-label="Usage limits info"
+                            >
+                                <Info className="w-4 h-4" aria-hidden />
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleOpenImportModal}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-border-primary text-text-secondary bg-surface-secondary hover:bg-surface-tertiary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                            >
+                                Import
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -127,6 +140,53 @@ export default function DecksPage() {
                 isOpen={isImportModalOpen}
                 onClose={handleCloseImportModal}
             />
+
+            {/* Usage Limits Info Modal */}
+            <Modal
+                isOpen={isInfoModalOpen}
+                onClose={() => setIsInfoModalOpen(false)}
+                title="Usage Limits"
+                size="md"
+            >
+                <div className="space-y-4 text-sm">
+                    <p className="text-text-secondary">
+                        Flashcards is currently in beta. Usage limits are in place to
+                        ensure a smooth experience for everyone.
+                    </p>
+
+                    <div className="rounded-lg bg-surface-secondary border border-border-primary p-4 space-y-2">
+                        <div className="flex justify-between">
+                            <span className="text-text-secondary">Decks</span>
+                            <span className="font-medium text-text-primary">
+                                {decks.length} / {limits.maxDecks}
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-text-secondary">Total cards</span>
+                            <span className="font-medium text-text-primary">
+                                {totalCards.toLocaleString()} / {limits.maxCardsPerUser.toLocaleString()}
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-text-secondary">Cards per deck</span>
+                            <span className="font-medium text-text-primary">
+                                up to {limits.maxCardsPerDeck.toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+
+                    <p className="text-text-tertiary">
+                        If you run into an issue or would like to request increased
+                        limits, please reach out at{' '}
+                        <a
+                            href="mailto:aberiggsiv@gmail.com"
+                            className="text-accent-primary hover:underline"
+                        >
+                            aberiggsiv@gmail.com
+                        </a>
+                    </p>
+                </div>
+            </Modal>
         </div>
     );
 }
