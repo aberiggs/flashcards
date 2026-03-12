@@ -84,7 +84,7 @@ function SignInPage() {
             A lightweight study tool that does one thing well.
           </p>
           <p className="text-text-secondary mb-6">
-            Create decks, study cards, and let SM-2 schedule reviews so you remember what matters.
+            Create decks, study cards, and let spaced repetition schedule reviews so you remember what matters.
           </p>
           <p className="text-text-tertiary text-sm max-w-lg mx-auto">
             Built for learners who want to spend time studying—not wrestling with clunky UIs or fighting with card creation. Simple, focused, and designed so you can actually retain what you learn.
@@ -95,30 +95,30 @@ function SignInPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl w-full mb-12">
           <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
             <div className="text-2xl mb-2">📚</div>
-            <h3 className="font-semibold text-text-primary mb-1">Decks & Cards</h3>
+            <h3 className="font-semibold text-text-primary mb-1">Create & Organize</h3>
             <p className="text-sm text-text-secondary">
-              Straightforward deck and card creation—no setup headaches. Add front and back, edit or remove as needed.
+              Create decks and cards in seconds. Import existing sets or generate cards with AI from any topic or notes.
             </p>
           </div>
           <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
             <div className="text-2xl mb-2">🔄</div>
-            <h3 className="font-semibold text-text-primary mb-1">Spaced Repetition</h3>
+            <h3 className="font-semibold text-text-primary mb-1">Smart Scheduling</h3>
             <p className="text-sm text-text-secondary">
-              SM-2 algorithm schedules reviews. Rate each card (wrong, close, hard, easy) and we handle the rest.
+              Spaced repetition automatically schedules your reviews so you study at the right time to remember long-term.
             </p>
           </div>
           <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
             <div className="text-2xl mb-2">📊</div>
-            <h3 className="font-semibold text-text-primary mb-1">Progress & Due Dates</h3>
+            <h3 className="font-semibold text-text-primary mb-1">Track Your Progress</h3>
             <p className="text-sm text-text-secondary">
-              See due counts per deck, track when you last studied, and keep your reviews organized.
+              See what&apos;s due, monitor your study streak, and watch your mastery grow with detailed stats.
             </p>
           </div>
           <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
-            <div className="text-2xl mb-2">⚙️</div>
-            <h3 className="font-semibold text-text-primary mb-1">Theme & Auth</h3>
+            <div className="text-2xl mb-2">✨</div>
+            <h3 className="font-semibold text-text-primary mb-1">AI-Powered Generation</h3>
             <p className="text-sm text-text-secondary">
-              Light, dark, or system theme. Sign in with GitHub—your data stays private and scoped to you.
+              Paste your notes or enter a topic and let AI create flashcards for you. Review and approve each card before adding.
             </p>
           </div>
         </div>
