@@ -69,7 +69,7 @@ export function ExportDeckButton({ deckName, description, cards }: ExportDeckBut
             {open && (
                 <div
                     role="menu"
-                    className="absolute right-0 top-full mt-1.5 z-30 w-44 bg-surface-primary border border-border-primary rounded-xl shadow-lg py-1 animate-fade-in-up"
+                    className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 z-30 w-44 bg-surface-primary border border-border-primary rounded-xl shadow-lg py-1 animate-fade-in-up"
                 >
                     <button
                         role="menuitem"

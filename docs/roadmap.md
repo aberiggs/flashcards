@@ -45,8 +45,8 @@ Take a look at what’s built and what’s next.
 
 - [x] **Generate from topic** — Generate flashcards from a concept or topic the user describes (e.g. "Spanish food vocabulary").
 - [x] **Generate from notes** — Generate flashcards from pasted study material or notes.
-- [x] **Auto card count** — AI analyzes content depth and decides how many cards to generate (1–50); chosen count is shown transparently in the preview step.
-- [x] **Free-form card count** — Users can specify any number of cards from 1 to 50; entering more than 50 shows a friendly suggestion to split into multiple generations.
+- [x] **Auto card count** — AI analyzes content depth and decides how many cards to generate (1–100); chosen count is shown transparently in the preview step.
+- [x] **Free-form card count** — Users can specify any number of cards from 1 to 100; entering more than 100 shows a friendly suggestion to split into multiple generations.
 - [x] **Deduplication** — Existing cards in the deck are passed to the AI so it avoids generating duplicates or near-duplicates.
 - [x] **Preview and edit before saving** — Generated cards are shown in an editable preview; users can modify or delete individual cards before adding them to the deck.
 
@@ -71,8 +71,11 @@ Take a look at what’s built and what’s next.
 
 ### Landing & polish
 
-- [x] **Landing page** — Unauthenticated page with tagline, feature highlights, and sign-in CTA.
+- [x] **Landing page** — Unauthenticated page with user-facing tagline, feature highlights (Create & Organize, Smart Scheduling, Track Your Progress, AI-Powered Generation), and sign-in CTA.
 - [x] **Chart theming** — Chart colors adapt to light/dark theme via CSS variables.
+- [x] **OpenAI API key guidance** — "Learn how to get one" link to OpenAI's API key dashboard shown in both the generate-cards modal and the Settings page.
+- [x] **Options page cleanup** — Removed leftover theme preview and component example sections; About section shows version and contact email only.
+- [x] **Mobile usability** — Export dropdown opens correctly on mobile; touch targets meet 44px minimum on all icon buttons; study confidence buttons use responsive grid; AI card count selector wraps on narrow viewports.
 - [x] **Empty states** — Dashboard widgets show helpful messages when there is no data.
 - [x] **Markdown in cards** — Card front and back content renders as Markdown (paragraphs, bold, italic, lists, inline code).
 - [x] **Toast notifications** — Global toast system for mutation feedback (success/error/info/warning); auto-dismisses after 4 s, dismissible on click. Wired to all key actions: create/delete deck, add/edit/delete card, save API key, AI generation.
@@ -90,7 +93,8 @@ Take a look at what’s built and what’s next.
 - [x] **Per-deck card cap** — 500 cards per deck enforced in `cards.create` and `ai.bulkInsertCards`; clear error message on breach.
 - [x] **Total card cap** — 5,000 cards per user enforced in `cards.create` and `ai.bulkInsertCards`.
 - [ ] ~~**AI generation rate limit**~~ — Removed; users supply their own API key so server-side rate limiting is unnecessary.
-- [x] **Usage display** — Decks list stats bar shows current usage against caps (e.g. "3/50 decks", "142/5,000 cards"); highlights in warning color when above 80%.
+- [x] **Usage display** — Decks list stats bar shows current usage against caps (e.g. "3/50 decks", "142/5,000 cards"); highlights in warning color when above 80%. Info button opens a modal explaining beta limits and providing a contact email.
+- [x] **Limits query** — Resource caps served from a single source of truth via a public Convex query; client no longer hardcodes limit values.
 
 ---
 

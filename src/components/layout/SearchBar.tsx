@@ -329,7 +329,7 @@ export function SearchBar() {
             type="button"
             onClick={clear}
             aria-label="Clear search"
-            className="absolute right-2 text-text-tertiary hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary rounded"
+            className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-text-tertiary hover:text-text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-accent-primary rounded cursor-pointer"
           >
             <X className="w-3.5 h-3.5" aria-hidden />
           </button>
