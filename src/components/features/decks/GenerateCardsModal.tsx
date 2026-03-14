@@ -95,6 +95,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
       const cards = await generateAction({
         deckId,
         prompt: prompt.trim(),
+        mode,
         count: count ?? undefined,
       });
       setReviewCards(cards.map((c) => ({ ...c, decision: undefined })));
