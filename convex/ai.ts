@@ -1,8 +1,8 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { action, internalMutation } from "./_generated/server";
+import { action, internalMutation, mutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { MAX_CARDS_PER_DECK, MAX_CARDS_PER_USER } from "./limits";
 
 const MAX_CARDS = 100;
@@ -76,14 +76,36 @@ export const bulkInsertCards = internalMutation({
   },
 });
 
+export const generateUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+export const deleteStorageFile = internalMutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    await ctx.storage.delete(args.storageId);
+  },
+});
+
 export const generateCards = action({
   args: {
     deckId: v.id("decks"),
     prompt: v.string(),
-    // "topic" = generate from a subject/theme, "notes" = extract from pasted material
-    mode: v.union(v.literal("topic"), v.literal("notes")),
+    // "topic" = generate from a subject/theme, "notes" = extract from pasted material, "image" = extract from uploaded image
+    mode: v.union(
+      v.literal("topic"),
+      v.literal("notes"),
+      v.literal("image")
+    ),
     // When count is omitted, the LLM decides (auto mode)
     count: v.optional(v.number()),
+    // Required when mode is "image" — references the uploaded file in Convex storage
+    imageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (
     ctx,
@@ -99,6 +121,22 @@ export const generateCards = action({
       throw new Error("No OpenAI API key configured. Add one in Settings.");
     }
 
+    // For image mode, resolve the storage URL and schedule cleanup
+    let imageUrl: string | null = null;
+    let imageStorageId: Id<"_storage"> | null = null;
+
+    if (args.mode === "image") {
+      if (!args.imageStorageId) {
+        throw new Error("Image is required for image mode.");
+      }
+      imageStorageId = args.imageStorageId;
+      const url = await ctx.storage.getUrl(imageStorageId);
+      if (!url) {
+        throw new Error("Image not found. Please re-upload.");
+      }
+      imageUrl = url;
+    }
+
     // Fetch existing cards for this deck
     const existingCards = await ctx.runQuery(internal.cards.getByDeckInternal, {
       deckId: args.deckId,
@@ -106,9 +144,10 @@ export const generateCards = action({
 
     const isAuto = args.count === undefined || args.count === null;
     const count = isAuto ? null : Math.min(args.count!, MAX_CARDS);
+    const isImage = args.mode === "image";
     const isTopic = args.mode === "topic";
 
-    // Build system prompt — differentiate between topic and notes modes
+    // Build system prompt — differentiate between topic, notes, and image modes
     let systemPrompt: string;
 
     const qualityRules = `Card quality defaults (follow these unless the user's prompt specifies otherwise):
@@ -121,7 +160,34 @@ export const generateCards = action({
     const jsonInstruction = `Return ONLY valid JSON in this exact format, with no markdown fencing or explanation:
 [{"front": "question or prompt text", "back": "answer text"}, ...]`;
 
-    if (isAuto) {
+    if (isImage) {
+      if (isAuto) {
+        systemPrompt = `You are an expert flashcard generator with vision capabilities. You will be given an image (handwritten notes, textbook page, whiteboard, diagram, etc.) and must extract key facts, concepts, and information visible in it to create flashcards.
+
+Decide on a card count based on the density of extractable content:
+- Image with a few key points or a short list: generate ${AUTO_MIN_CARDS}–10 cards.
+- Image with moderate content (a page of notes, a diagram with labels): generate 10–20 cards.
+- Dense image with many distinct facts or extensive text: generate up to ${AUTO_MAX_CARDS} cards.
+- Never generate fewer than ${AUTO_MIN_CARDS} or more than ${AUTO_MAX_CARDS} cards.
+- Create one card per distinct fact or concept — do not combine multiple ideas into one card.
+- Only create cards from content you can clearly read or identify. Skip illegible sections rather than guessing.
+- If the image contains text in a non-English language, create cards in that language unless the user requests otherwise.
+
+${qualityRules}
+
+${jsonInstruction}`;
+      } else {
+        systemPrompt = `You are a flashcard generator with vision capabilities. You will be given an image (handwritten notes, textbook page, whiteboard, diagram, etc.) and must extract key facts, concepts, and information visible in it to create exactly ${count} flashcards.
+
+You MUST return exactly ${count} cards — no more, no fewer. Count your output carefully before responding.
+- Only create cards from content you can clearly read or identify. Skip illegible sections rather than guessing.
+- If the image contains text in a non-English language, create cards in that language unless the user requests otherwise.
+
+${qualityRules}
+
+${jsonInstruction}`;
+      }
+    } else if (isAuto) {
       if (isTopic) {
         systemPrompt = `You are an expert flashcard generator. Given a topic or subject, generate flashcards that cover its key concepts, definitions, and relationships.
 
@@ -189,70 +255,123 @@ Existing card questions (${existingCards.length}):
 ${existingFronts}`;
     }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${settings.openAiApiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: args.prompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 8000,
-      }),
-    });
+    // Build the messages array — image mode uses multipart content with image_url
+    type ChatMessage =
+      | { role: string; content: string }
+      | {
+          role: string;
+          content: Array<
+            | { type: "text"; text: string }
+            | { type: "image_url"; image_url: { url: string; detail: string } }
+          >;
+        };
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      if (response.status === 401) {
-        throw new Error("Invalid OpenAI API key. Check your key in Settings.");
+    const messages: ChatMessage[] = [
+      { role: "system", content: systemPrompt },
+    ];
+
+    if (isImage && imageUrl) {
+      const userContent: Array<
+        | { type: "text"; text: string }
+        | { type: "image_url"; image_url: { url: string; detail: string } }
+      > = [
+        { type: "image_url", image_url: { url: imageUrl, detail: "high" } },
+      ];
+      // Add optional context from the user if provided
+      if (args.prompt.trim()) {
+        userContent.unshift({
+          type: "text",
+          text: args.prompt.trim(),
+        });
       }
-      throw new Error(
-        `OpenAI API error (${response.status}): ${errorText.slice(0, 200)}`
-      );
+      messages.push({ role: "user", content: userContent });
+    } else {
+      messages.push({ role: "user", content: args.prompt });
     }
 
-    const data = await response.json();
-    const content: string = data.choices?.[0]?.message?.content ?? "";
-
-    // Try to extract JSON from the response (handle potential markdown fencing)
-    let jsonStr = content.trim();
-    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (fenceMatch) {
-      jsonStr = fenceMatch[1].trim();
-    }
-
-    let cards: Array<{ front: string; back: string }>;
     try {
-      cards = JSON.parse(jsonStr);
-    } catch {
-      throw new Error("AI returned invalid JSON. Try rephrasing your prompt.");
+      const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${settings.openAiApiKey}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages,
+            temperature: 0.7,
+            max_tokens: 8000,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 401) {
+          throw new Error(
+            "Invalid OpenAI API key. Check your key in Settings."
+          );
+        }
+        throw new Error(
+          `OpenAI API error (${response.status}): ${errorText.slice(0, 200)}`
+        );
+      }
+
+      const data = await response.json();
+      const content: string = data.choices?.[0]?.message?.content ?? "";
+
+      // Try to extract JSON from the response (handle potential markdown fencing)
+      let jsonStr = content.trim();
+      const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (fenceMatch) {
+        jsonStr = fenceMatch[1].trim();
+      }
+
+      let cards: Array<{ front: string; back: string }>;
+      try {
+        cards = JSON.parse(jsonStr);
+      } catch {
+        throw new Error(
+          "AI returned invalid JSON. Try rephrasing your prompt."
+        );
+      }
+
+      if (!Array.isArray(cards)) {
+        throw new Error("AI returned unexpected format. Try again.");
+      }
+
+      // When a specific count was requested, enforce it as a hard cap so the
+      // user never gets more cards than they asked for even if the LLM overshoots.
+      const hardCap = count ?? MAX_CARDS;
+
+      const filtered = cards
+        .filter(
+          (c) =>
+            typeof c.front === "string" &&
+            typeof c.back === "string" &&
+            c.front.trim() !== "" &&
+            c.back.trim() !== ""
+        )
+        .slice(0, hardCap)
+        .map((c) => ({ front: c.front.trim(), back: c.back.trim() }));
+
+      if (isImage && filtered.length === 0) {
+        throw new Error(
+          "Could not extract content from this image. Try a clearer photo or add context about what the image contains."
+        );
+      }
+
+      return filtered;
+    } finally {
+      // Clean up the uploaded image from storage regardless of success or failure
+      if (imageStorageId) {
+        await ctx.runMutation(internal.ai.deleteStorageFile, {
+          storageId: imageStorageId,
+        });
+      }
     }
-
-    if (!Array.isArray(cards)) {
-      throw new Error("AI returned unexpected format. Try again.");
-    }
-
-    // When a specific count was requested, enforce it as a hard cap so the
-    // user never gets more cards than they asked for even if the LLM overshoots.
-    const hardCap = count ?? MAX_CARDS;
-
-    const filtered = cards
-      .filter(
-        (c) =>
-          typeof c.front === "string" &&
-          typeof c.back === "string" &&
-          c.front.trim() !== "" &&
-          c.back.trim() !== ""
-      )
-      .slice(0, hardCap)
-      .map((c) => ({ front: c.front.trim(), back: c.back.trim() }));
-
-    return filtered;
   },
 });
 
