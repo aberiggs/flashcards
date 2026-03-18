@@ -54,4 +54,12 @@ export default defineSchema({
     openAiApiKey: v.optional(v.string()),
   }).index("by_user", ["userId"]),
 
+  pendingUploads: defineTable({
+    storageId: v.id("_storage"),
+    userId: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_storage", ["storageId"])
+    .index("by_created", ["createdAt"]),
+
 });

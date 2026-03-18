@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useQuery, useAction } from 'convex/react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery, useAction, useMutation } from 'convex/react';
 import { api } from '../../../../convex/_generated/api';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { Sparkles, Loader2, AlertCircle, RotateCcw, Check, X, Pencil, ChevronLeft } from 'lucide-react';
+import { Sparkles, Loader2, AlertCircle, RotateCcw, Check, X, Pencil, ChevronLeft, ImagePlus, Upload, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { FlipCard } from './FlipCard';
 import { CardEditForm } from './CardEditForm';
@@ -27,20 +27,31 @@ interface ReviewCard {
 }
 
 const MAX_CARDS = 100;
+const MAX_IMAGE_SIZE_MB = 20;
+const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
 export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsModalProps) {
   const settings = useQuery(api.settings.get);
   const generateAction = useAction(api.ai.generateCards);
   const insertAction = useAction(api.ai.insertGeneratedCards);
+  const generateUploadUrl = useMutation(api.ai.generateUploadUrl);
+  const registerUpload = useMutation(api.ai.registerUpload);
   const { toast } = useToast();
 
   const [phase, setPhase] = useState<Phase>('input');
-  const [mode, setMode] = useState<'topic' | 'notes'>('topic');
+  const [mode, setMode] = useState<'topic' | 'notes' | 'image'>('topic');
   const [prompt, setPrompt] = useState('');
   const [autoMode, setAutoMode] = useState(true);
   const [countInput, setCountInput] = useState('10');
   const [countError, setCountError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Image upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Review state
   const [reviewCards, setReviewCards] = useState<ReviewCard[]>([]);
@@ -49,6 +60,42 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
   const [isEditing, setIsEditing] = useState(false);
   const [editFront, setEditFront] = useState('');
   const [editBack, setEditBack] = useState('');
+
+  // Clean up object URLs when component unmounts or preview changes
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
+
+  const clearImage = useCallback(() => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setSelectedFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [imagePreview]);
+
+  const handleFileSelect = useCallback((file: File | null) => {
+    if (!file) return;
+
+    // Validate file type
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      setError('Please upload a PNG, JPEG, WEBP, or GIF image.');
+      return;
+    }
+
+    // Validate file size
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setError(`Image must be under ${MAX_IMAGE_SIZE_MB} MB.`);
+      return;
+    }
+
+    setError(null);
+    // Revoke previous preview URL
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setSelectedFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  }, [imagePreview]);
 
   const resetState = useCallback(() => {
     setPhase('input');
@@ -59,7 +106,9 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
     setReviewIndex(0);
     setIsFlipped(false);
     setIsEditing(false);
-  }, []);
+    clearImage();
+    setIsUploading(false);
+  }, [clearImage]);
 
   const handleClose = useCallback(() => {
     resetState();
@@ -86,17 +135,55 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    // For image mode, require a file; for other modes, require a prompt
+    if (mode === 'image') {
+      if (!selectedFile) {
+        setError('Please select an image to generate cards from.');
+        return;
+      }
+    } else {
+      if (!prompt.trim()) return;
+    }
+
     const count = validateAndGetCount();
     if (count === false) return;
-    setPhase('generating');
     setError(null);
+
+    let storageId: Id<"_storage"> | undefined;
+
+    // Upload image to Convex storage if in image mode
+    if (mode === 'image' && selectedFile) {
+      setIsUploading(true);
+      try {
+        const uploadUrl = await generateUploadUrl();
+        const uploadResult = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': selectedFile.type },
+          body: selectedFile,
+        });
+        if (!uploadResult.ok) {
+          throw new Error('Failed to upload image. Please try again.');
+        }
+        const { storageId: id } = await uploadResult.json();
+        storageId = id as Id<"_storage">;
+        // Register the upload for server-side tracking and ownership validation
+        await registerUpload({ storageId });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to upload image');
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
+    }
+
+    setPhase('generating');
     try {
       const cards = await generateAction({
         deckId,
-        prompt: prompt.trim(),
+        prompt: prompt.trim() || undefined,
         mode,
         count: count ?? undefined,
+        imageStorageId: storageId,
       });
       setReviewCards(cards.map((c) => ({ ...c, decision: undefined })));
       setReviewIndex(0);
@@ -418,10 +505,16 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
             </a>
           </p>
         </div>
-      ) : phase === 'generating' ? (
+      ) : phase === 'generating' || isUploading ? (
         <div className="text-center py-12">
           <Loader2 className="w-8 h-8 text-accent-primary mx-auto mb-4 animate-spin" aria-hidden />
-          <p className="text-text-secondary">Generating cards with AI...</p>
+          <p className="text-text-secondary">
+            {isUploading
+              ? 'Uploading image...'
+              : mode === 'image'
+                ? 'Analyzing image and generating cards...'
+                : 'Generating cards with AI...'}
+          </p>
           <p className="text-text-tertiary text-sm mt-1">This may take a few seconds</p>
         </div>
       ) : (
@@ -455,25 +548,116 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
             >
               Paste Notes
             </button>
+            <button
+              onClick={() => setMode('image')}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors cursor-pointer ${
+                mode === 'image'
+                  ? 'bg-accent-primary text-text-inverse'
+                  : 'bg-surface-secondary text-text-secondary border border-border-primary hover:bg-surface-tertiary'
+              }`}
+            >
+              <ImagePlus className="w-3.5 h-3.5" aria-hidden />
+              Image
+            </button>
           </div>
 
-          {/* Prompt input */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              {mode === 'topic' ? 'Topic' : 'Notes'}
-            </label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={6}
-              placeholder={
-                mode === 'topic'
-                  ? 'e.g., Spanish food vocabulary, Japanese hiragana, French past tense...'
-                  : 'Paste your notes, vocabulary lists, or study material here...'
-              }
-              className="w-full bg-surface-secondary border border-border-primary rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
-            />
-          </div>
+          {/* Prompt / image input */}
+          {mode === 'image' ? (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Upload Image
+              </label>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                className="hidden"
+                onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
+              />
+
+              {selectedFile && imagePreview ? (
+                /* Image preview */
+                <div className="relative mb-3">
+                  <div className="rounded-lg border border-border-primary overflow-hidden bg-surface-secondary">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={imagePreview}
+                      alt="Selected image preview"
+                      className="w-full max-h-48 object-contain"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-text-tertiary truncate max-w-[70%]">
+                      {selectedFile.name} ({(selectedFile.size / (1024 * 1024)).toFixed(1)} MB)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearImage}
+                      className="inline-flex items-center gap-1 text-xs text-status-error-text hover:opacity-80 transition-opacity cursor-pointer"
+                      aria-label="Remove image"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" aria-hidden />
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Drop zone / click to upload */
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) handleFileSelect(file);
+                  }}
+                  className="w-full border-2 border-dashed border-border-primary rounded-lg p-8 flex flex-col items-center gap-3 text-text-tertiary hover:border-accent-primary hover:text-text-secondary transition-colors cursor-pointer mb-3"
+                >
+                  <Upload className="w-8 h-8" aria-hidden />
+                  <div className="text-sm text-center">
+                    <span className="font-medium text-text-secondary">Click to upload</span>{' '}
+                    or drag and drop
+                  </div>
+                  <span className="text-xs">
+                    PNG, JPEG, WEBP, or GIF (max {MAX_IMAGE_SIZE_MB} MB)
+                  </span>
+                </button>
+              )}
+
+              {/* Optional context */}
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                Context <span className="font-normal text-text-tertiary">(optional)</span>
+              </label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={2}
+                placeholder="e.g., These are my organic chemistry notes, This is a Japanese textbook page..."
+                className="w-full bg-surface-secondary border border-border-primary rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
+              />
+            </div>
+          ) : (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                {mode === 'topic' ? 'Topic' : 'Notes'}
+              </label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={6}
+                placeholder={
+                  mode === 'topic'
+                    ? 'e.g., Spanish food vocabulary, Japanese hiragana, French past tense...'
+                    : 'Paste your notes, vocabulary lists, or study material here...'
+                }
+                className="w-full bg-surface-secondary border border-border-primary rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
+              />
+            </div>
+          )}
 
           {/* Card count */}
           <div className="mb-6">
@@ -529,11 +713,15 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
           <div className="flex justify-end">
             <button
               onClick={handleGenerate}
-              disabled={!prompt.trim()}
+              disabled={mode === 'image' ? !selectedFile : !prompt.trim()}
               className="inline-flex items-center gap-2 bg-accent-primary text-text-inverse px-4 py-2 rounded-md text-sm font-medium hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
-              <Sparkles className="w-4 h-4" aria-hidden />
-              Generate Cards
+              {mode === 'image' ? (
+                <ImagePlus className="w-4 h-4" aria-hidden />
+              ) : (
+                <Sparkles className="w-4 h-4" aria-hidden />
+              )}
+              {mode === 'image' ? 'Generate from Image' : 'Generate Cards'}
             </button>
           </div>
         </div>

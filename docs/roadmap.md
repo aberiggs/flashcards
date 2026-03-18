@@ -49,6 +49,7 @@ Take a look at what’s built and what’s next.
 - [x] **Free-form card count** — Users can specify any number of cards from 1 to 100; entering more than 100 shows a friendly suggestion to split into multiple generations.
 - [x] **Deduplication** — Existing cards in the deck are passed to the AI so it avoids generating duplicates or near-duplicates.
 - [x] **Preview and edit before saving** — Generated cards are shown in an editable preview; users can modify or delete individual cards before adding them to the deck.
+- [x] **Generate from image** — Upload a photo (handwritten notes, textbook page, whiteboard, etc.) and generate flashcards from its content using OpenAI's vision API. Supports drag-and-drop or click-to-upload with image preview; uploaded images are stored temporarily in Convex file storage and cleaned up after processing. Generated cards go through the same review flow as topic/notes generation.
 
 ### Backend (Convex)
 
@@ -86,6 +87,7 @@ Take a look at what’s built and what’s next.
 - [x] **Cascade delete** — Deleting a deck now also removes all associated study sessions and events.
 - [x] **Session ownership** — `recordEvent` verifies the session belongs to the caller before inserting.
 - [x] **Type hygiene** — Removed `any` from AI card mapping; removed unused `DeckStats` type; extracted shared `getMemoryStage` utility to `src/lib/memoryStage.ts`.
+- [x] **Upload security** — Server-side file type/size validation for image uploads; ownership verification via `pendingUploads` tracking table; automatic cleanup of orphaned uploads via cron job (every 30 min).
 
 ### Resource caps
 
@@ -113,6 +115,7 @@ Take a look at what’s built and what’s next.
 
 - [ ] **AI-assisted explanations** — AI-assisted explanations of concepts and terms. It may also suggest additional resources or lessons.
 - [ ] **Card generation templates** — Have prompt templates that can be used to help in generating cards that are consistent with a certain theme.
+- [ ] **Optimal model selection** — Evaluate and select the best cost-effective model for each generation mode (topic, notes, image); image mode may benefit from a stronger vision model.
 
 ### Flashcard & study
 
