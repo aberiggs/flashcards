@@ -36,6 +36,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
   const generateAction = useAction(api.ai.generateCards);
   const insertAction = useAction(api.ai.insertGeneratedCards);
   const generateUploadUrl = useMutation(api.ai.generateUploadUrl);
+  const registerUpload = useMutation(api.ai.registerUpload);
   const { toast } = useToast();
 
   const [phase, setPhase] = useState<Phase>('input');
@@ -165,6 +166,8 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
         }
         const { storageId: id } = await uploadResult.json();
         storageId = id as Id<"_storage">;
+        // Register the upload for server-side tracking and ownership validation
+        await registerUpload({ storageId });
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to upload image');
         setIsUploading(false);
@@ -177,7 +180,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
     try {
       const cards = await generateAction({
         deckId,
-        prompt: prompt.trim(),
+        prompt: prompt.trim() || undefined,
         mode,
         count: count ?? undefined,
         imageStorageId: storageId,

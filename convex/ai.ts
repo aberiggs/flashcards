@@ -1,5 +1,10 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { action, internalMutation, mutation } from "./_generated/server";
+import {
+  action,
+  internalMutation,
+  internalQuery,
+  mutation,
+} from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -8,6 +13,14 @@ import { MAX_CARDS_PER_DECK, MAX_CARDS_PER_USER } from "./limits";
 const MAX_CARDS = 100;
 const AUTO_MIN_CARDS = 1;
 const AUTO_MAX_CARDS = 100;
+
+const MAX_IMAGE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+const ALLOWED_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+] as const;
 
 export const bulkInsertCards = internalMutation({
   args: {
@@ -92,10 +105,102 @@ export const deleteStorageFile = internalMutation({
   },
 });
 
+/** Client calls this after a successful upload POST to register the file for tracking. */
+export const registerUpload = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    // Verify the file actually exists in storage
+    const fileMeta = await ctx.db.system.get(args.storageId);
+    if (!fileMeta) throw new Error("Uploaded file not found.");
+
+    await ctx.db.insert("pendingUploads", {
+      storageId: args.storageId,
+      userId,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+/** Validate that the upload belongs to the caller and meets file constraints. */
+export const validateUpload = internalQuery({
+  args: {
+    storageId: v.id("_storage"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    // Ownership check via pendingUploads
+    const pending = await ctx.db
+      .query("pendingUploads")
+      .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
+      .unique();
+
+    if (!pending) {
+      throw new Error("Upload not found. Please re-upload the image.");
+    }
+    if (pending.userId !== args.userId) {
+      throw new Error("Upload not found. Please re-upload the image.");
+    }
+
+    // Get storage metadata for server-side validation
+    const fileMeta = await ctx.db.system.get(args.storageId);
+    if (!fileMeta) {
+      throw new Error("Image not found. Please re-upload.");
+    }
+
+    return {
+      contentType: fileMeta.contentType ?? null,
+      size: fileMeta.size,
+      pendingUploadId: pending._id,
+    };
+  },
+});
+
+/** Remove both the storage file and its pendingUploads tracking row. */
+export const cleanupUpload = internalMutation({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    // Delete the storage file
+    await ctx.storage.delete(args.storageId);
+
+    // Delete the tracking row
+    const pending = await ctx.db
+      .query("pendingUploads")
+      .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
+      .unique();
+    if (pending) {
+      await ctx.db.delete(pending._id);
+    }
+  },
+});
+
+const ORPHAN_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+
+/** Cron job: delete uploads older than 30 minutes that were never consumed. */
+export const sweepOrphanedUploads = internalMutation({
+  args: {},
+  handler: async (ctx) => {
+    const cutoff = Date.now() - ORPHAN_THRESHOLD_MS;
+    const stale = await ctx.db
+      .query("pendingUploads")
+      .withIndex("by_created", (q) => q.lt("createdAt", cutoff))
+      .collect();
+
+    for (const row of stale) {
+      await ctx.storage.delete(row.storageId);
+      await ctx.db.delete(row._id);
+    }
+  },
+});
+
 export const generateCards = action({
   args: {
     deckId: v.id("decks"),
-    prompt: v.string(),
+    prompt: v.optional(v.string()),
     // "topic" = generate from a subject/theme, "notes" = extract from pasted material, "image" = extract from uploaded image
     mode: v.union(
       v.literal("topic"),
@@ -121,7 +226,9 @@ export const generateCards = action({
       throw new Error("No OpenAI API key configured. Add one in Settings.");
     }
 
-    // For image mode, resolve the storage URL and schedule cleanup
+    const promptText = (args.prompt ?? "").trim();
+
+    // For image mode, validate ownership + file constraints, then resolve URL
     let imageUrl: string | null = null;
     let imageStorageId: Id<"_storage"> | null = null;
 
@@ -130,6 +237,35 @@ export const generateCards = action({
         throw new Error("Image is required for image mode.");
       }
       imageStorageId = args.imageStorageId;
+
+      // Server-side ownership + file validation
+      const uploadMeta = await ctx.runQuery(internal.ai.validateUpload, {
+        storageId: imageStorageId,
+        userId,
+      });
+
+      if (
+        !uploadMeta.contentType ||
+        !(ALLOWED_IMAGE_TYPES as readonly string[]).includes(
+          uploadMeta.contentType
+        )
+      ) {
+        // Clean up the invalid file
+        await ctx.runMutation(internal.ai.cleanupUpload, {
+          storageId: imageStorageId,
+        });
+        throw new Error(
+          "Invalid file type. Please upload a PNG, JPEG, WEBP, or GIF image."
+        );
+      }
+
+      if (uploadMeta.size > MAX_IMAGE_SIZE_BYTES) {
+        await ctx.runMutation(internal.ai.cleanupUpload, {
+          storageId: imageStorageId,
+        });
+        throw new Error("Image must be under 20 MB.");
+      }
+
       const url = await ctx.storage.getUrl(imageStorageId);
       if (!url) {
         throw new Error("Image not found. Please re-upload.");
@@ -278,15 +414,15 @@ ${existingFronts}`;
         { type: "image_url", image_url: { url: imageUrl, detail: "high" } },
       ];
       // Add optional context from the user if provided
-      if (args.prompt.trim()) {
+      if (promptText) {
         userContent.unshift({
           type: "text",
-          text: args.prompt.trim(),
+          text: promptText,
         });
       }
       messages.push({ role: "user", content: userContent });
     } else {
-      messages.push({ role: "user", content: args.prompt });
+      messages.push({ role: "user", content: promptText });
     }
 
     try {
@@ -365,9 +501,9 @@ ${existingFronts}`;
 
       return filtered;
     } finally {
-      // Clean up the uploaded image from storage regardless of success or failure
+      // Clean up the uploaded image and its tracking row regardless of success or failure
       if (imageStorageId) {
-        await ctx.runMutation(internal.ai.deleteStorageFile, {
+        await ctx.runMutation(internal.ai.cleanupUpload, {
           storageId: imageStorageId,
         });
       }
