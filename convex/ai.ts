@@ -164,8 +164,12 @@ export const cleanupUpload = internalMutation({
     storageId: v.id("_storage"),
   },
   handler: async (ctx, args) => {
-    // Delete the storage file
-    await ctx.storage.delete(args.storageId);
+    // Guard: only delete the storage file if it still exists (avoids
+    // "NonexistentDocument" error if the cron already swept it).
+    const fileMeta = await ctx.db.system.get(args.storageId);
+    if (fileMeta) {
+      await ctx.storage.delete(args.storageId);
+    }
 
     // Delete the tracking row
     const pending = await ctx.db
@@ -191,7 +195,11 @@ export const sweepOrphanedUploads = internalMutation({
       .collect();
 
     for (const row of stale) {
-      await ctx.storage.delete(row.storageId);
+      // Guard: the file may have been cleaned up by generateCards already.
+      const fileMeta = await ctx.db.system.get(row.storageId);
+      if (fileMeta) {
+        await ctx.storage.delete(row.storageId);
+      }
       await ctx.db.delete(row._id);
     }
   },
