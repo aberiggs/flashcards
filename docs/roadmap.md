@@ -87,6 +87,7 @@ Take a look at what’s built and what’s next.
 - [x] **Cascade delete** — Deleting a deck now also removes all associated study sessions and events.
 - [x] **Session ownership** — `recordEvent` verifies the session belongs to the caller before inserting.
 - [x] **Type hygiene** — Removed `any` from AI card mapping; removed unused `DeckStats` type; extracted shared `getMemoryStage` utility to `src/lib/memoryStage.ts`.
+- [x] **Upload security** — Server-side file type/size validation for image uploads; ownership verification via `pendingUploads` tracking table; automatic cleanup of orphaned uploads via cron job (every 30 min).
 
 ### Resource caps
 
@@ -114,6 +115,7 @@ Take a look at what’s built and what’s next.
 
 - [ ] **AI-assisted explanations** — AI-assisted explanations of concepts and terms. It may also suggest additional resources or lessons.
 - [ ] **Card generation templates** — Have prompt templates that can be used to help in generating cards that are consistent with a certain theme.
+- [ ] **Optimal model selection** — Evaluate and select the best cost-effective model for each generation mode (topic, notes, image); image mode may benefit from a stronger vision model.
 
 ### Flashcard & study
 
