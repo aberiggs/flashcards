@@ -597,6 +597,8 @@ ${existingFronts}`;
       messages.push({ role: "user", content: promptText });
     }
 
+    let generationSucceeded = false;
+
     try {
       const response = await fetch(
         "https://api.openai.com/v1/chat/completions",
@@ -671,6 +673,7 @@ ${existingFronts}`;
         );
       }
 
+      generationSucceeded = true;
       return filtered;
     } finally {
       // Clean up the uploaded image and its tracking session regardless of success/failure.
@@ -679,7 +682,7 @@ ${existingFronts}`;
           await ctx.runMutation(internal.ai.finalizeUploadSession, {
             uploadSessionId: validatedUploadSessionId,
             userId,
-            targetStatus: "consumed",
+            targetStatus: generationSucceeded ? "consumed" : "cancelled",
           });
         } catch (cleanupError) {
           console.error("Failed to finalize image upload session:", cleanupError);
