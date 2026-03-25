@@ -116,6 +116,19 @@ export const registerUpload = mutation({
     const fileMeta = await ctx.db.system.get(args.storageId);
     if (!fileMeta) throw new Error("Uploaded file not found.");
 
+    const existingRows = await ctx.db
+      .query("pendingUploads")
+      .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
+      .collect();
+
+    if (existingRows.some((row) => row.userId === userId)) {
+      return;
+    }
+
+    if (existingRows.length > 0) {
+      throw new Error("Upload not found.");
+    }
+
     await ctx.db.insert("pendingUploads", {
       storageId: args.storageId,
       userId,
@@ -132,15 +145,14 @@ export const validateUpload = internalQuery({
   },
   handler: async (ctx, args) => {
     // Ownership check via pendingUploads
-    const pending = await ctx.db
+    const pendingRows = await ctx.db
       .query("pendingUploads")
       .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
-      .unique();
+      .collect();
+
+    const pending = pendingRows.find((row) => row.userId === args.userId);
 
     if (!pending) {
-      throw new Error("Upload not found. Please re-upload the image.");
-    }
-    if (pending.userId !== args.userId) {
       throw new Error("Upload not found. Please re-upload the image.");
     }
 
@@ -165,12 +177,14 @@ export const cleanupUpload = internalMutation({
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const pending = await ctx.db
+    const pendingRows = await ctx.db
       .query("pendingUploads")
       .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
-      .unique();
+      .collect();
 
-    if (!pending || pending.userId !== args.userId) {
+    const ownedRows = pendingRows.filter((row) => row.userId === args.userId);
+
+    if (ownedRows.length === 0) {
       return;
     }
 
@@ -181,7 +195,9 @@ export const cleanupUpload = internalMutation({
       await ctx.storage.delete(args.storageId);
     }
 
-    await ctx.db.delete(pending._id);
+    for (const row of ownedRows) {
+      await ctx.db.delete(row._id);
+    }
   },
 });
 
@@ -194,26 +210,24 @@ export const cancelUpload = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const pending = await ctx.db
+    const pendingRows = await ctx.db
       .query("pendingUploads")
       .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
-      .unique();
+      .collect();
 
-    if (pending) {
-      if (pending.userId !== userId) {
-        throw new Error("Upload not found.");
-      }
-      await ctx.runMutation(internal.ai.cleanupUpload, {
-        storageId: args.storageId,
-        userId,
-      });
+    if (pendingRows.length === 0) {
       return;
     }
 
-    const fileMeta = await ctx.db.system.get(args.storageId);
-    if (fileMeta) {
-      await ctx.storage.delete(args.storageId);
+    const hasOwnedRow = pendingRows.some((row) => row.userId === userId);
+    if (!hasOwnedRow) {
+      throw new Error("Upload not found.");
     }
+
+    await ctx.runMutation(internal.ai.cleanupUpload, {
+      storageId: args.storageId,
+      userId,
+    });
   },
 });
 
