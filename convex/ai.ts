@@ -675,11 +675,15 @@ ${existingFronts}`;
     } finally {
       // Clean up the uploaded image and its tracking session regardless of success/failure.
       if (validatedUploadSessionId) {
-        await ctx.runMutation(internal.ai.finalizeUploadSession, {
-          uploadSessionId: validatedUploadSessionId,
-          userId,
-          targetStatus: "consumed",
-        });
+        try {
+          await ctx.runMutation(internal.ai.finalizeUploadSession, {
+            uploadSessionId: validatedUploadSessionId,
+            userId,
+            targetStatus: "consumed",
+          });
+        } catch (cleanupError) {
+          console.error("Failed to finalize image upload session:", cleanupError);
+        }
       }
     }
   },
