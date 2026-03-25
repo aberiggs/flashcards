@@ -292,7 +292,15 @@ export const finalizeUploadSession = internalMutation({
   },
 });
 
-/** Best-effort client cleanup for abandoned or failed image generation flows. */
+/**
+ * Best-effort client cleanup for abandoned or failed image generation flows.
+ *
+ * Important: callers should treat this as opportunistic cleanup, not a strict
+ * guarantee. A modal close/unmount can race with the storage upload finishing:
+ * we may receive one cancel call before storageId is known, then a second call
+ * with storageId after upload settles. The fallback block below handles that
+ * late-arriving storageId case even if the session is already cancelled.
+ */
 export const cancelUpload = mutation({
   args: {
     uploadSessionId: v.id("imageUploadSessions"),
@@ -307,12 +315,9 @@ export const cancelUpload = mutation({
       throw new Error("Upload session not found.");
     }
 
-    if (session.status !== "issued" && session.status !== "uploaded") {
-      return;
-    }
-
     // Fallback cleanup for the case where upload succeeded but registerUpload
-    // failed before the session was linked to storageId.
+    // failed before the session was linked to storageId. This can happen when
+    // the user closes the modal mid-upload and cancellation races with upload.
     if (!session.storageId && args.storageId) {
       const sameStorageRows = await ctx.db
         .query("imageUploadSessions")
@@ -335,6 +340,10 @@ export const cancelUpload = mutation({
         updatedAt: Date.now(),
         lastError: "Cancelled before upload registration completed.",
       });
+      return;
+    }
+
+    if (session.status !== "issued" && session.status !== "uploaded") {
       return;
     }
 

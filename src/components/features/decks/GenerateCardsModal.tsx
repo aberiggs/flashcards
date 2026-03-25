@@ -117,13 +117,32 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
     setIsUploading(false);
   }, [clearImage]);
 
-  const cleanupActiveUploadSession = useCallback(async (storageId?: Id<"_storage">) => {
-    const uploadSessionId = activeUploadSessionRef.current;
-    if (!uploadSessionId) return;
-    activeUploadSessionRef.current = null;
+  // Best-effort cleanup only: this may run during modal close/unmount while the
+  // upload POST is still in flight. In that race, we can call cleanup once
+  // before storageId exists, then again later with storageId after the upload
+  // settles. That is why this helper accepts explicit ids instead of relying
+  // only on activeUploadSessionRef.
+  const cleanupActiveUploadSession = useCallback(async (
+    {
+      uploadSessionId,
+      storageId,
+      clearActiveRef,
+    }: {
+      uploadSessionId?: Id<"imageUploadSessions">;
+      storageId?: Id<"_storage">;
+      clearActiveRef?: boolean;
+    } = {}
+  ) => {
+    const sessionId = uploadSessionId ?? activeUploadSessionRef.current;
+    const shouldClearActiveRef = clearActiveRef ?? uploadSessionId === undefined;
+
+    if (!sessionId) return;
 
     try {
-      await cancelUpload({ uploadSessionId, storageId });
+      await cancelUpload({ uploadSessionId: sessionId, storageId });
+      if (shouldClearActiveRef && activeUploadSessionRef.current === sessionId) {
+        activeUploadSessionRef.current = null;
+      }
     } catch (cleanupError) {
       console.error('Failed to cleanup upload session:', cleanupError);
     }
@@ -230,7 +249,15 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
           throw registerError;
         }
       } catch (err) {
-        await cleanupActiveUploadSession(uploadedStorageId);
+        // Best-effort recovery for upload/register races:
+        // - If upload succeeded but register failed, uploadedStorageId is set.
+        // - If user closed during upload, the session may already be cancelled.
+        // Passing both ids lets backend cleanup remove late-arriving storage.
+        await cleanupActiveUploadSession({
+          uploadSessionId,
+          storageId: uploadedStorageId,
+          clearActiveRef: true,
+        });
         setError(err instanceof Error ? err.message : 'Failed to upload image');
         setIsUploading(false);
         return;
