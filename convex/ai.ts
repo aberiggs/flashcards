@@ -162,8 +162,18 @@ export const validateUpload = internalQuery({
 export const cleanupUpload = internalMutation({
   args: {
     storageId: v.id("_storage"),
+    userId: v.id("users"),
   },
   handler: async (ctx, args) => {
+    const pending = await ctx.db
+      .query("pendingUploads")
+      .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
+      .unique();
+
+    if (!pending || pending.userId !== args.userId) {
+      return;
+    }
+
     // Guard: only delete the storage file if it still exists (avoids
     // "NonexistentDocument" error if the cron already swept it).
     const fileMeta = await ctx.db.system.get(args.storageId);
@@ -171,13 +181,38 @@ export const cleanupUpload = internalMutation({
       await ctx.storage.delete(args.storageId);
     }
 
-    // Delete the tracking row
+    await ctx.db.delete(pending._id);
+  },
+});
+
+/** Best-effort client cleanup for uploads that failed registration/use. */
+export const cancelUpload = mutation({
+  args: {
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
     const pending = await ctx.db
       .query("pendingUploads")
       .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
       .unique();
+
     if (pending) {
-      await ctx.db.delete(pending._id);
+      if (pending.userId !== userId) {
+        throw new Error("Upload not found.");
+      }
+      await ctx.runMutation(internal.ai.cleanupUpload, {
+        storageId: args.storageId,
+        userId,
+      });
+      return;
+    }
+
+    const fileMeta = await ctx.db.system.get(args.storageId);
+    if (fileMeta) {
+      await ctx.storage.delete(args.storageId);
     }
   },
 });
@@ -236,21 +271,26 @@ export const generateCards = action({
 
     const promptText = (args.prompt ?? "").trim();
 
+    if (args.mode !== "image" && promptText.length === 0) {
+      throw new Error("Prompt is required for topic and notes modes.");
+    }
+
     // For image mode, validate ownership + file constraints, then resolve URL
     let imageUrl: string | null = null;
-    let imageStorageId: Id<"_storage"> | null = null;
+    let validatedImageStorageId: Id<"_storage"> | null = null;
 
     if (args.mode === "image") {
       if (!args.imageStorageId) {
         throw new Error("Image is required for image mode.");
       }
-      imageStorageId = args.imageStorageId;
+      const imageStorageId = args.imageStorageId;
 
       // Server-side ownership + file validation
       const uploadMeta = await ctx.runQuery(internal.ai.validateUpload, {
         storageId: imageStorageId,
         userId,
       });
+      validatedImageStorageId = imageStorageId;
 
       if (
         !uploadMeta.contentType ||
@@ -258,19 +298,12 @@ export const generateCards = action({
           uploadMeta.contentType
         )
       ) {
-        // Clean up the invalid file
-        await ctx.runMutation(internal.ai.cleanupUpload, {
-          storageId: imageStorageId,
-        });
         throw new Error(
           "Invalid file type. Please upload a PNG, JPEG, WEBP, or GIF image."
         );
       }
 
       if (uploadMeta.size > MAX_IMAGE_SIZE_BYTES) {
-        await ctx.runMutation(internal.ai.cleanupUpload, {
-          storageId: imageStorageId,
-        });
         throw new Error("Image must be under 20 MB.");
       }
 
@@ -510,9 +543,10 @@ ${existingFronts}`;
       return filtered;
     } finally {
       // Clean up the uploaded image and its tracking row regardless of success or failure
-      if (imageStorageId) {
+      if (validatedImageStorageId) {
         await ctx.runMutation(internal.ai.cleanupUpload, {
-          storageId: imageStorageId,
+          storageId: validatedImageStorageId,
+          userId,
         });
       }
     }
