@@ -87,12 +87,14 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
 
     // Validate file type
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+      clearImage();
       setError('Please upload a PNG, JPEG, WEBP, or GIF image.');
       return;
     }
 
     // Validate file size
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      clearImage();
       setError(`Image must be under ${MAX_IMAGE_SIZE_MB} MB.`);
       return;
     }
@@ -102,7 +104,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
     if (imagePreview) URL.revokeObjectURL(imagePreview);
     setSelectedFile(file);
     setImagePreview(URL.createObjectURL(file));
-  }, [imagePreview]);
+  }, [clearImage, imagePreview]);
 
   const resetState = useCallback(() => {
     setPhase('input');
