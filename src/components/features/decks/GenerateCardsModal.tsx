@@ -30,6 +30,11 @@ const MAX_CARDS = 100;
 const MAX_IMAGE_SIZE_MB = 20;
 const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_MB * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
+const REGISTER_UPLOAD_MAX_ATTEMPTS = 3;
+
+async function delay(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsModalProps) {
   const settings = useQuery(api.settings.get);
@@ -53,6 +58,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeUploadSessionRef = useRef<Id<"imageUploadSessions"> | null>(null);
 
   // Review state
   const [reviewCards, setReviewCards] = useState<ReviewCard[]>([]);
@@ -111,10 +117,29 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
     setIsUploading(false);
   }, [clearImage]);
 
+  const cleanupActiveUploadSession = useCallback(async (storageId?: Id<"_storage">) => {
+    const uploadSessionId = activeUploadSessionRef.current;
+    if (!uploadSessionId) return;
+    activeUploadSessionRef.current = null;
+
+    try {
+      await cancelUpload({ uploadSessionId, storageId });
+    } catch (cleanupError) {
+      console.error('Failed to cleanup upload session:', cleanupError);
+    }
+  }, [cancelUpload]);
+
+  useEffect(() => {
+    return () => {
+      void cleanupActiveUploadSession();
+    };
+  }, [cleanupActiveUploadSession]);
+
   const handleClose = useCallback(() => {
+    void cleanupActiveUploadSession();
     resetState();
     onClose();
-  }, [resetState, onClose]);
+  }, [cleanupActiveUploadSession, resetState, onClose]);
 
   // ── Input phase helpers ──────────────────────────────────────────────────
 
@@ -150,14 +175,21 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
     if (count === false) return;
     setError(null);
 
-    let storageId: Id<"_storage"> | undefined;
+    let uploadSessionId: Id<"imageUploadSessions"> | undefined;
+    let uploadedStorageId: Id<"_storage"> | undefined;
 
     // Upload image to Convex storage if in image mode
     if (mode === 'image' && selectedFile) {
       setIsUploading(true);
       try {
-        const uploadUrl = await generateUploadUrl();
-        const uploadResult = await fetch(uploadUrl, {
+        const session = await generateUploadUrl();
+        uploadSessionId = session.uploadSessionId;
+        activeUploadSessionRef.current = uploadSessionId;
+        if (!uploadSessionId) {
+          throw new Error('Failed to create upload session. Please try again.');
+        }
+
+        const uploadResult = await fetch(session.uploadUrl, {
           method: 'POST',
           headers: { 'Content-Type': selectedFile.type },
           body: selectedFile,
@@ -165,18 +197,40 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
         if (!uploadResult.ok) {
           throw new Error('Failed to upload image. Please try again.');
         }
-        const { storageId: id } = await uploadResult.json();
-        storageId = id as Id<"_storage">;
-        // Register the upload for server-side tracking and ownership validation
-        await registerUpload({ storageId });
-      } catch (err) {
-        if (storageId) {
+        const uploadJson: unknown = await uploadResult.json();
+        const storageId =
+          typeof uploadJson === 'object' &&
+          uploadJson !== null &&
+          'storageId' in uploadJson &&
+          typeof uploadJson.storageId === 'string'
+            ? (uploadJson.storageId as Id<"_storage">)
+            : null;
+
+        if (!storageId) {
+          throw new Error('Upload response was invalid. Please try again.');
+        }
+        uploadedStorageId = storageId;
+
+        // Register upload to session with retries to tolerate transient network hiccups.
+        let registerError: unknown = null;
+        for (let attempt = 1; attempt <= REGISTER_UPLOAD_MAX_ATTEMPTS; attempt += 1) {
           try {
-            await cancelUpload({ storageId });
-          } catch (cleanupErr) {
-            console.error('Failed to cleanup upload after registration error:', cleanupErr);
+            await registerUpload({ uploadSessionId, storageId });
+            registerError = null;
+            break;
+          } catch (err) {
+            registerError = err;
+            if (attempt < REGISTER_UPLOAD_MAX_ATTEMPTS) {
+              await delay(250 * attempt);
+            }
           }
         }
+
+        if (registerError) {
+          throw registerError;
+        }
+      } catch (err) {
+        await cleanupActiveUploadSession(uploadedStorageId);
         setError(err instanceof Error ? err.message : 'Failed to upload image');
         setIsUploading(false);
         return;
@@ -191,14 +245,18 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
         prompt: prompt.trim() || undefined,
         mode,
         count: count ?? undefined,
-        imageStorageId: storageId,
+        imageUploadSessionId: uploadSessionId,
       });
+      activeUploadSessionRef.current = null;
       setReviewCards(cards.map((c) => ({ ...c, decision: undefined })));
       setReviewIndex(0);
       setIsFlipped(false);
       setIsEditing(false);
       setPhase('review');
     } catch (err) {
+      if (mode === 'image') {
+        await cleanupActiveUploadSession();
+      }
       setError(err instanceof Error ? err.message : 'Failed to generate cards');
       setPhase('input');
     }

@@ -54,12 +54,23 @@ export default defineSchema({
     openAiApiKey: v.optional(v.string()),
   }).index("by_user", ["userId"]),
 
-  pendingUploads: defineTable({
-    storageId: v.id("_storage"),
+  imageUploadSessions: defineTable({
     userId: v.id("users"),
+    status: v.union(
+      v.literal("issued"),
+      v.literal("uploaded"),
+      v.literal("consumed"),
+      v.literal("cancelled"),
+      v.literal("expired")
+    ),
+    storageId: v.optional(v.id("_storage")),
     createdAt: v.number(),
+    updatedAt: v.number(),
+    expiresAt: v.number(),
+    lastError: v.optional(v.string()),
   })
+    .index("by_user", ["userId"])
     .index("by_storage", ["storageId"])
-    .index("by_created", ["createdAt"]),
+    .index("by_status_expires", ["status", "expiresAt"]),
 
 });

@@ -87,7 +87,7 @@ Take a look at what’s built and what’s next.
 - [x] **Cascade delete** — Deleting a deck now also removes all associated study sessions and events.
 - [x] **Session ownership** — `recordEvent` verifies the session belongs to the caller before inserting.
 - [x] **Type hygiene** — Removed `any` from AI card mapping; removed unused `DeckStats` type; extracted shared `getMemoryStage` utility to `src/lib/memoryStage.ts`.
-- [x] **Upload security** — Server-side file type/size validation for image uploads; ownership verification via `pendingUploads` tracking table; automatic cleanup of orphaned uploads via cron job (every 30 min).
+- [x] **Upload security** — Server-side file type/size validation for image uploads; ownership verification via upload sessions (`issued` → `uploaded` → `consumed/cancelled/expired`); automatic cleanup of expired uploads via cron job.
 
 ### Resource caps
 

@@ -21,6 +21,19 @@ const ALLOWED_IMAGE_TYPES = [
   "image/webp",
   "image/gif",
 ] as const;
+const IMAGE_UPLOAD_SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+type UploadSessionStatus =
+  | "issued"
+  | "uploaded"
+  | "consumed"
+  | "cancelled"
+  | "expired";
+
+interface UploadSessionResult {
+  storageId: Id<"_storage">;
+  uploadSessionId: Id<"imageUploadSessions">;
+}
 
 export const bulkInsertCards = internalMutation({
   args: {
@@ -94,162 +107,267 @@ export const generateUploadUrl = mutation({
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
-    return await ctx.storage.generateUploadUrl();
-  },
-});
-
-export const deleteStorageFile = internalMutation({
-  args: { storageId: v.id("_storage") },
-  handler: async (ctx, args) => {
-    await ctx.storage.delete(args.storageId);
-  },
-});
-
-/** Client calls this after a successful upload POST to register the file for tracking. */
-export const registerUpload = mutation({
-  args: { storageId: v.id("_storage") },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-
-    // Verify the file actually exists in storage
-    const fileMeta = await ctx.db.system.get(args.storageId);
-    if (!fileMeta) throw new Error("Uploaded file not found.");
-
-    const existingRows = await ctx.db
-      .query("pendingUploads")
-      .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
-      .collect();
-
-    if (existingRows.some((row) => row.userId === userId)) {
-      return;
-    }
-
-    if (existingRows.length > 0) {
-      throw new Error("Upload not found.");
-    }
-
-    await ctx.db.insert("pendingUploads", {
-      storageId: args.storageId,
+    const now = Date.now();
+    const uploadSessionId = await ctx.db.insert("imageUploadSessions", {
       userId,
-      createdAt: Date.now(),
+      status: "issued",
+      createdAt: now,
+      updatedAt: now,
+      expiresAt: now + IMAGE_UPLOAD_SESSION_TTL_MS,
     });
-  },
-});
-
-/** Validate that the upload belongs to the caller and meets file constraints. */
-export const validateUpload = internalQuery({
-  args: {
-    storageId: v.id("_storage"),
-    userId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    // Ownership check via pendingUploads
-    const pendingRows = await ctx.db
-      .query("pendingUploads")
-      .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
-      .collect();
-
-    const pending = pendingRows.find((row) => row.userId === args.userId);
-
-    if (!pending) {
-      throw new Error("Upload not found. Please re-upload the image.");
-    }
-
-    // Get storage metadata for server-side validation
-    const fileMeta = await ctx.db.system.get(args.storageId);
-    if (!fileMeta) {
-      throw new Error("Image not found. Please re-upload.");
-    }
-
+    const uploadUrl = await ctx.storage.generateUploadUrl();
     return {
-      contentType: fileMeta.contentType ?? null,
-      size: fileMeta.size,
-      pendingUploadId: pending._id,
+      uploadUrl,
+      uploadSessionId,
     };
   },
 });
 
-/** Remove both the storage file and its pendingUploads tracking row. */
-export const cleanupUpload = internalMutation({
+/** Client calls this after a successful upload POST to attach storage to session. */
+export const registerUpload = mutation({
   args: {
-    storageId: v.id("_storage"),
-    userId: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const pendingRows = await ctx.db
-      .query("pendingUploads")
-      .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
-      .collect();
-
-    const ownedRows = pendingRows.filter((row) => row.userId === args.userId);
-
-    if (ownedRows.length === 0) {
-      return;
-    }
-
-    // Guard: only delete the storage file if it still exists (avoids
-    // "NonexistentDocument" error if the cron already swept it).
-    const fileMeta = await ctx.db.system.get(args.storageId);
-    if (fileMeta) {
-      await ctx.storage.delete(args.storageId);
-    }
-
-    for (const row of ownedRows) {
-      await ctx.db.delete(row._id);
-    }
-  },
-});
-
-/** Best-effort client cleanup for uploads that failed registration/use. */
-export const cancelUpload = mutation({
-  args: {
+    uploadSessionId: v.id("imageUploadSessions"),
     storageId: v.id("_storage"),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const pendingRows = await ctx.db
-      .query("pendingUploads")
+    const session = await ctx.db.get(args.uploadSessionId);
+    if (!session || session.userId !== userId) {
+      throw new Error("Upload session not found. Please re-upload.");
+    }
+
+    if (session.status === "consumed" || session.status === "cancelled") {
+      throw new Error("Upload session is no longer valid. Please re-upload.");
+    }
+
+    if (session.status === "expired" || session.expiresAt <= Date.now()) {
+      throw new Error("Upload session expired. Please re-upload the image.");
+    }
+
+    if (session.status === "uploaded") {
+      if (session.storageId === args.storageId) {
+        return;
+      }
+      throw new Error("Upload session already has a different file.");
+    }
+
+    const fileMeta = await ctx.db.system.get(args.storageId);
+    if (!fileMeta) throw new Error("Uploaded file not found.");
+
+    if (
+      !fileMeta.contentType ||
+      !(ALLOWED_IMAGE_TYPES as readonly string[]).includes(fileMeta.contentType)
+    ) {
+      await ctx.storage.delete(args.storageId);
+      await ctx.db.patch(args.uploadSessionId, {
+        status: "cancelled",
+        storageId: args.storageId,
+        updatedAt: Date.now(),
+        lastError: "Invalid file type.",
+      });
+      throw new Error(
+        "Invalid file type. Please upload a PNG, JPEG, WEBP, or GIF image."
+      );
+    }
+
+    if (fileMeta.size > MAX_IMAGE_SIZE_BYTES) {
+      await ctx.storage.delete(args.storageId);
+      await ctx.db.patch(args.uploadSessionId, {
+        status: "cancelled",
+        storageId: args.storageId,
+        updatedAt: Date.now(),
+        lastError: "File exceeded size limit.",
+      });
+      throw new Error("Image must be under 20 MB.");
+    }
+
+    const existingRows = await ctx.db
+      .query("imageUploadSessions")
       .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
       .collect();
 
-    if (pendingRows.length === 0) {
-      return;
+    const conflictingRow = existingRows.find(
+      (row) => row._id !== args.uploadSessionId
+    );
+    if (conflictingRow) {
+      throw new Error("Upload already linked to another session.");
     }
 
-    const hasOwnedRow = pendingRows.some((row) => row.userId === userId);
-    if (!hasOwnedRow) {
-      throw new Error("Upload not found.");
-    }
-
-    await ctx.runMutation(internal.ai.cleanupUpload, {
+    await ctx.db.patch(args.uploadSessionId, {
+      status: "uploaded",
       storageId: args.storageId,
-      userId,
+      updatedAt: Date.now(),
+      expiresAt: Date.now() + IMAGE_UPLOAD_SESSION_TTL_MS,
     });
   },
 });
 
-const ORPHAN_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+/** Validate that an uploaded image session belongs to the caller and is usable. */
+export const validateUploadedImageSession = internalQuery({
+  args: {
+    uploadSessionId: v.id("imageUploadSessions"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args): Promise<UploadSessionResult> => {
+    const session = await ctx.db.get(args.uploadSessionId);
+    if (!session || session.userId !== args.userId) {
+      throw new Error("Upload session not found. Please re-upload the image.");
+    }
+
+    if (session.status !== "uploaded") {
+      throw new Error("Upload session is not ready. Please re-upload the image.");
+    }
+
+    if (!session.storageId) {
+      throw new Error("Image not found. Please re-upload.");
+    }
+
+    if (session.expiresAt <= Date.now()) {
+      throw new Error("Upload session expired. Please re-upload the image.");
+    }
+
+    const fileMeta = await ctx.db.system.get(session.storageId);
+    if (!fileMeta) {
+      throw new Error("Image not found. Please re-upload.");
+    }
+
+    if (
+      !fileMeta.contentType ||
+      !(ALLOWED_IMAGE_TYPES as readonly string[]).includes(fileMeta.contentType)
+    ) {
+      throw new Error(
+        "Invalid file type. Please upload a PNG, JPEG, WEBP, or GIF image."
+      );
+    }
+
+    if (fileMeta.size > MAX_IMAGE_SIZE_BYTES) {
+      throw new Error("Image must be under 20 MB.");
+    }
+
+    return {
+      storageId: session.storageId,
+      uploadSessionId: session._id,
+    };
+  },
+});
+
+/** Finalize an upload session and best-effort delete the backing file. */
+export const finalizeUploadSession = internalMutation({
+  args: {
+    uploadSessionId: v.id("imageUploadSessions"),
+    userId: v.id("users"),
+    targetStatus: v.union(
+      v.literal("consumed"),
+      v.literal("cancelled"),
+      v.literal("expired")
+    ),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.uploadSessionId);
+    if (!session || session.userId !== args.userId) {
+      return;
+    }
+
+    if (
+      session.status === "consumed" ||
+      session.status === "cancelled" ||
+      session.status === "expired"
+    ) {
+      return;
+    }
+
+    if (session.storageId) {
+      const fileMeta = await ctx.db.system.get(session.storageId);
+      if (fileMeta) {
+        await ctx.storage.delete(session.storageId);
+      }
+    }
+
+    await ctx.db.patch(args.uploadSessionId, {
+      status: args.targetStatus,
+      updatedAt: Date.now(),
+    });
+  },
+});
+
+/** Best-effort client cleanup for abandoned or failed image generation flows. */
+export const cancelUpload = mutation({
+  args: {
+    uploadSessionId: v.id("imageUploadSessions"),
+    storageId: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const session = await ctx.db.get(args.uploadSessionId);
+    if (!session || session.userId !== userId) {
+      throw new Error("Upload session not found.");
+    }
+
+    if (session.status !== "issued" && session.status !== "uploaded") {
+      return;
+    }
+
+    // Fallback cleanup for the case where upload succeeded but registerUpload
+    // failed before the session was linked to storageId.
+    if (!session.storageId && args.storageId) {
+      const sameStorageRows = await ctx.db
+        .query("imageUploadSessions")
+        .withIndex("by_storage", (q) => q.eq("storageId", args.storageId))
+        .collect();
+
+      const conflictingRow = sameStorageRows.find((row) => row._id !== session._id);
+      if (conflictingRow) {
+        throw new Error("Upload session not found.");
+      }
+
+      const fileMeta = await ctx.db.system.get(args.storageId);
+      if (fileMeta) {
+        await ctx.storage.delete(args.storageId);
+      }
+
+      await ctx.db.patch(args.uploadSessionId, {
+        storageId: args.storageId,
+        status: "cancelled",
+        updatedAt: Date.now(),
+        lastError: "Cancelled before upload registration completed.",
+      });
+      return;
+    }
+
+    await ctx.runMutation(internal.ai.finalizeUploadSession, {
+      uploadSessionId: args.uploadSessionId,
+      userId,
+      targetStatus: "cancelled",
+    });
+  },
+});
 
 /** Cron job: delete uploads older than 30 minutes that were never consumed. */
 export const sweepOrphanedUploads = internalMutation({
   args: {},
   handler: async (ctx) => {
-    const cutoff = Date.now() - ORPHAN_THRESHOLD_MS;
-    const stale = await ctx.db
-      .query("pendingUploads")
-      .withIndex("by_created", (q) => q.lt("createdAt", cutoff))
-      .collect();
+    const now = Date.now();
+    const expirableStatuses: UploadSessionStatus[] = ["issued", "uploaded"];
 
-    for (const row of stale) {
-      // Guard: the file may have been cleaned up by generateCards already.
-      const fileMeta = await ctx.db.system.get(row.storageId);
-      if (fileMeta) {
-        await ctx.storage.delete(row.storageId);
+    for (const status of expirableStatuses) {
+      const stale = await ctx.db
+        .query("imageUploadSessions")
+        .withIndex("by_status_expires", (q) =>
+          q.eq("status", status).lt("expiresAt", now)
+        )
+        .collect();
+
+      for (const session of stale) {
+        await ctx.runMutation(internal.ai.finalizeUploadSession, {
+          uploadSessionId: session._id,
+          userId: session.userId,
+          targetStatus: "expired",
+        });
       }
-      await ctx.db.delete(row._id);
     }
   },
 });
@@ -266,8 +384,8 @@ export const generateCards = action({
     ),
     // When count is omitted, the LLM decides (auto mode)
     count: v.optional(v.number()),
-    // Required when mode is "image" — references the uploaded file in Convex storage
-    imageStorageId: v.optional(v.id("_storage")),
+    // Required when mode is "image" — references the tracked upload session
+    imageUploadSessionId: v.optional(v.id("imageUploadSessions")),
   },
   handler: async (
     ctx,
@@ -291,35 +409,25 @@ export const generateCards = action({
 
     // For image mode, validate ownership + file constraints, then resolve URL
     let imageUrl: string | null = null;
-    let validatedImageStorageId: Id<"_storage"> | null = null;
+    let validatedUploadSessionId: Id<"imageUploadSessions"> | null = null;
 
     if (args.mode === "image") {
-      if (!args.imageStorageId) {
+      if (!args.imageUploadSessionId) {
         throw new Error("Image is required for image mode.");
       }
-      const imageStorageId = args.imageStorageId;
+      const imageUploadSessionId = args.imageUploadSessionId;
 
       // Server-side ownership + file validation
-      const uploadMeta = await ctx.runQuery(internal.ai.validateUpload, {
-        storageId: imageStorageId,
-        userId,
-      });
-      validatedImageStorageId = imageStorageId;
+      const uploadMeta = await ctx.runQuery(
+        internal.ai.validateUploadedImageSession,
+        {
+          uploadSessionId: imageUploadSessionId,
+          userId,
+        }
+      );
+      validatedUploadSessionId = uploadMeta.uploadSessionId;
 
-      if (
-        !uploadMeta.contentType ||
-        !(ALLOWED_IMAGE_TYPES as readonly string[]).includes(
-          uploadMeta.contentType
-        )
-      ) {
-        throw new Error(
-          "Invalid file type. Please upload a PNG, JPEG, WEBP, or GIF image."
-        );
-      }
-
-      if (uploadMeta.size > MAX_IMAGE_SIZE_BYTES) {
-        throw new Error("Image must be under 20 MB.");
-      }
+      const imageStorageId = uploadMeta.storageId;
 
       const url = await ctx.storage.getUrl(imageStorageId);
       if (!url) {
@@ -556,11 +664,12 @@ ${existingFronts}`;
 
       return filtered;
     } finally {
-      // Clean up the uploaded image and its tracking row regardless of success or failure
-      if (validatedImageStorageId) {
-        await ctx.runMutation(internal.ai.cleanupUpload, {
-          storageId: validatedImageStorageId,
+      // Clean up the uploaded image and its tracking session regardless of success/failure.
+      if (validatedUploadSessionId) {
+        await ctx.runMutation(internal.ai.finalizeUploadSession, {
+          uploadSessionId: validatedUploadSessionId,
           userId,
+          targetStatus: "consumed",
         });
       }
     }
