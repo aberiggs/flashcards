@@ -211,17 +211,16 @@ try {
 
 ## Keeping Docs Current
 
-After completing any feature work or making meaningful changes, update `docs/roadmap.md`:
+After completing any feature work or making meaningful changes, update `docs/features.md`:
 
-- **Check off completed items**: change `- [ ]` to `- [x]` for anything now implemented,
-  and move it (with a short label) under the appropriate `## Implemented ✅` section.
-- **Add new ideas**: if you build something that wasn't planned, or discover a natural
-  follow-on feature, add it under the relevant `## Future ideas 🚧` subsection with a
-  `- [ ]` checkbox and a one-line description.
-- **Keep descriptions honest**: the roadmap is user-facing — write entries as
-  user-visible capabilities, not implementation details.
-- **Don't over-document**: trivial bug fixes and refactors don't need roadmap entries.
-  New user-facing features, significant UX changes, and newly planned ideas do.
+- **Keep current capabilities current**: add or revise user-visible functionality in
+  the appropriate section.
+- **Track ideas in GitHub Issues**: for new follow-on ideas, first check for duplicates,
+  then create or link an issue instead of adding local roadmap checkboxes.
+- **Keep descriptions honest**: write feature notes as user-visible capabilities, not
+  implementation details.
+- **Don't over-document**: trivial bug fixes and refactors don't need feature doc updates.
+  New user-facing features and significant UX changes do.
 
 Also update `docs/build.md` if you change the dev setup, environment variables,
 deployment process, or add new tooling.
