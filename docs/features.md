@@ -1,6 +1,6 @@
 # Features
 
-User-facing capabilities are documented here. New ideas and backlog items are tracked in GitHub Issues.
+User-facing capabilities are documented here. New ideas and backlog items are tracked in GitHub.
 
 ## Current capabilities
 
@@ -39,42 +39,7 @@ User-facing capabilities are documented here. New ideas and backlog items are tr
 - Theme options (light, dark, system) and secure OpenAI API key management.
 - Global search (Cmd/Ctrl+K), toast notifications, and mobile usability improvements.
 
-## Feature backlog (GitHub Issues)
+## Feature backlog
 
-Track planned features and ideas in GitHub: https://github.com/aberiggs/flashcards/issues
-
-### Study and deck management
-
-- #11 Keyboard shortcuts for study mode
-- #16 Card browser with search
-- #17 Card memory stage badges and sorting
-- #18 Deck tags and filtering
-- #21 Per-deck and per-card stats
-- #22 Daily study goal
-- #29 Multiple study modes
-
-### AI and generation
-
-- #27 Deep AI-assisted explanations
-- #28 Card generation templates
-- #35 Explore optimal models for each AI task type
-- #36 Track AI request usage and cost metrics
-
-### Card content and format
-
-- #23 Multimedia in cards (images, audio, video)
-- #24 Extended Markdown rendering
-- #25 Custom card schema
-- #26 Rich card components
-
-### Sharing and social
-
-- #19 Deck sharing (read-only copy)
-- #20 Deck rating and reviews
-- #31 Learning paths
-- #32 Learning communities
-
-### UX and theming
-
-- #33 Advanced themes and customization
-- #38 Improve loading states and UI polish
+Track planned features and ideas in GitHub:
+https://github.com/aberiggs/flashcards/issues

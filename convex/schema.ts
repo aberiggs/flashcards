@@ -54,4 +54,25 @@ export default defineSchema({
     openAiApiKey: v.optional(v.string()),
   }).index("by_user", ["userId"]),
 
+  aiImageJobs: defineTable({
+    userId: v.id("users"),
+    deckId: v.id("decks"),
+    storageId: v.optional(v.id("_storage")),
+    status: v.union(
+      v.literal("pending_upload"),
+      v.literal("processing"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("deleted")
+    ),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    expiresAt: v.number(),
+    deletedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_expires_at", ["expiresAt"])
+    .index("by_storage", ["storageId"]),
+
 });
