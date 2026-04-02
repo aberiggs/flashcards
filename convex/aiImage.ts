@@ -85,6 +85,7 @@ export const cleanupExpiredImageJobs = internalMutation({
 
     for (const job of expiredJobs) {
       if (job.status === "deleted") {
+        await ctx.db.delete(job._id);
         continue;
       }
 
