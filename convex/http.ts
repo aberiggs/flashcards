@@ -86,14 +86,17 @@ http.route({
       }
 
       const deckId = coerceDeckId(deckIdRaw);
-      storageId = await ctx.storage.store(image);
-
       const expiresAt = Date.now() + IMAGE_JOB_TTL_MS;
       jobId = await ctx.runMutation(internal.aiImage.createImageJob, {
         userId,
         deckId,
-        storageId,
         expiresAt,
+      });
+
+      storageId = await ctx.storage.store(image);
+      await ctx.runMutation(internal.aiImage.attachImageToJob, {
+        jobId,
+        storageId,
       });
 
       const cards = await ctx.runAction(internal.aiImage.generateCardsFromStoredImage, {
@@ -115,6 +118,17 @@ http.route({
     } catch (error) {
       const message = getImageJobErrorMessage(error);
       const status = statusCodeFromMessage(message);
+
+      if (jobId && storageId) {
+        try {
+          await ctx.runMutation(internal.aiImage.attachImageToJob, {
+            jobId,
+            storageId,
+          });
+        } catch {
+          // Ignore; best effort so cron can retry storage cleanup.
+        }
+      }
 
       if (jobId) {
         await ctx.runMutation(internal.aiImage.markImageJobStatus, {

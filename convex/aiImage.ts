@@ -13,7 +13,6 @@ export const createImageJob = internalMutation({
   args: {
     userId: v.id("users"),
     deckId: v.id("decks"),
-    storageId: v.id("_storage"),
     expiresAt: v.number(),
   },
   handler: async (ctx, args) => {
@@ -21,11 +20,29 @@ export const createImageJob = internalMutation({
     return await ctx.db.insert("aiImageJobs", {
       userId: args.userId,
       deckId: args.deckId,
-      storageId: args.storageId,
-      status: "processing",
+      status: "pending_upload",
       createdAt: now,
       updatedAt: now,
       expiresAt: args.expiresAt,
+    });
+  },
+});
+
+export const attachImageToJob = internalMutation({
+  args: {
+    jobId: v.id("aiImageJobs"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    const job = await ctx.db.get(args.jobId);
+    if (!job || job.status === "deleted") {
+      return;
+    }
+
+    await ctx.db.patch(args.jobId, {
+      storageId: args.storageId,
+      status: job.status === "pending_upload" ? "processing" : job.status,
+      updatedAt: Date.now(),
     });
   },
 });
@@ -68,6 +85,15 @@ export const cleanupExpiredImageJobs = internalMutation({
 
     for (const job of expiredJobs) {
       if (job.status === "deleted") {
+        continue;
+      }
+
+      if (!job.storageId) {
+        await ctx.db.patch(job._id, {
+          status: "deleted",
+          updatedAt: now,
+          deletedAt: now,
+        });
         continue;
       }
 

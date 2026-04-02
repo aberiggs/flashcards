@@ -57,8 +57,9 @@ export default defineSchema({
   aiImageJobs: defineTable({
     userId: v.id("users"),
     deckId: v.id("decks"),
-    storageId: v.id("_storage"),
+    storageId: v.optional(v.id("_storage")),
     status: v.union(
+      v.literal("pending_upload"),
       v.literal("processing"),
       v.literal("completed"),
       v.literal("failed"),
