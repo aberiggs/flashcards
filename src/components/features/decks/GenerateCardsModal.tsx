@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useAction } from 'convex/react';
+import { useAuthToken } from '@convex-dev/auth/react';
 import { api } from '../../../../convex/_generated/api';
 import type { Id } from '../../../../convex/_generated/dataModel';
 import { Modal } from '@/components/ui/Modal';
@@ -10,6 +11,7 @@ import { Sparkles, Loader2, AlertCircle, RotateCcw, Check, X, Pencil, ChevronLef
 import Link from 'next/link';
 import { FlipCard } from './FlipCard';
 import { CardEditForm } from './CardEditForm';
+import { getConvexSiteUrl } from '@/lib/convexSiteUrl';
 
 interface GenerateCardsModalProps {
   isOpen: boolean;
@@ -27,16 +29,20 @@ interface ReviewCard {
 }
 
 const MAX_CARDS = 100;
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg'];
 
 export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsModalProps) {
   const settings = useQuery(api.settings.get);
+  const authToken = useAuthToken();
   const generateAction = useAction(api.ai.generateCards);
   const insertAction = useAction(api.ai.insertGeneratedCards);
   const { toast } = useToast();
 
   const [phase, setPhase] = useState<Phase>('input');
-  const [mode, setMode] = useState<'topic' | 'notes'>('topic');
+  const [mode, setMode] = useState<'topic' | 'notes' | 'image'>('topic');
   const [prompt, setPrompt] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [autoMode, setAutoMode] = useState(true);
   const [countInput, setCountInput] = useState('10');
   const [countError, setCountError] = useState<string | null>(null);
@@ -53,6 +59,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
   const resetState = useCallback(() => {
     setPhase('input');
     setPrompt('');
+    setSelectedImage(null);
     setError(null);
     setCountError(null);
     setReviewCards([]);
@@ -86,18 +93,37 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+    if (mode === 'image') {
+      if (!selectedImage) return;
+    } else if (!prompt.trim()) {
+      return;
+    }
+
     const count = validateAndGetCount();
     if (count === false) return;
     setPhase('generating');
     setError(null);
+
     try {
-      const cards = await generateAction({
-        deckId,
-        prompt: prompt.trim(),
-        mode,
-        count: count ?? undefined,
-      });
+      let cards: Array<{ front: string; back: string }>;
+
+      if (mode === 'image') {
+        cards = await generateFromImage({
+          deckId,
+          token: authToken,
+          image: selectedImage,
+          guidance: prompt.trim() || undefined,
+          count: count ?? undefined,
+        });
+      } else {
+        cards = await generateAction({
+          deckId,
+          prompt: prompt.trim(),
+          mode,
+          count: count ?? undefined,
+        });
+      }
+
       setReviewCards(cards.map((c) => ({ ...c, decision: undefined })));
       setReviewIndex(0);
       setIsFlipped(false);
@@ -112,6 +138,28 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
   const handleCountInputChange = (value: string) => {
     setCountInput(value);
     if (countError) setCountError(null);
+  };
+
+  const handleImageChange = (file: File | null) => {
+    setError(null);
+    if (!file) {
+      setSelectedImage(null);
+      return;
+    }
+
+    if (!SUPPORTED_IMAGE_TYPES.includes(file.type)) {
+      setSelectedImage(null);
+      setError('Unsupported image format. Please upload a PNG or JPEG image.');
+      return;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setSelectedImage(null);
+      setError('Image is too large. Maximum allowed size is 5MB.');
+      return;
+    }
+
+    setSelectedImage(file);
   };
 
   // ── Review phase helpers ─────────────────────────────────────────────────
@@ -455,25 +503,71 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
             >
               Paste Notes
             </button>
+            <button
+              onClick={() => setMode('image')}
+              className={`px-3 py-1.5 text-sm rounded-md transition-colors cursor-pointer ${
+                mode === 'image'
+                  ? 'bg-accent-primary text-text-inverse'
+                  : 'bg-surface-secondary text-text-secondary border border-border-primary hover:bg-surface-tertiary'
+              }`}
+            >
+              Image
+            </button>
           </div>
 
-          {/* Prompt input */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-text-secondary mb-1.5">
-              {mode === 'topic' ? 'Topic' : 'Notes'}
-            </label>
-            <textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              rows={6}
-              placeholder={
-                mode === 'topic'
-                  ? 'e.g., Spanish food vocabulary, Japanese hiragana, French past tense...'
-                  : 'Paste your notes, vocabulary lists, or study material here...'
-              }
-              className="w-full bg-surface-secondary border border-border-primary rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
-            />
-          </div>
+          {mode === 'image' ? (
+            <>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Upload image
+                </label>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  onChange={(e) => handleImageChange(e.target.files?.[0] ?? null)}
+                  className="w-full bg-surface-secondary border border-border-primary rounded-md px-3 py-2 text-sm text-text-primary file:mr-3 file:border-0 file:bg-accent-primary file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-text-inverse file:rounded-md hover:file:bg-accent-primary-hover"
+                />
+                <p className="mt-2 text-xs text-text-tertiary">
+                  Supports PNG/JPEG up to 5MB. For best OCR results, use a clear, well-lit photo.
+                </p>
+                {selectedImage && (
+                  <p className="mt-1 text-xs text-text-secondary">
+                    Selected: {selectedImage.name}
+                  </p>
+                )}
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                  Additional guidance (optional)
+                </label>
+                <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  rows={4}
+                  placeholder="e.g., Focus on formulas and definitions from this page"
+                  className="w-full bg-surface-secondary border border-border-primary rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-text-secondary mb-1.5">
+                {mode === 'topic' ? 'Topic' : 'Notes'}
+              </label>
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={6}
+                placeholder={
+                  mode === 'topic'
+                    ? 'e.g., Spanish food vocabulary, Japanese hiragana, French past tense...'
+                    : 'Paste your notes, vocabulary lists, or study material here...'
+                }
+                className="w-full bg-surface-secondary border border-border-primary rounded-md px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
+              />
+            </div>
+          )}
 
           {/* Card count */}
           <div className="mb-6">
@@ -529,7 +623,7 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
           <div className="flex justify-end">
             <button
               onClick={handleGenerate}
-              disabled={!prompt.trim()}
+              disabled={mode === 'image' ? !selectedImage : !prompt.trim()}
               className="inline-flex items-center gap-2 bg-accent-primary text-text-inverse px-4 py-2 rounded-md text-sm font-medium hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
               <Sparkles className="w-4 h-4" aria-hidden />
@@ -540,4 +634,71 @@ export function GenerateCardsModal({ isOpen, onClose, deckId }: GenerateCardsMod
       )}
     </Modal>
   );
+}
+
+interface GenerateFromImageArgs {
+  deckId: Id<'decks'>;
+  token: string | null;
+  image: File | null;
+  guidance?: string;
+  count?: number;
+}
+
+async function generateFromImage({
+  deckId,
+  token,
+  image,
+  guidance,
+  count,
+}: GenerateFromImageArgs): Promise<Array<{ front: string; back: string }>> {
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+  if (!image) {
+    throw new Error('Please upload an image first.');
+  }
+
+  const formData = new FormData();
+  formData.append('deckId', deckId);
+  formData.append('image', image);
+  if (guidance) {
+    formData.append('guidance', guidance);
+  }
+  if (count !== undefined) {
+    formData.append('count', String(count));
+  }
+
+  const endpoint = `${getConvexSiteUrl()}/ai/generate-from-image`;
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  const raw = await response.text();
+  let payload: {
+    cards?: Array<{ front: string; back: string }>;
+    error?: string;
+  };
+
+  try {
+    payload = JSON.parse(raw) as {
+      cards?: Array<{ front: string; back: string }>;
+      error?: string;
+    };
+  } catch {
+    payload = {};
+  }
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? 'Failed to generate cards from image.');
+  }
+
+  if (!Array.isArray(payload.cards)) {
+    throw new Error('Unexpected response from image generation.');
+  }
+
+  return payload.cards;
 }

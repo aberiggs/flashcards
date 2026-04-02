@@ -1,7 +1,14 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 import { MAX_DECKS_PER_USER } from "./limits";
+
+export const getInternal = internalQuery({
+  args: { id: v.id("decks") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.id);
+  },
+});
 
 // List all decks for the authenticated user, with stats
 export const list = query({
