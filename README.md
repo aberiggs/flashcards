@@ -17,9 +17,9 @@ I built this so I didn't have to deal with clunky interfaces or annoying paywall
 - **Theme** — Light, dark, and system themes via the Options page.
 - **Auth** — Sign in with GitHub; your data is scoped to your account and stays private.
 
-You can find more in the [roadmap](docs/roadmap.md)!
+You can find more in the [features doc](docs/features.md)!
 
 ## Docs
 
 - [Build & run instructions](docs/build.md) — How to install, run locally, and deploy.
-- [Roadmap](docs/roadmap.md) — What’s built and what’s planned.
+- [Features](docs/features.md) — Current capabilities and linked feature backlog.
