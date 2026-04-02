@@ -45,6 +45,7 @@ Take a look at what’s built and what’s next.
 
 - [x] **Generate from topic** — Generate flashcards from a concept or topic the user describes (e.g. "Spanish food vocabulary").
 - [x] **Generate from notes** — Generate flashcards from pasted study material or notes.
+- [x] **Generate from image** — Upload a single PNG/JPEG image (up to 5MB) and generate flashcards from visible content with OCR-aware AI guidance; cards still go through the existing review/edit flow before saving.
 - [x] **Auto card count** — AI analyzes content depth and decides how many cards to generate (1–100); chosen count is shown transparently in the preview step.
 - [x] **Free-form card count** — Users can specify any number of cards from 1 to 100; entering more than 100 shows a friendly suggestion to split into multiple generations.
 - [x] **Deduplication** — Existing cards in the deck are passed to the AI so it avoids generating duplicates or near-duplicates.

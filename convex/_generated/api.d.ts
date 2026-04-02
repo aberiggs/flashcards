@@ -9,8 +9,10 @@
  */
 
 import type * as ai from "../ai.js";
+import type * as aiImage from "../aiImage.js";
 import type * as auth from "../auth.js";
 import type * as cards from "../cards.js";
+import type * as crons from "../crons.js";
 import type * as decks from "../decks.js";
 import type * as http from "../http.js";
 import type * as import_ from "../import.js";
@@ -29,8 +31,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   ai: typeof ai;
+  aiImage: typeof aiImage;
   auth: typeof auth;
   cards: typeof cards;
+  crons: typeof crons;
   decks: typeof decks;
   http: typeof http;
   import: typeof import_;
