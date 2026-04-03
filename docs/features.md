@@ -13,6 +13,7 @@ User-facing capabilities are documented here. New ideas and backlog items are tr
 ### Study workflow
 
 - Review mode with flip-to-reveal, progress tracking, and confidence ratings.
+- Keyboard-first study controls (`Space` to reveal, `1-4` to rate confidence) with on-screen hints.
 - SM-2 scheduling with due-card filtering and stage progression.
 - Session and event tracking for streaks, activity, and accuracy metrics.
 
