@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Pencil, Trash2, Plus, Layers, Sparkles } from 'lucide-react';
+import { Pencil, Trash2, Plus, Layers, Sparkles, Repeat } from 'lucide-react';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../../../../convex/_generated/api';
 import type { Id } from '../../../../../convex/_generated/dataModel';
@@ -44,6 +44,7 @@ export default function DeckDetailPage() {
     const addCardMutation = useMutation(api.cards.create);
     const updateCardMutation = useMutation(api.cards.update);
     const deleteCardMutation = useMutation(api.cards.remove);
+    const generateReverseCardsMutation = useMutation(api.cards.generateReverseCards);
 
     const [editingName, setEditingName] = useState(false);
     const [editingDescription, setEditingDescription] = useState(false);
@@ -55,11 +56,18 @@ export default function DeckDetailPage() {
     const [isDeleteCardModalOpen, setIsDeleteCardModalOpen] = useState(false);
     const [cardToDeleteId, setCardToDeleteId] = useState<Id<"cards"> | null>(null);
     const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+    const [isGenerateReverseModalOpen, setIsGenerateReverseModalOpen] = useState(false);
+    const [isGeneratingReverseCards, setIsGeneratingReverseCards] = useState(false);
     const [isDeletingCard, setIsDeletingCard] = useState(false);
     const [isDeletingDeck, setIsDeletingDeck] = useState(false);
     const [viewingCardIndex, setViewingCardIndex] = useState<number | null>(null);
     const [showingCardInfo, setShowingCardInfo] = useState(false);
     const [infoCardIndex, setInfoCardIndex] = useState(0);
+
+    const reverseSummary = useQuery(
+        api.cards.reverseGenerationSummary,
+        deckWithCards && isGenerateReverseModalOpen ? { deckId } : 'skip'
+    );
 
     const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -220,6 +228,23 @@ export default function DeckDetailPage() {
         setAddForm({ front: '', back: '' });
     };
 
+    const handleGenerateReverseCards = async () => {
+        setIsGeneratingReverseCards(true);
+        try {
+            const result = await generateReverseCardsMutation({ deckId });
+            if (result.createdCount === 0) {
+                toast.success('No new reverse cards to create. Existing reverses were skipped.');
+            } else {
+                toast.success(`Created ${result.createdCount} reverse card${result.createdCount === 1 ? '' : 's'}`);
+            }
+            setIsGenerateReverseModalOpen(false);
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : 'Failed to generate reverse cards');
+        } finally {
+            setIsGeneratingReverseCards(false);
+        }
+    };
+
     return (
         <div className="min-h-screen bg-background text-foreground">
             <AppHeader title={deckWithCards.name} backHref="/decks" backLabel="Decks" />
@@ -342,6 +367,15 @@ export default function DeckDetailPage() {
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-text-primary">Cards</h2>
                         <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsGenerateReverseModalOpen(true)}
+                                disabled={cards.length === 0}
+                                className="inline-flex items-center gap-2 border border-border-primary text-text-primary px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-surface-secondary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
+                            >
+                                <Repeat className="w-4 h-4" aria-hidden />
+                                Generate reverse cards
+                            </button>
                             <button
                                 type="button"
                                 onClick={() => setIsGenerateModalOpen(true)}
@@ -520,6 +554,64 @@ export default function DeckDetailPage() {
                 onClose={() => setIsGenerateModalOpen(false)}
                 deckId={deckId}
             />
+
+            {/* Generate Reverse Cards Modal */}
+            <Modal
+                isOpen={isGenerateReverseModalOpen}
+                onClose={() => {
+                    if (!isGeneratingReverseCards) {
+                        setIsGenerateReverseModalOpen(false);
+                    }
+                }}
+                title="Generate reverse cards"
+            >
+                {reverseSummary === undefined ? (
+                    <p className="text-sm text-text-secondary">Calculating reverse card preview…</p>
+                ) : reverseSummary === null ? (
+                    <p className="text-sm text-text-secondary">Unable to load reverse card summary.</p>
+                ) : (
+                    <div className="space-y-4">
+                        <p className="text-sm text-text-secondary">
+                            This will create <span className="font-semibold text-text-primary">{reverseSummary.cardsToCreateCount}</span> reverse card{reverseSummary.cardsToCreateCount === 1 ? '' : 's'} by swapping front and back.
+                        </p>
+                        <ul className="text-sm text-text-secondary space-y-1">
+                            <li>Skipped existing reverses: {reverseSummary.skippedExistingReverseCount}</li>
+                            <li>Skipped duplicate reverses: {reverseSummary.skippedDuplicateCandidateCount}</li>
+                            <li>Deck capacity remaining: {reverseSummary.remainingDeckCapacity}</li>
+                            <li>Total capacity remaining: {reverseSummary.remainingUserCapacity}</li>
+                        </ul>
+                        {(reverseSummary.deckLimitExceeded || reverseSummary.userLimitExceeded) && (
+                            <p className="text-sm text-accent-error">
+                                This action would exceed card limits. Remove cards or split content before generating reverses.
+                            </p>
+                        )}
+                    </div>
+                )}
+                <div className="flex gap-2 justify-end mt-6">
+                    <button
+                        type="button"
+                        onClick={() => setIsGenerateReverseModalOpen(false)}
+                        disabled={isGeneratingReverseCards}
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleGenerateReverseCards}
+                        disabled={
+                            isGeneratingReverseCards ||
+                            reverseSummary === undefined ||
+                            reverseSummary === null ||
+                            reverseSummary.deckLimitExceeded ||
+                            reverseSummary.userLimitExceeded
+                        }
+                        className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isGeneratingReverseCards ? 'Generating…' : 'Generate'}
+                    </button>
+                </div>
+            </Modal>
         </div>
     );
 }

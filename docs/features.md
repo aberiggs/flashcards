@@ -7,6 +7,7 @@ User-facing capabilities are documented here. New ideas and backlog items are tr
 ### Decks and cards
 
 - Create, edit, and remove decks and cards.
+- Generate reverse cards (answer -> question) in bulk with duplicate/capacity safeguards.
 - View card counts, due counts, and last-studied order on decks.
 - Render card content as Markdown (paragraphs, emphasis, lists, inline code).
 

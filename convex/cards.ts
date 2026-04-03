@@ -8,6 +8,10 @@ import {
 } from "./sm2";
 import { MAX_CARDS_PER_DECK, MAX_CARDS_PER_USER } from "./limits";
 
+function normalizeCardSide(value: string): string {
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
 // Get all cards for a deck
 export const getByDeck = query({
   args: { deckId: v.id("decks") },
@@ -66,6 +70,178 @@ export const getDueByDeck = query({
     });
 
     return dueCards;
+  },
+});
+
+export const reverseGenerationSummary = query({
+  args: { deckId: v.id("decks") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return null;
+
+    const deck = await ctx.db.get(args.deckId);
+    if (!deck || deck.userId !== userId) return null;
+
+    const cards = await ctx.db
+      .query("cards")
+      .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
+      .collect();
+
+    const existingPairs = new Set(
+      cards.map((card) => `${normalizeCardSide(card.front)}\u0000${normalizeCardSide(card.back)}`)
+    );
+
+    const candidates = new Map<string, { front: string; back: string }>();
+    let skippedExistingReverseCount = 0;
+    let skippedDuplicateCandidateCount = 0;
+
+    for (const card of cards) {
+      const reverseFront = card.back.trim();
+      const reverseBack = card.front.trim();
+      const reverseKey = `${normalizeCardSide(reverseFront)}\u0000${normalizeCardSide(reverseBack)}`;
+
+      if (existingPairs.has(reverseKey)) {
+        skippedExistingReverseCount++;
+        continue;
+      }
+
+      if (candidates.has(reverseKey)) {
+        skippedDuplicateCandidateCount++;
+        continue;
+      }
+
+      candidates.set(reverseKey, {
+        front: reverseFront,
+        back: reverseBack,
+      });
+    }
+
+    const cardsToCreateCount = candidates.size;
+    const remainingDeckCapacity = Math.max(0, MAX_CARDS_PER_DECK - cards.length);
+    const deckLimitExceeded = cardsToCreateCount > remainingDeckCapacity;
+
+    const decks = await ctx.db
+      .query("decks")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    let totalCards = 0;
+    for (const userDeck of decks) {
+      const count = await ctx.db
+        .query("cards")
+        .withIndex("by_deck", (q) => q.eq("deckId", userDeck._id))
+        .collect()
+        .then((c) => c.length);
+      totalCards += count;
+      if (totalCards >= MAX_CARDS_PER_USER) break;
+    }
+
+    const remainingUserCapacity = Math.max(0, MAX_CARDS_PER_USER - totalCards);
+    const userLimitExceeded = cardsToCreateCount > remainingUserCapacity;
+
+    return {
+      totalCardsInDeck: cards.length,
+      cardsToCreateCount,
+      skippedExistingReverseCount,
+      skippedDuplicateCandidateCount,
+      remainingDeckCapacity,
+      remainingUserCapacity,
+      deckLimitExceeded,
+      userLimitExceeded,
+    };
+  },
+});
+
+export const generateReverseCards = mutation({
+  args: { deckId: v.id("decks") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const deck = await ctx.db.get(args.deckId);
+    if (!deck || deck.userId !== userId) throw new Error("Deck not found");
+
+    const cards = await ctx.db
+      .query("cards")
+      .withIndex("by_deck", (q) => q.eq("deckId", args.deckId))
+      .collect();
+
+    const existingPairs = new Set(
+      cards.map((card) => `${normalizeCardSide(card.front)}\u0000${normalizeCardSide(card.back)}`)
+    );
+
+    const candidates = new Map<string, { front: string; back: string }>();
+    let skippedExistingReverseCount = 0;
+    let skippedDuplicateCandidateCount = 0;
+
+    for (const card of cards) {
+      const reverseFront = card.back.trim();
+      const reverseBack = card.front.trim();
+      const reverseKey = `${normalizeCardSide(reverseFront)}\u0000${normalizeCardSide(reverseBack)}`;
+
+      if (existingPairs.has(reverseKey)) {
+        skippedExistingReverseCount++;
+        continue;
+      }
+
+      if (candidates.has(reverseKey)) {
+        skippedDuplicateCandidateCount++;
+        continue;
+      }
+
+      candidates.set(reverseKey, {
+        front: reverseFront,
+        back: reverseBack,
+      });
+    }
+
+    const cardsToCreate = Array.from(candidates.values());
+    const remainingDeckCapacity = MAX_CARDS_PER_DECK - cards.length;
+    if (cardsToCreate.length > remainingDeckCapacity) {
+      throw new Error(
+        `Generating ${cardsToCreate.length} reverse cards would exceed this deck's limit of ${MAX_CARDS_PER_DECK}. Only ${Math.max(0, remainingDeckCapacity)} more card${remainingDeckCapacity === 1 ? "" : "s"} can be added.`
+      );
+    }
+
+    const decks = await ctx.db
+      .query("decks")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    let totalCards = 0;
+    for (const userDeck of decks) {
+      const count = await ctx.db
+        .query("cards")
+        .withIndex("by_deck", (q) => q.eq("deckId", userDeck._id))
+        .collect()
+        .then((c) => c.length);
+      totalCards += count;
+      if (totalCards >= MAX_CARDS_PER_USER) break;
+    }
+
+    const remainingUserCapacity = MAX_CARDS_PER_USER - totalCards;
+    if (cardsToCreate.length > remainingUserCapacity) {
+      throw new Error(
+        `Generating ${cardsToCreate.length} reverse cards would exceed your total limit of ${MAX_CARDS_PER_USER.toLocaleString()} cards. Only ${Math.max(0, remainingUserCapacity)} more card${remainingUserCapacity === 1 ? "" : "s"} can be added.`
+      );
+    }
+
+    if (cardsToCreate.length > 0) {
+      const now = Date.now();
+      for (const card of cardsToCreate) {
+        await ctx.db.insert("cards", {
+          deckId: args.deckId,
+          front: card.front,
+          back: card.back,
+          updatedAt: now,
+        });
+      }
+      await ctx.db.patch(args.deckId, { updatedAt: now });
+    }
+
+    return {
+      createdCount: cardsToCreate.length,
+      skippedExistingReverseCount,
+      skippedDuplicateCandidateCount,
+    };
   },
 });
 
