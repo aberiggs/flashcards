@@ -256,6 +256,114 @@ ${existingFronts}`;
   },
 });
 
+export const orderCramCards = action({
+  args: {
+    cards: v.array(
+      v.object({
+        cardId: v.id("cards"),
+        front: v.string(),
+        back: v.string(),
+        repetitions: v.optional(v.number()),
+        efactor: v.optional(v.number()),
+        nextReview: v.optional(v.number()),
+      })
+    ),
+  },
+  handler: async (ctx, args): Promise<Array<Doc<"cards">["_id"]>> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const settings = await ctx.runQuery(internal.settings.getInternal, {
+      userId,
+    });
+    if (!settings?.openAiApiKey) {
+      throw new Error("No OpenAI API key configured. Add one in Settings.");
+    }
+
+    if (args.cards.length === 0) return [];
+
+    const cardsPayload = args.cards.map((card) => ({
+      cardId: card.cardId,
+      front: card.front,
+      repetitions: card.repetitions ?? 0,
+      efactor: card.efactor ?? 2.5,
+      nextReview: card.nextReview ?? null,
+    }));
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${settings.openAiApiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You reorder flashcards for a cram session. Return ONLY valid JSON as an array of cardId strings in recommended study order. Prioritize likely weak cards first and keep related concepts near each other.",
+          },
+          {
+            role: "user",
+            content: `Order these cards by cram priority:\n${JSON.stringify(cardsPayload)}`,
+          },
+        ],
+        temperature: 0.2,
+        max_tokens: 2000,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `OpenAI API error (${response.status}): ${errorText.slice(0, 200)}`
+      );
+    }
+
+    const data = await response.json();
+    const content: string = data.choices?.[0]?.message?.content ?? "";
+
+    let jsonStr = content.trim();
+    const fenceMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (fenceMatch) {
+      jsonStr = fenceMatch[1].trim();
+    }
+
+    let orderedIds: string[];
+    try {
+      orderedIds = JSON.parse(jsonStr);
+    } catch {
+      throw new Error("AI returned invalid JSON for cram ordering.");
+    }
+
+    if (!Array.isArray(orderedIds)) {
+      throw new Error("AI returned unexpected format for cram ordering.");
+    }
+
+    const requestedIds = new Set(args.cards.map((card) => card.cardId));
+    const validOrdered = orderedIds.filter(
+      (id): id is Doc<"cards">["_id"] =>
+        typeof id === "string" && requestedIds.has(id as Doc<"cards">["_id"])
+    );
+
+    const seen = new Set<Doc<"cards">["_id"]>();
+    const deduped = validOrdered.filter((id) => {
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+
+    for (const card of args.cards) {
+      if (!seen.has(card.cardId)) {
+        deduped.push(card.cardId);
+      }
+    }
+
+    return deduped;
+  },
+});
+
 export const insertGeneratedCards = action({
   args: {
     deckId: v.id("decks"),

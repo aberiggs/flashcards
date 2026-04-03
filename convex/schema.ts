@@ -28,6 +28,7 @@ export default defineSchema({
   studySessions: defineTable({
     userId: v.id("users"),
     deckId: v.id("decks"),
+    mode: v.optional(v.union(v.literal("study"), v.literal("cram"))),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
     cardsStudied: v.number(),

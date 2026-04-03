@@ -13,6 +13,7 @@ User-facing capabilities are documented here. New ideas and backlog items are tr
 ### Study workflow
 
 - Review mode with flip-to-reveal, progress tracking, and confidence ratings.
+- Cram mode with all cards (not due-filtered), round-based retries, timer, and binary "Got it/Missed it" flow.
 - SM-2 scheduling with due-card filtering and stage progression.
 - Session and event tracking for streaks, activity, and accuracy metrics.
 

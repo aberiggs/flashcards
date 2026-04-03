@@ -50,7 +50,7 @@ export default function StudyPage() {
     useEffect(() => {
         if (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete) {
             setSessionCards(dueCards);
-            startSessionMutation({ deckId }).then(setSessionId);
+            startSessionMutation({ deckId, mode: 'study' }).then(setSessionId);
         }
     }, [dueCards, sessionCards, sessionComplete, deckId, startSessionMutation]);
 

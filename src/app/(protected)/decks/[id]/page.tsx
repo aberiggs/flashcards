@@ -290,6 +290,21 @@ export default function DeckDetailPage() {
                                     Study
                                 </span>
                             )}
+                            {cards.length > 0 ? (
+                                <Link
+                                    href={`/decks/${deckId}/cram`}
+                                    className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
+                                >
+                                    Cram
+                                </Link>
+                            ) : (
+                                <span
+                                    className="inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium bg-surface-tertiary text-text-tertiary cursor-not-allowed"
+                                    title="Add cards to start cram mode"
+                                >
+                                    Cram
+                                </span>
+                            )}
                             <ExportDeckButton
                                 deckName={deckWithCards.name}
                                 description={deckWithCards.description}

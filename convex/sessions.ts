@@ -3,7 +3,10 @@ import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 export const startSession = mutation({
-  args: { deckId: v.id("decks") },
+  args: {
+    deckId: v.id("decks"),
+    mode: v.optional(v.union(v.literal("study"), v.literal("cram"))),
+  },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
@@ -14,6 +17,7 @@ export const startSession = mutation({
     return await ctx.db.insert("studySessions", {
       userId,
       deckId: args.deckId,
+      mode: args.mode ?? "study",
       startedAt: Date.now(),
       cardsStudied: 0,
       cardsCorrect: 0,
