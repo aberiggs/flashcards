@@ -256,6 +256,79 @@ ${existingFronts}`;
   },
 });
 
+export const explainCard = action({
+  args: {
+    front: v.string(),
+    back: v.string(),
+  },
+  handler: async (ctx, args): Promise<string> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const settings = await ctx.runQuery(internal.settings.getInternal, {
+      userId,
+    });
+    if (!settings?.openAiApiKey) {
+      throw new Error("No OpenAI API key configured. Add one in Settings.");
+    }
+
+    const systemPrompt = `You are a study coach for flashcard learners.
+Given a flashcard front (question/prompt) and back (answer), provide a short explanation that helps the learner understand and remember the fact.
+
+Output requirements:
+- Keep it concise: 3-6 sentences unless examples are clearly helpful.
+- Focus on understanding, not just restating the answer.
+- Use plain language and avoid jargon where possible.
+
+Domain-aware guidance:
+- If the card is historical (events, people, dates, causes), include brief context: why it matters, what led to it, or an important consequence.
+- If the card is language-learning (vocabulary, grammar, translation), include 1-2 short example sentences showing natural usage.
+- If neither applies, provide one practical memory aid (comparison, pattern, or mnemonic cue).
+
+Return plain markdown text only.`;
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${settings.openAiApiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Front: ${args.front}\nBack: ${args.back}`,
+          },
+        ],
+        temperature: 0.4,
+        max_tokens: 500,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      if (response.status === 401) {
+        throw new Error("Invalid OpenAI API key. Check your key in Settings.");
+      }
+      throw new Error(
+        `OpenAI API error (${response.status}): ${errorText.slice(0, 200)}`
+      );
+    }
+
+    const data = await response.json();
+    const content: string = data.choices?.[0]?.message?.content ?? "";
+
+    const explanation = content.trim();
+    if (!explanation) {
+      throw new Error("AI returned an empty explanation. Try again.");
+    }
+
+    return explanation;
+  },
+});
+
 export const insertGeneratedCards = action({
   args: {
     deckId: v.id("decks"),

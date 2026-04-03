@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { BookOpen, Check, HelpCircle, Lightbulb, X, AlertCircle } from 'lucide-react';
-import { useQuery, useMutation } from 'convex/react';
+import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../../../../../convex/_generated/api';
 import type { Id } from '../../../../../../convex/_generated/dataModel';
 import { Card } from '@/components/ui/Card';
@@ -28,10 +28,12 @@ export default function StudyPage() {
     const deck = useQuery(api.decks.get, { id: deckId });
     const dueCards = useQuery(api.cards.getDueByDeck, { deckId });
     const allCards = useQuery(api.cards.getByDeck, { deckId });
+    const settings = useQuery(api.settings.get);
     const recordReviewMutation = useMutation(api.cards.recordReview);
     const startSessionMutation = useMutation(api.sessions.startSession);
     const completeSessionMutation = useMutation(api.sessions.completeSession);
     const recordEventMutation = useMutation(api.sessions.recordEvent);
+    const explainCardAction = useAction(api.ai.explainCard);
 
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
@@ -39,6 +41,9 @@ export default function StudyPage() {
     const [sessionId, setSessionId] = useState<Id<"studySessions"> | null>(null);
     const [cardsCorrect, setCardsCorrect] = useState(0);
     const [cardsIncorrect, setCardsIncorrect] = useState(0);
+    const [explanationByCard, setExplanationByCard] = useState<Record<string, string>>({});
+    const [isLoadingExplanation, setIsLoadingExplanation] = useState(false);
+    const [explanationError, setExplanationError] = useState<string | null>(null);
     // Freeze study order at session start so Convex live updates don't re-sort
     // mid-session (which would show the same card again after studying it)
     const [sessionCards, setSessionCards] = useState<NonNullable<typeof dueCards> | null>(null);
@@ -74,7 +79,7 @@ export default function StudyPage() {
     const studyCards = sessionCards ?? [];
 
     // Loading state (include brief init when cards loaded but session order not yet frozen)
-    if (deck === undefined || dueCards === undefined || allCards === undefined || (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete)) {
+    if (deck === undefined || dueCards === undefined || allCards === undefined || settings === undefined || (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete)) {
         return (
             <div className="min-h-screen bg-background text-foreground">
                 <AppHeader title="Study" backHref="/decks" backLabel="Decks" />
@@ -219,6 +224,7 @@ export default function StudyPage() {
         if (currentCardIndex < studyCards.length - 1) {
             setCurrentCardIndex(currentCardIndex + 1);
             setShowAnswer(false);
+            setExplanationError(null);
         } else {
             const finalCorrect = isCorrect ? cardsCorrect + 1 : cardsCorrect;
             const finalIncorrect = isCorrect ? cardsIncorrect : cardsIncorrect + 1;
@@ -236,6 +242,33 @@ export default function StudyPage() {
 
     const handleShowAnswer = () => {
         setShowAnswer(true);
+    };
+
+    const handleExplain = async () => {
+        if (!settings?.hasApiKey) return;
+
+        const existing = explanationByCard[currentCard._id];
+        if (existing) {
+            setExplanationError(null);
+            return;
+        }
+
+        setIsLoadingExplanation(true);
+        setExplanationError(null);
+        try {
+            const explanation = await explainCardAction({
+                front: currentCard.front,
+                back: currentCard.back,
+            });
+            setExplanationByCard((prev) => ({
+                ...prev,
+                [currentCard._id]: explanation,
+            }));
+        } catch (err) {
+            setExplanationError(err instanceof Error ? err.message : 'Failed to load explanation');
+        } finally {
+            setIsLoadingExplanation(false);
+        }
     };
 
     return (
@@ -301,6 +334,21 @@ export default function StudyPage() {
                                     <p className="text-text-tertiary font-medium">
                                         How did you do?
                                     </p>
+                                    {settings?.hasApiKey && (
+                                        <div className="max-w-md mx-auto w-full">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    void handleExplain();
+                                                }}
+                                                disabled={isLoadingExplanation}
+                                                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                                            >
+                                                <Lightbulb className="w-4 h-4" aria-hidden />
+                                                {isLoadingExplanation ? 'Explaining...' : 'Explain this'}
+                                            </button>
+                                        </div>
+                                    )}
                                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 max-w-md mx-auto w-full">
                                         <button
                                             onClick={() => handleConfidence('wrong')}
@@ -331,6 +379,17 @@ export default function StudyPage() {
                                             <span className="font-medium">Easy</span>
                                         </button>
                                     </div>
+                                    {explanationError && (
+                                        <p className="text-sm text-status-error-text max-w-2xl mx-auto">{explanationError}</p>
+                                    )}
+                                    {explanationByCard[currentCard._id] && (
+                                        <div className="max-w-2xl mx-auto text-left border border-border-primary bg-surface-secondary rounded-lg px-4 py-3">
+                                            <p className="text-xs uppercase tracking-wide text-text-tertiary mb-2">Explanation</p>
+                                            <div className="text-sm text-text-secondary leading-relaxed">
+                                                <MarkdownContent content={explanationByCard[currentCard._id]} />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

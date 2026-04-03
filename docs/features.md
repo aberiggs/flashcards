@@ -27,6 +27,7 @@ User-facing capabilities are documented here. New ideas and backlog items are tr
 - Generate cards from topics or pasted notes.
 - Auto-select card counts by content depth, or choose 1-100 manually.
 - Deduplicate against existing deck cards, then preview/edit before saving.
+- Request an in-session "Explain this" breakdown for revealed study answers (BYOK required).
 
 ### Import and export
 
