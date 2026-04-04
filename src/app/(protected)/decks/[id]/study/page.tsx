@@ -150,6 +150,7 @@ export default function StudyPage() {
         const onKeyDown = (event: KeyboardEvent) => {
             if (isTypingTarget(event.target)) return;
             if (event.repeat) return;
+            if (!currentCard || sessionComplete) return;
 
             if (event.key === ' ' && !showAnswer) {
                 event.preventDefault();
@@ -180,7 +181,7 @@ export default function StudyPage() {
         return () => {
             document.removeEventListener('keydown', onKeyDown);
         };
-    }, [showAnswer, handleShowAnswer, handleConfidence]);
+    }, [currentCard, sessionComplete, showAnswer, handleShowAnswer, handleConfidence]);
 
     // Loading state (include brief init when cards loaded but session order not yet frozen)
     if (deck === undefined || dueCards === undefined || allCards === undefined || (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete)) {
