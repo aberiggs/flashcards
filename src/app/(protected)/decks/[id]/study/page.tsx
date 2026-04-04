@@ -48,6 +48,7 @@ export default function StudyPage() {
     // Freeze study order at session start so Convex live updates don't re-sort
     // mid-session (which would show the same card again after studying it)
     const [sessionCards, setSessionCards] = useState<NonNullable<typeof dueCards> | null>(null);
+    const confidenceLockRef = useRef(false);
 
     // Keep a ref to current session state so the cleanup effect can read it without stale closures
     const sessionStateRef = useRef({ sessionId: null as Id<"studySessions"> | null, cardsCorrect: 0, cardsIncorrect: 0, sessionComplete: false });
@@ -82,46 +83,51 @@ export default function StudyPage() {
     const progress = studyCards.length > 0 ? ((currentCardIndex + 1) / studyCards.length) * 100 : 0;
 
     const handleConfidence = useCallback(async (confidence: ConfidenceLevel) => {
-        if (!currentCard) return;
+        if (!currentCard || confidenceLockRef.current) return;
+        confidenceLockRef.current = true;
 
-        const quality = qualityFromConfidence[confidence];
-        const isCorrect = quality >= 3;
+        try {
+            const quality = qualityFromConfidence[confidence];
+            const isCorrect = quality >= 3;
 
-        if (isCorrect) {
-            setCardsCorrect((c) => c + 1);
-        } else {
-            setCardsIncorrect((c) => c + 1);
-        }
+            if (isCorrect) {
+                setCardsCorrect((c) => c + 1);
+            } else {
+                setCardsIncorrect((c) => c + 1);
+            }
 
-        await recordReviewMutation({
-            id: currentCard._id,
-            confidence,
-        });
-
-        if (sessionId) {
-            await recordEventMutation({
-                sessionId,
-                cardId: currentCard._id,
-                deckId,
-                quality,
+            await recordReviewMutation({
+                id: currentCard._id,
+                confidence,
             });
-        }
 
-        if (currentCardIndex < studyCards.length - 1) {
-            setCurrentCardIndex(currentCardIndex + 1);
-            setShowAnswer(false);
-        } else {
-            const finalCorrect = isCorrect ? cardsCorrect + 1 : cardsCorrect;
-            const finalIncorrect = isCorrect ? cardsIncorrect : cardsIncorrect + 1;
             if (sessionId) {
-                await completeSessionMutation({
+                await recordEventMutation({
                     sessionId,
-                    cardsStudied: studyCards.length,
-                    cardsCorrect: finalCorrect,
-                    cardsIncorrect: finalIncorrect,
+                    cardId: currentCard._id,
+                    deckId,
+                    quality,
                 });
             }
-            setSessionComplete(true);
+
+            if (currentCardIndex < studyCards.length - 1) {
+                setCurrentCardIndex(currentCardIndex + 1);
+                setShowAnswer(false);
+            } else {
+                const finalCorrect = isCorrect ? cardsCorrect + 1 : cardsCorrect;
+                const finalIncorrect = isCorrect ? cardsIncorrect : cardsIncorrect + 1;
+                if (sessionId) {
+                    await completeSessionMutation({
+                        sessionId,
+                        cardsStudied: studyCards.length,
+                        cardsCorrect: finalCorrect,
+                        cardsIncorrect: finalIncorrect,
+                    });
+                }
+                setSessionComplete(true);
+            }
+        } finally {
+            confidenceLockRef.current = false;
         }
     }, [
         cardsCorrect,
@@ -143,6 +149,7 @@ export default function StudyPage() {
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (isTypingTarget(event.target)) return;
+            if (event.repeat) return;
 
             if (event.key === ' ' && !showAnswer) {
                 event.preventDefault();
@@ -178,7 +185,7 @@ export default function StudyPage() {
     // Loading state (include brief init when cards loaded but session order not yet frozen)
     if (deck === undefined || dueCards === undefined || allCards === undefined || (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete)) {
         return (
-            <div className="min-h-screen bg-background text-foreground">
+            <div className="flex-1 bg-background text-foreground">
                 <AppHeader title="Study" backHref="/decks" backLabel="Decks" />
                 <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <PageLoader message="Loading…" />
@@ -189,7 +196,7 @@ export default function StudyPage() {
 
     if (!deck) {
         return (
-            <div className="min-h-screen bg-background text-foreground">
+            <div className="flex-1 bg-background text-foreground">
                 <AppHeader title="Study" backHref="/decks" backLabel="Decks" />
                 <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex items-center justify-center">
                     <div className="text-center">
@@ -213,7 +220,7 @@ export default function StudyPage() {
     if (!hasCardsToStudy) {
         if (hasNoCards) {
             return (
-                <div className="min-h-screen bg-background text-foreground">
+                <div className="flex-1 bg-background text-foreground">
                     <AppHeader
                         title={`Studying: ${deck.name}`}
                         backHref="/decks"
@@ -239,7 +246,7 @@ export default function StudyPage() {
         }
         if (hasNoDueCards && !sessionComplete) {
             return (
-                <div className="min-h-screen bg-background text-foreground">
+                <div className="flex-1 bg-background text-foreground">
                     <AppHeader
                         title={`Studying: ${deck.name}`}
                         backHref="/decks"
@@ -269,7 +276,7 @@ export default function StudyPage() {
 
     if (sessionComplete) {
         return (
-            <div className="min-h-screen bg-background text-foreground flex items-center justify-center">
+            <div className="flex-1 bg-background text-foreground flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-16 h-16 mx-auto mb-4 bg-status-success-bg rounded-full flex items-center justify-center">
                         <Check className="w-8 h-8 text-status-success-text" aria-hidden />
@@ -291,7 +298,7 @@ export default function StudyPage() {
     }
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
+        <div className="flex-1 bg-background text-foreground">
             <AppHeader
                 title={`Studying: ${deck.name}`}
                 backHref="/decks"
@@ -335,6 +342,7 @@ export default function StudyPage() {
                                 >
                                     Show Answer
                                 </button>
+                                <p className="mt-3 text-xs text-text-tertiary">Shortcut: Space reveals answer</p>
                             </div>
                         ) : (
                             // Back of card with confidence buttons
@@ -387,7 +395,7 @@ export default function StudyPage() {
                                             <span className="text-xs opacity-80">4</span>
                                         </button>
                                     </div>
-                                    <p className="text-xs text-text-tertiary">Shortcuts: Space reveals answer, 1-4 rate confidence</p>
+                                    <p className="text-xs text-text-tertiary">Shortcuts: 1-4 rate confidence</p>
                                 </div>
                             </div>
                         )}
