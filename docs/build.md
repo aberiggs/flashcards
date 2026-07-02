@@ -4,7 +4,7 @@
 
 - **Frontend + API**: Next.js 15 (App Router, standalone output), React 19, Tailwind v4
 - **Backend**: Postgres + Drizzle ORM, exposed via Next.js Route Handlers
-- **Auth**: Auth.js (NextAuth v5) with the Drizzle Postgres adapter
+- **Auth**: Auth.js (NextAuth v5) with Credentials provider (email + password, JWT sessions — no OAuth, no DB session table)
 - **Data fetching**: TanStack Query (request/response + refetch — no realtime)
 
 All server code lives under `src/server/` (query functions, auth helpers) and
@@ -45,19 +45,25 @@ All server code lives under `src/server/` (query functions, auth helpers) and
    Edit `.env.local` and fill in:
    - `DATABASE_URL` — your Postgres connection string
    - `AUTH_SECRET` — generate with `openssl rand -base64 32`
-   - `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` — from a GitHub OAuth App
-   - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — from Google Cloud Console
    - `NEXTAUTH_URL=http://localhost:3000`
 
-   OAuth callback URLs for local dev:
-   - GitHub: `http://localhost:3000/api/auth/callback/github`
-   - Google: `http://localhost:3000/api/auth/callback/google`
+   That's it — no OAuth provider setup needed.
 
 4. **Run migrations**
 
    ```bash
    npm run db:migrate
    ```
+
+5. **Start the app and create your account**
+
+   ```bash
+   npm run dev
+   ```
+
+   Visit http://localhost:3000. Since no users exist yet, you'll see a
+   registration form. Create the first account — registration closes
+   automatically after that.
 
 ### Running the app
 
@@ -111,7 +117,6 @@ Postgres + the Next.js app with migrations applied automatically.
 
 1. Copy `.env.example` to `.env` on the host and fill in:
    - `AUTH_SECRET` (required)
-   - `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` and/or Google OAuth creds
    - `NEXTAUTH_URL` — the public URL of your deployment
    - Optionally `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` (defaults: `postgres`/`postgres`/`flashcards`)
 
@@ -121,9 +126,8 @@ Postgres + the Next.js app with migrations applied automatically.
    docker compose up -d
    ```
 
-3. Point OAuth callback URLs at your deployment:
-   - GitHub: `https://your-domain/api/auth/callback/github`
-   - Google: `https://your-domain/api/auth/callback/google`
+3. Visit the app. Since no users exist, you'll see a registration form —
+   create the first account. Registration closes automatically after that.
 
 The Compose file runs `drizzle-kit migrate` before starting the server, so the
 DB schema is always current. Postgres data persists in the `db_data` volume.
@@ -134,6 +138,7 @@ For a hosted deployment without Docker:
 
 1. Create a Vercel project linked to this repo.
 2. Provision a Postgres instance (Vercel Postgres, Supabase, Neon, etc.) and set `DATABASE_URL` in Vercel env vars.
-3. Set `AUTH_SECRET`, `AUTH_GITHUB_*`, `AUTH_GOOGLE_*`, and `NEXTAUTH_URL` in Vercel env vars.
+3. Set `AUTH_SECRET` and `NEXTAUTH_URL` in Vercel env vars.
 4. Run migrations once: `DATABASE_URL=… npm run db:migrate` (or wire it into a build step).
 5. Push to `main` — Vercel builds and deploys automatically.
+6. Visit the app and create the first account via the registration form.

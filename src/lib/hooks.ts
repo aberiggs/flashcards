@@ -316,6 +316,17 @@ export function useSearch(query: string, enabled: boolean) {
   });
 }
 
+// ── Hooks: auth ─────────────────────────────────────────────────────────────────
+
+export function useRegistrationOpen() {
+  return useQuery({
+    queryKey: ["auth", "registration-open"] as const,
+    queryFn: () => api.get<{ open: boolean }>("/api/auth/register-status"),
+    // Don't retry — if it fails, just show sign-in.
+    retry: false,
+  });
+}
+
 // ── Hooks: import ────────────────────────────────────────────────────────────────
 
 export interface ImportCardInput {

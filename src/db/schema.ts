@@ -5,64 +5,23 @@ import {
   timestamp,
   doublePrecision,
   integer,
-  primaryKey,
 } from "drizzle-orm/pg-core";
-import type { AdapterAccount } from "next-auth/adapters";
 
-// ── Auth.js tables ──────────────────────────────────────────────────────────────
-// The Drizzle adapter requires string-typed ids (text/varchar/uuid).
+// ── Users ───────────────────────────────────────────────────────────────────────
+// The only auth table. Credentials-only auth with JWT sessions — no DB session
+// table, no accounts table, no OAuth. passwordHash is bcrypt.
 
 export const users = pgTable("users", {
   id: text("id")
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
-  name: text("name"),
   email: text("email").notNull().unique(),
-  emailVerified: timestamp("email_verified", { withTimezone: true }),
-  image: text("image"),
-});
-
-export const accounts = pgTable(
-  "accounts",
-  {
-    userId: text("user_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    type: text("type").$type<AdapterAccount["type"]>().notNull(),
-    provider: text("provider").notNull(),
-    providerAccountId: text("provider_account_id").notNull(),
-    refresh_token: text("refresh_token"),
-    access_token: text("access_token"),
-    expires_at: integer("expires_at"),
-    token_type: text("token_type"),
-    scope: text("scope"),
-    id_token: text("id_token"),
-    session_state: text("session_state"),
-  },
-  (account) => [
-    primaryKey({
-      columns: [account.provider, account.providerAccountId],
-    }),
-  ],
-);
-
-export const sessions = pgTable("sessions", {
-  sessionToken: text("session_token").primaryKey(),
-  userId: text("user_id")
+  name: text("name"),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  expires: timestamp("expires", { withTimezone: true }).notNull(),
+    .defaultNow(),
 });
-
-export const verificationTokens = pgTable(
-  "verification_tokens",
-  {
-    identifier: text("identifier").notNull(),
-    token: text("token").notNull(),
-    expires: timestamp("expires", { withTimezone: true }).notNull(),
-  },
-  (vt) => [primaryKey({ columns: [vt.identifier, vt.token] })],
-);
 
 // ── App tables ──────────────────────────────────────────────────────────────────
 // bigint PKs for compact URLs; userId is text to reference the auth users table.
@@ -120,10 +79,10 @@ export const studySessions = pgTable("study_sessions", {
 
 // ── Inferred types ──────────────────────────────────────────────────────────────
 
+export type User = typeof users.$inferSelect;
 export type Deck = typeof decks.$inferSelect;
 export type NewDeck = typeof decks.$inferInsert;
 export type Card = typeof cards.$inferSelect;
 export type NewCard = typeof cards.$inferInsert;
 export type StudySession = typeof studySessions.$inferSelect;
 export type NewStudySession = typeof studySessions.$inferInsert;
-export type User = typeof users.$inferSelect;

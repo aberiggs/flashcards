@@ -30,7 +30,8 @@ User-facing capabilities are documented here. New ideas and backlog items are tr
 
 ### Auth, settings, and quality-of-life
 
-- GitHub and Google sign-in, sign-out, and authenticated route gating.
+- Email + password sign-in (no external OAuth). First user self-registers on initial setup; registration closes automatically after.
+- Sign-out and authenticated route gating.
 - Theme options (light, dark, system).
 - Global search (Cmd/Ctrl+K), toast notifications, and mobile usability improvements.
 
