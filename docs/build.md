@@ -1,18 +1,14 @@
 # Build, Dev & Deployment Guide
 
-## How the environments work
+## Stack
 
-This app has two environments, each with its own isolated Convex backend
-(separate database, functions, and configuration):
+- **Frontend + API**: Next.js 15 (App Router, standalone output), React 19, Tailwind v4
+- **Backend**: Postgres + Drizzle ORM, exposed via Next.js Route Handlers
+- **Auth**: Auth.js (NextAuth v5) with the Drizzle Postgres adapter
+- **Data fetching**: TanStack Query (request/response + refetch — no realtime)
 
-```
-local dev   ──►  Convex dev deployment    (your personal dev backend, hot-reloads)
-main branch ──►  Convex prod deployment + Vercel  (live app)
-```
-
-The key thing to understand: **Convex deployments are in the cloud even during local dev.**
-There is no local database running on your machine. Your dev deployment is a real Convex
-backend tied to your account, it just has separate data from production.
+All server code lives under `src/server/` (query functions, auth helpers) and
+`src/app/api/` (Route Handlers). The DB schema is `src/db/schema.ts`.
 
 ---
 
@@ -22,7 +18,7 @@ backend tied to your account, it just has separate data from production.
 
 - Node.js 20+
 - npm
-- A Convex account at [convex.dev](https://convex.dev)
+- Postgres 14+ (local install, Docker, or a cloud instance)
 
 ### First-time setup
 
@@ -32,37 +28,36 @@ backend tied to your account, it just has separate data from production.
    npm install
    ```
 
-2. **Link to your Convex dev deployment**
+2. **Create the database**
 
    ```bash
-   npx convex dev
+   createdb flashcards
    ```
 
-   On first run, the Convex CLI will prompt you to log in and either create a new
-   project or link an existing one. Once linked, it writes your dev deployment's
-   URL and name into `.env.local` automatically:
+   (Or use Docker: `docker run -d --name flashcards-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=flashcards -p 5432:5432 postgres:17-alpine`)
 
-   ```
-   CONVEX_DEPLOYMENT=dev:your-project-name-abc123
-   NEXT_PUBLIC_CONVEX_URL=https://your-project-name-abc123.convex.cloud
-   ```
-
-   You do not need to create or edit `.env.local` manually.
-
-3. **Set up auth environment variables**
-
-   Auth credentials live in the Convex backend (not in `.env.local`). Set them
-   once via the CLI:
+3. **Configure environment**
 
    ```bash
-   npx convex env set AUTH_GITHUB_ID your_github_client_id
-   npx convex env set AUTH_GITHUB_SECRET your_github_client_secret
-   npx convex env set AUTH_GOOGLE_ID your_google_client_id
-   npx convex env set AUTH_GOOGLE_SECRET your_google_client_secret
-   npx convex env set SITE_URL http://localhost:3000
+   cp .env.example .env.local
    ```
 
-   These are stored in your Convex dev deployment and persist across restarts.
+   Edit `.env.local` and fill in:
+   - `DATABASE_URL` — your Postgres connection string
+   - `AUTH_SECRET` — generate with `openssl rand -base64 32`
+   - `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` — from a GitHub OAuth App
+   - `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — from Google Cloud Console
+   - `NEXTAUTH_URL=http://localhost:3000`
+
+   OAuth callback URLs for local dev:
+   - GitHub: `http://localhost:3000/api/auth/callback/github`
+   - Google: `http://localhost:3000/api/auth/callback/google`
+
+4. **Run migrations**
+
+   ```bash
+   npm run db:migrate
+   ```
 
 ### Running the app
 
@@ -70,120 +65,75 @@ backend tied to your account, it just has separate data from production.
 npm run dev
 ```
 
-This starts both processes together:
-
-| Process | What it does |
-|---------|-------------|
-| `next dev --turbopack` | Next.js frontend on http://localhost:3000 |
-| `convex dev` | Watches `convex/` and hot-reloads functions to your dev deployment; also regenerates `convex/_generated/` types on every change |
-
-The two processes share the terminal output, prefixed with `[next]` (blue) and
-`[convex]` (green). Ctrl+C stops both.
+Starts Next.js (Turbopack) on http://localhost:3000.
 
 ### npm scripts reference
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start Next.js + Convex dev together (use this for all local work) |
-| `npm run build` | Production build (Next.js only; Convex deploy is separate) |
+| `npm run dev` | Start Next.js dev server |
+| `npm run build` | Production build (Next.js) |
 | `npm run start` | Run the production build locally |
 | `npm run lint` | Run ESLint |
+| `npm run typecheck` | Run `tsc --noEmit` |
+| `npm run db:generate` | Generate a new Drizzle migration from schema changes |
+| `npm run db:migrate` | Apply pending migrations |
+| `npm run db:push` | Push schema directly to DB (dev only — skips migration files) |
+| `npm run db:studio` | Open Drizzle Studio (DB browser) |
+
+### Schema changes
+
+1. Edit `src/db/schema.ts`
+2. Run `npm run db:generate` to create a new migration in `drizzle/`
+3. Run `npm run db:migrate` to apply it
+4. Commit the new `drizzle/*.sql` file
 
 ---
 
 ## CI pipeline (GitHub Actions)
 
-The workflow lives at `.github/workflows/deploy.yml` and has two jobs:
+The workflow at `.github/workflows/deploy.yml` runs on every push/PR:
 
-### `check` job — runs on every push and every PR
+1. `npm ci`
+2. `npm run lint`
+3. `npm run typecheck` (or `npx tsc --noEmit`)
 
-1. Installs dependencies (`npm ci`)
-2. Runs `npx convex codegen` to generate `convex/_generated/` — this directory
-   is gitignored and must be produced before TypeScript can resolve Convex imports
-3. Runs `npm run lint`
-4. Runs `tsc --noEmit` (type-checks `src/` only; `convex/` has its own tsconfig
-   and is excluded from the root one)
-
-### `deploy` job — runs on push to `main` only (after `check` passes)
-
-1. Installs dependencies
-2. Runs `npx convex deploy --cmd 'npm run build'`
-   - Deploys Convex functions to the **production** deployment
-   - Automatically injects `NEXT_PUBLIC_CONVEX_URL` into the build environment
-     so Next.js points at the production Convex backend
-   - Runs `npm run build` inside that environment
-
-### Required GitHub secret
-
-| Secret | Where to get it |
-|--------|----------------|
-| `CONVEX_DEPLOY_KEY` | Convex dashboard → your project → Settings → Deploy keys → Generate Production Deploy Key |
-
-Add it at: **GitHub repo → Settings → Secrets and variables → Actions → New repository secret**
+No Convex codegen step needed anymore — types are inferred from Drizzle directly.
 
 ---
 
-## Vercel deployment (frontend hosting)
+## Deployment
 
-The CI workflow deploys your Convex backend on every push to `main`, but does
-**not** build or host the Next.js frontend itself — that's Vercel's job.
+### Docker Compose (self-hosted)
 
-### One-time setup
+The simplest self-hosted deployment: a single `docker compose up` brings up
+Postgres + the Next.js app with migrations applied automatically.
 
-1. Create a Vercel project and link it to this GitHub repo.
+1. Copy `.env.example` to `.env` on the host and fill in:
+   - `AUTH_SECRET` (required)
+   - `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` and/or Google OAuth creds
+   - `NEXTAUTH_URL` — the public URL of your deployment
+   - Optionally `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` (defaults: `postgres`/`postgres`/`flashcards`)
 
-2. Override the **Build Command** in Vercel to:
-   ```
-   npx convex deploy --cmd 'npm run build'
-   ```
-   This replaces Vercel's default `npm run build`. The Convex CLI handles deploying
-   functions and injecting the right `NEXT_PUBLIC_CONVEX_URL` before the build runs.
-
-3. Add the `CONVEX_DEPLOY_KEY` environment variable in Vercel → Settings → Environment Variables:
-
-   | Variable | Value | Environment |
-   |----------|-------|-------------|
-   | `CONVEX_DEPLOY_KEY` | Production deploy key (from Convex dashboard) | Production only |
-
-4. Set auth environment variables for production in the **Convex dashboard**
-   (not in Vercel — auth secrets belong to the Convex backend, not the frontend):
+2. Start it:
 
    ```bash
-   npx convex env set --prod AUTH_GITHUB_ID your_github_client_id
-   npx convex env set --prod AUTH_GITHUB_SECRET your_github_client_secret
-   npx convex env set --prod AUTH_GOOGLE_ID your_google_client_id
-   npx convex env set --prod AUTH_GOOGLE_SECRET your_google_client_secret
-   npx convex env set --prod SITE_URL https://your-app.vercel.app
+   docker compose up -d
    ```
 
-5. Update OAuth callback URIs in your provider consoles to point at the production
-   Convex site URL (found in the Convex dashboard under your production deployment):
+3. Point OAuth callback URLs at your deployment:
+   - GitHub: `https://your-domain/api/auth/callback/github`
+   - Google: `https://your-domain/api/auth/callback/google`
 
-   - **GitHub OAuth app:** `https://<prod-deployment>.convex.site/api/auth/callback/github`
-   - **Google OAuth app:** `https://<prod-deployment>.convex.site/api/auth/callback/google`
+The Compose file runs `drizzle-kit migrate` before starting the server, so the
+DB schema is always current. Postgres data persists in the `db_data` volume.
 
-### How Vercel + Convex interact
+### Vercel (frontend hosting + managed Postgres)
 
-```
-push to main
-    │
-    ├─► GitHub Actions (check job)
-    │       lint + typecheck
-    │
-    ├─► GitHub Actions (deploy job)
-    │       convex deploy → pushes functions to prod Convex backend
-    │
-    └─► Vercel (triggered automatically by Vercel's GitHub integration)
-            npx convex deploy --cmd 'npm run build'
-            → also pushes functions to prod Convex backend (idempotent)
-            → builds Next.js with NEXT_PUBLIC_CONVEX_URL set
-            → publishes to your-app.vercel.app
-```
+For a hosted deployment without Docker:
 
-The Convex deploy step runs twice on a `main` push (once from GitHub Actions,
-once from Vercel). This is harmless — deploying the same functions twice is
-idempotent. If you want to simplify, you can remove the `deploy` job from
-`.github/workflows/deploy.yml` and let Vercel own the production Convex deploy
-entirely, keeping GitHub Actions purely for the `check` job.
-
-
+1. Create a Vercel project linked to this repo.
+2. Provision a Postgres instance (Vercel Postgres, Supabase, Neon, etc.) and set `DATABASE_URL` in Vercel env vars.
+3. Set `AUTH_SECRET`, `AUTH_GITHUB_*`, `AUTH_GOOGLE_*`, and `NEXTAUTH_URL` in Vercel env vars.
+4. Run migrations once: `DATABASE_URL=… npm run db:migrate` (or wire it into a build step).
+5. Push to `main` — Vercel builds and deploys automatically.

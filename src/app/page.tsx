@@ -1,9 +1,7 @@
 'use client';
 
 import Link from "next/link";
-import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
-import { api } from "../../convex/_generated/api";
+import { useSession, signIn } from "next-auth/react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Footer } from "@/components/layout/Footer";
 import { PageLoader } from "@/components/ui/PageLoader";
@@ -11,15 +9,20 @@ import { MemoryStagesWidget } from "@/components/features/dashboard/MemoryStages
 import { ReviewForecastWidget } from "@/components/features/dashboard/ReviewForecastWidget";
 import { StreakWidget } from "@/components/features/dashboard/StreakWidget";
 import { ActivityHeatmapWidget } from "@/components/features/dashboard/ActivityHeatmapWidget";
+import {
+  useDashboardStats,
+  useGamificationStats,
+  useActivityHistory,
+} from "@/lib/hooks";
 
 function AuthenticatedContent() {
   const timeZone =
     typeof Intl !== "undefined"
       ? Intl.DateTimeFormat().resolvedOptions().timeZone
       : "UTC";
-  const stats = useQuery(api.stats.dashboardStats, { timeZone });
-  const gamification = useQuery(api.stats.gamificationStats, { timeZone });
-  const activity = useQuery(api.stats.activityHistory, { timeZone });
+  const { data: stats } = useDashboardStats(timeZone);
+  const { data: gamification } = useGamificationStats(timeZone);
+  const { data: activity } = useActivityHistory(timeZone);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -35,7 +38,6 @@ function AuthenticatedContent() {
           </p>
         </div>
 
-        {/* Gamification widgets */}
         {gamification && (
           <div className="mb-6">
             <StreakWidget data={gamification} />
@@ -47,7 +49,6 @@ function AuthenticatedContent() {
           </div>
         )}
 
-        {/* Stats widgets */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
             <MemoryStagesWidget data={stats.memoryStages} />
@@ -71,8 +72,6 @@ function AuthenticatedContent() {
 }
 
 function SignInPage() {
-  const { signIn } = useAuthActions();
-
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <main className="flex-1 flex flex-col items-center justify-center px-4 py-12 animate-fade-in-up">
@@ -87,17 +86,16 @@ function SignInPage() {
             Create decks, study cards, and let spaced repetition schedule reviews so you remember what matters.
           </p>
           <p className="text-text-tertiary text-sm max-w-lg mx-auto">
-            Built for learners who want to spend time studying—not wrestling with clunky UIs or fighting with card creation. Simple, focused, and designed so you can actually retain what you learn.
+            Built for learners who want to spend time studying—not wrestling with clunky UIs. Simple, focused, and designed so you can actually retain what you learn.
           </p>
         </div>
 
-        {/* Feature highlights */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl w-full mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl w-full mb-12">
           <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
             <div className="text-2xl mb-2">📚</div>
             <h3 className="font-semibold text-text-primary mb-1">Create & Organize</h3>
             <p className="text-sm text-text-secondary">
-              Create decks and cards in seconds. Import existing sets or generate cards with AI from any topic or notes.
+              Create decks and cards in seconds. Import existing sets or write your own.
             </p>
           </div>
           <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
@@ -114,16 +112,8 @@ function SignInPage() {
               See what&apos;s due, monitor your study streak, and watch your mastery grow with detailed stats.
             </p>
           </div>
-          <div className="bg-surface-primary border border-border-primary rounded-xl shadow-sm p-5 text-left">
-            <div className="text-2xl mb-2">✨</div>
-            <h3 className="font-semibold text-text-primary mb-1">AI-Powered Generation</h3>
-            <p className="text-sm text-text-secondary">
-              Paste your notes or enter a topic and let AI create flashcards for you. Review and approve each card before adding.
-            </p>
-          </div>
         </div>
 
-        {/* Sign in CTA */}
         <div className="w-full max-w-md">
            <div className="bg-surface-primary border border-border-primary rounded-xl p-8 shadow-sm">
             <h2 className="text-xl font-semibold text-text-primary mb-6 text-center">
@@ -175,17 +165,9 @@ function SignInPage() {
 }
 
 export default function HomePage() {
-  return (
-    <>
-      <AuthLoading>
-        <PageLoader fullScreen />
-      </AuthLoading>
-      <Unauthenticated>
-        <SignInPage />
-      </Unauthenticated>
-      <Authenticated>
-        <AuthenticatedContent />
-      </Authenticated>
-    </>
-  );
+  const { status } = useSession();
+
+  if (status === "loading") return <PageLoader fullScreen />;
+  if (status === "unauthenticated") return <SignInPage />;
+  return <AuthenticatedContent />;
 }

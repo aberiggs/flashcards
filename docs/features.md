@@ -15,19 +15,13 @@ User-facing capabilities are documented here. New ideas and backlog items are tr
 - Review mode with flip-to-reveal, progress tracking, and confidence ratings.
 - Keyboard-first study controls (`Space` to reveal, `1-4` to rate confidence) with on-screen hints.
 - SM-2 scheduling with due-card filtering and stage progression.
-- Session and event tracking for streaks, activity, and accuracy metrics.
+- Session tracking for streaks, activity, and accuracy metrics.
 
 ### Dashboard and insights
 
 - Memory stages pie chart and due-date forecast chart.
 - Streak, daily/weekly counts, and overall accuracy.
 - 90-day activity heatmap and helpful empty states.
-
-### AI-assisted generation
-
-- Generate cards from topics or pasted notes.
-- Auto-select card counts by content depth, or choose 1-100 manually.
-- Deduplicate against existing deck cards, then preview/edit before saving.
 
 ### Import and export
 
@@ -37,7 +31,7 @@ User-facing capabilities are documented here. New ideas and backlog items are tr
 ### Auth, settings, and quality-of-life
 
 - GitHub and Google sign-in, sign-out, and authenticated route gating.
-- Theme options (light, dark, system) and secure OpenAI API key management.
+- Theme options (light, dark, system).
 - Global search (Cmd/Ctrl+K), toast notifications, and mobile usability improvements.
 
 ## Feature backlog

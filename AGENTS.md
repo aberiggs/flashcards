@@ -9,33 +9,36 @@ generation, and OAuth authentication (GitHub + Google).
 
 | Layer      | Technology                                              |
 | ---------- | ------------------------------------------------------- |
-| Frontend   | Next.js 15 (App Router, Turbopack), React 19, Tailwind v4 |
-| Backend    | Convex (queries, mutations, actions, auth)              |
-| Auth       | `@convex-dev/auth` (GitHub OAuth, Google OAuth)        |
-| AI         | OpenAI `gpt-4o-mini` via direct `fetch` in Convex action |
+| Frontend   | Next.js 15 (App Router, Turbopack, standalone output), React 19, Tailwind v4 |
+| Backend    | Postgres + Drizzle ORM, exposed via Next.js Route Handlers under `src/app/api/` |
+| Auth       | Auth.js (NextAuth v5) with the Drizzle Postgres adapter (GitHub + Google OAuth) |
 | Charts     | Recharts                                                |
 | Icons      | Lucide React                                            |
-| Deployment | Vercel (frontend) + Convex Cloud (backend)              |
+| Data       | TanStack Query (request/response + refetch — no realtime) |
+| Deployment | Docker Compose (Next.js + Postgres) or Vercel + managed Postgres |
 
 ---
 
 ## Commands
 
 ```bash
-# Start both Next.js (Turbopack) and Convex dev watcher
+# Start Next.js dev server (Turbopack)
 npm run dev
 
 # Lint (ESLint with next/core-web-vitals + next/typescript)
 npm run lint
 
 # Type-check without emitting (run this before committing)
-npx tsc --noEmit
+npm run typecheck
 
-# Type-check Convex backend separately
-npx tsc --noEmit --project convex/tsconfig.json
+# Drizzle migrations
+npm run db:generate   # generate a migration from schema changes
+npm run db:migrate    # apply pending migrations
+npm run db:push       # push schema directly to DB (dev only)
+npm run db:studio     # open Drizzle Studio (DB browser)
 
-# Production build (Convex injects NEXT_PUBLIC_CONVEX_URL)
-npx convex deploy --cmd 'npm run build'
+# Production build (Next.js standalone output)
+npm run build
 ```
 
 > **No test runner exists.** There are no Jest, Vitest, Playwright, or other test
@@ -46,9 +49,8 @@ npx convex deploy --cmd 'npm run build'
 ## CI / CD
 
 - **Every push/PR**: `npm ci` → `npm run lint` → `npx tsc --noEmit`
-- **Push to `main`**: Convex backend deploys, then Next.js builds on Vercel
-- `convex/_generated/` is **committed** to git (needed for CI type-checking without a
-  codegen step). Do not `.gitignore` it.
+- **Docker Compose** is the canonical self-host deployment (`docker compose up`).
+- No codegen step needed — Drizzle types are inferred from `src/db/schema.ts`.
 
 ---
 
@@ -58,37 +60,61 @@ npx convex deploy --cmd 'npm run build'
 src/
   app/
     (protected)/          # Auth-gated route group — all pages are 'use client'
-    ConvexClientProvider.tsx
+    api/                  # Next.js Route Handlers (REST endpoints)
+      api/auth/[...nextauth]/route.ts   # Auth.js handler
+      api/decks/...       # Deck + card + study + stats endpoints
+      api/stats/...       # Dashboard stats endpoints
+      api/search/         # Search endpoint
+      api/import/         # Bulk import endpoint
+    AuthSessionProvider.tsx  # Client-side next-auth SessionProvider
+    QueryProvider.tsx        # TanStack Query client provider
     globals.css           # Tailwind v4 @theme + CSS custom properties
-    layout.tsx            # Root layout
+    layout.tsx            # Root layout (providers)
     page.tsx              # Landing / dashboard
+  auth.ts                 # NextAuth config (providers, adapter, callbacks)
+  middleware.ts           # Route protection (auth-gated middleware)
   components/
     features/             # Domain-specific components (dashboard/, decks/)
-    layout/               # AppHeader, Footer
+    layout/               # AppHeader, Footer, SearchBar
     theme/                # ThemeProvider, ThemeToggle
     ui/                   # Generic primitives (Card, Modal, PageLoader, …)
-  middleware.ts           # convexAuthNextjsMiddleware
+  db/
+    schema.ts             # Drizzle schema (source of truth for all tables)
+    index.ts              # Postgres connection + Drizzle instance
+  lib/
+    sm2.ts                # SM-2 spaced-repetition algorithm (pure logic)
+    limits.ts             # Resource cap constants
+    hooks.ts              # TanStack Query hooks (useDecks, useCards, etc.)
+    api.ts                # Typed fetch client for the REST API
+    parseDeck.ts          # Import file parsing (CSV/TXT/JSON)
+    exportDeck.ts         # Deck export (CSV/JSON)
+    memoryStage.ts        # Memory stage classification
+  server/
+    auth.ts               # getAuthUserId / requireAuthUserId helpers
+    api.ts                # Route Handler response helpers
+    queries/
+      decks.ts            # Deck CRUD + stats aggregation
+      cards.ts            # Card CRUD + SM-2 review recording
+      sessions.ts         # Study session lifecycle
+      stats.ts            # Dashboard / deck / gamification / activity stats
+      search.ts           # ILIKE search
+      import.ts           # Bulk deck import
   types/
-    flashcards.ts         # Shared TypeScript types
+    next-auth.d.ts        # Session.user.id type augmentation
 
-convex/
-  _generated/             # Auto-generated — DO NOT edit by hand
-  schema.ts               # Database schema (source of truth for all tables)
-  ai.ts                   # AI card generation action
-  auth.ts / auth.config.ts
-  cards.ts / decks.ts / sessions.ts / stats.ts / settings.ts
-  sm2.ts                  # SM-2 spaced-repetition algorithm (pure logic)
-  http.ts                 # HTTP router for auth callbacks
+drizzle/                  # Generated migration SQL files (committed)
+drizzle.config.ts         # Drizzle Kit configuration
+Dockerfile                # Multi-stage Next.js standalone build
+docker-compose.yml        # Next.js + Postgres self-host deployment
 ```
 
 ---
 
 ## TypeScript
 
-- **Strict mode** is enabled in both `tsconfig.json` (root) and `convex/tsconfig.json`.
-- Root target: `ES2017`; Convex target: `ESNext` — keep them separate.
+- **Strict mode** is enabled in `tsconfig.json`.
+- Root target: `ES2017`.
 - **Path alias**: `@/*` → `./src/*`. Use `@/` for all intra-`src/` imports.
-  Convex files use relative imports (e.g., `./schema`, `./_generated/server`).
 - Never use `any`; prefer `unknown` + type guards when the shape is truly unknown.
 - Avoid type assertions (`as Foo`) unless bridging external API responses that are
   already validated.
@@ -105,11 +131,10 @@ convex/
 // 1. React (if needed explicitly)
 import { useState, useCallback } from "react";
 // 2. Third-party packages
-import { useMutation } from "convex/react";
+import { useQuery } from "@tanstack/react-query";
 // 3. Internal — alias imports (@/)
 import { Modal } from "@/components/ui/Modal";
-// 4. Convex generated (from pages/components into convex)
-import { api } from "../../../convex/_generated/api";
+import { useDecks } from "@/lib/hooks";
 ```
 
 ### Components
@@ -135,23 +160,27 @@ import { api } from "../../../convex/_generated/api";
 | Thing                        | Convention                  |
 | ---------------------------- | --------------------------- |
 | Components / files           | `PascalCase`                |
-| Convex function files        | `camelCase` (`cards.ts`)    |
+| Route handler files          | `route.ts` (Next.js convention) |
 | Variables / functions        | `camelCase`                 |
 | Types / interfaces           | `PascalCase` (no `I` prefix) |
-| Convex delete operations     | `remove` (not `delete`)     |
-| Internal Convex ops          | `internal*` suffix via `internalQuery` / `internalMutation` |
 | Constants (module-level)     | `SCREAMING_SNAKE_CASE` + `as const` |
 
-### Convex Backend
+### Backend (Drizzle + Route Handlers)
 
-- Scope every query/mutation to the authenticated user: call `getAuthUserId(ctx)`.
-  - **Queries**: return `null` or `[]` when unauthenticated.
-  - **Mutations/actions**: throw `new Error("Not authenticated")` when unauthenticated.
+- Scope every query/mutation to the authenticated user: call `getAuthUserId()` or
+  `requireAuthUserId()` from `src/server/auth.ts`.
+  - **Reads**: return `null` or `[]` when unauthenticated.
+  - **Writes**: throw `new Error("Not authenticated")` when unauthenticated.
 - Ownership checks: throw `new Error("<Entity> not found")` if the record doesn't
   belong to the caller.
-- Use `internalMutation` / `internalQuery` for operations that should only be called
-  by other Convex functions, never directly by clients.
-- Never return raw secrets (e.g., API keys) from queries or mutations.
+- Keep query logic in `src/server/queries/*.ts`. Keep Route Handlers in
+  `src/app/api/**/route.ts` thin — they parse the request, call a query function,
+  and return JSON.
+- Use Drizzle's query builder (`eq`, `and`, `lt`, `sql`, etc.) — avoid raw SQL
+  strings unless the builder can't express the query.
+- Foreign keys use `ON DELETE CASCADE` where children should be removed with their
+  parent (e.g. cards when a deck is deleted).
+- Never return raw secrets from API routes.
 
 ### Error Handling (Client)
 
@@ -191,21 +220,30 @@ try {
 
 - No global state library. Use React built-ins: `useState`, `useEffect`, `useRef`,
   `useCallback`.
-- Convex `useQuery` provides real-time reactive data. `useMutation` / `useAction` for
-  writes.
-- When you need a stable snapshot of live data (e.g., during a study session), copy
-  Convex results into local state at session start to prevent mid-session re-sorting.
+- TanStack Query provides caching, refetch, and loading states. `useMutation` /
+  `useQuery` hooks in `src/lib/hooks.ts` are the data layer — invalidate affected
+  query keys in mutation `onSuccess` callbacks to keep the UI fresh.
+- When you need a stable snapshot of data (e.g., during a study session), copy
+  query results into local state at session start to prevent mid-session re-sorting
+  from refetches.
 
 ---
 
 ## Auth
 
-- Auth secrets (`AUTH_GITHUB_ID`, etc.) are set as **Convex environment variables**,
-  not in `.env.local`. Do not add auth secrets to `.env.local`.
-- `NEXT_PUBLIC_CONVEX_URL` is the only frontend env var required locally (in
-  `.env.local`).
-- The `(protected)/` route group's `layout.tsx` handles the auth gate — all child
-  pages can assume the user is authenticated.
+- Auth is configured in `src/auth.ts` (NextAuth v5) using the Drizzle Postgres
+  adapter. The auth tables (`users`, `accounts`, `sessions`, `verification_tokens`)
+  live in `src/db/schema.ts` and use `text` ids (the Drizzle adapter requires
+  string-typed user ids).
+- App tables (`decks`, `cards`, `studySessions`) use `bigint` serial PKs for compact
+  URLs; their `userId` foreign key is `text` referencing `users.id`.
+- `src/middleware.ts` gates protected routes by checking `req.auth` from the NextAuth
+  middleware wrapper.
+- The `(protected)/` route group's `layout.tsx` handles the auth gate client-side
+  via `useSession()` — all child pages can assume the user is authenticated.
+- Auth secrets (`AUTH_GITHUB_ID`, `AUTH_GOOGLE_ID`, `AUTH_SECRET`, etc.) are set in
+  `.env.local` (or `.env` for Docker Compose), **not** in a separate dashboard.
+- `DATABASE_URL` is the only other required env var locally (in `.env.local`).
 
 ---
 
@@ -229,7 +267,6 @@ deployment process, or add new tooling.
 
 ## Do Not
 
-- Edit anything inside `convex/_generated/` — it is auto-generated by the Convex CLI.
 - Add a global state library (Zustand, Redux, Jotai) without discussion.
 - Add a test framework ad-hoc — if tests are needed, plan the framework choice first.
 - Use `console.log` in committed code; use `console.error` only in genuine error paths.

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Layers, ChevronLeft, Settings, LogOut, Menu, X, Home, BookOpen } from 'lucide-react';
-import { useAuthActions } from '@convex-dev/auth/react';
+import { signOut } from 'next-auth/react';
 import { SearchBar } from './SearchBar';
 
 const NAV_LINKS = [
@@ -23,7 +23,6 @@ export interface AppHeaderProps {
 
 export function AppHeader({ title, backHref, backLabel }: AppHeaderProps) {
   const pathname = usePathname();
-  const { signOut } = useAuthActions();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
 

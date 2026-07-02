@@ -3,23 +3,21 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { BookOpen, Check, HelpCircle, Lightbulb, X, AlertCircle } from 'lucide-react';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../../../../../convex/_generated/api';
-import type { Id } from '../../../../../../convex/_generated/dataModel';
-import { Card } from '@/components/ui/Card';
+import {
+  useDeck,
+  useCards,
+  useDueCards,
+  useRecordReview,
+  useStartSession,
+  useCompleteSession,
+  type Card,
+} from '@/lib/hooks';
+import { qualityFromConfidence, type ConfidenceLevel } from '@/lib/sm2';
+import { Card as CardUi } from '@/components/ui/Card';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { MarkdownContent } from '@/components/ui/MarkdownContent';
 import Link from 'next/link';
-
-type ConfidenceLevel = 'wrong' | 'close' | 'hard' | 'easy';
-
-const qualityFromConfidence: Record<ConfidenceLevel, number> = {
-    wrong: 0,
-    close: 2,
-    hard: 3,
-    easy: 5,
-};
 
 function isTypingTarget(target: EventTarget | null): boolean {
     if (!(target instanceof HTMLElement)) return false;
@@ -29,37 +27,35 @@ function isTypingTarget(target: EventTarget | null): boolean {
 
 export default function StudyPage() {
     const { id } = useParams();
-    const deckId = id as Id<"decks">;
+    const deckId = Number(id as string);
 
-    const deck = useQuery(api.decks.get, { id: deckId });
-    const dueCards = useQuery(api.cards.getDueByDeck, { deckId });
-    const allCards = useQuery(api.cards.getByDeck, { deckId });
-    const recordReviewMutation = useMutation(api.cards.recordReview);
-    const startSessionMutation = useMutation(api.sessions.startSession);
-    const completeSessionMutation = useMutation(api.sessions.completeSession);
-    const recordEventMutation = useMutation(api.sessions.recordEvent);
+    const { data: deck, isLoading: deckLoading } = useDeck(deckId);
+    const { data: dueCards, isLoading: dueLoading } = useDueCards(deckId);
+    const { data: allCards } = useCards(deckId);
+    const recordReviewMutation = useRecordReview(deckId);
+    const startSessionMutation = useStartSession(deckId);
+    const completeSessionMutation = useCompleteSession(deckId);
 
     const [currentCardIndex, setCurrentCardIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
     const [sessionComplete, setSessionComplete] = useState(false);
-    const [sessionId, setSessionId] = useState<Id<"studySessions"> | null>(null);
+    const [sessionId, setSessionId] = useState<number | null>(null);
     const [cardsCorrect, setCardsCorrect] = useState(0);
     const [cardsIncorrect, setCardsIncorrect] = useState(0);
-    // Freeze study order at session start so Convex live updates don't re-sort
-    // mid-session (which would show the same card again after studying it)
-    const [sessionCards, setSessionCards] = useState<NonNullable<typeof dueCards> | null>(null);
+    // Freeze study order at session start so refetches don't re-sort mid-session.
+    const [sessionCards, setSessionCards] = useState<Card[] | null>(null);
     const confidenceLockRef = useRef(false);
 
     // Keep a ref to current session state so the cleanup effect can read it without stale closures
-    const sessionStateRef = useRef({ sessionId: null as Id<"studySessions"> | null, cardsCorrect: 0, cardsIncorrect: 0, sessionComplete: false });
+    const sessionStateRef = useRef({ sessionId: null as number | null, cardsCorrect: 0, cardsIncorrect: 0, sessionComplete: false });
     sessionStateRef.current = { sessionId, cardsCorrect, cardsIncorrect, sessionComplete };
 
     useEffect(() => {
         if (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete) {
             setSessionCards(dueCards);
-            startSessionMutation({ deckId }).then(setSessionId);
+            startSessionMutation.mutateAsync().then((res) => setSessionId(res.id));
         }
-    }, [dueCards, sessionCards, sessionComplete, deckId, startSessionMutation]);
+    }, [dueCards, sessionCards, sessionComplete, startSessionMutation]);
 
     // Complete the session if the user navigates away mid-session
     useEffect(() => {
@@ -67,7 +63,7 @@ export default function StudyPage() {
             const { sessionId: sid, cardsCorrect: correct, cardsIncorrect: incorrect, sessionComplete: done } = sessionStateRef.current;
             const reviewed = correct + incorrect;
             if (sid && !done && reviewed > 0) {
-                completeSessionMutation({
+                void completeSessionMutation.mutateAsync({
                     sessionId: sid,
                     cardsStudied: reviewed,
                     cardsCorrect: correct,
@@ -87,7 +83,7 @@ export default function StudyPage() {
         confidenceLockRef.current = true;
 
         try {
-            const quality = qualityFromConfidence[confidence];
+            const quality = qualityFromConfidence(confidence);
             const isCorrect = quality >= 3;
 
             if (isCorrect) {
@@ -96,19 +92,10 @@ export default function StudyPage() {
                 setCardsIncorrect((c) => c + 1);
             }
 
-            await recordReviewMutation({
-                id: currentCard._id,
+            await recordReviewMutation.mutateAsync({
+                cardId: currentCard.id,
                 confidence,
             });
-
-            if (sessionId) {
-                await recordEventMutation({
-                    sessionId,
-                    cardId: currentCard._id,
-                    deckId,
-                    quality,
-                });
-            }
 
             if (currentCardIndex < studyCards.length - 1) {
                 setCurrentCardIndex(currentCardIndex + 1);
@@ -117,7 +104,7 @@ export default function StudyPage() {
                 const finalCorrect = isCorrect ? cardsCorrect + 1 : cardsCorrect;
                 const finalIncorrect = isCorrect ? cardsIncorrect : cardsIncorrect + 1;
                 if (sessionId) {
-                    await completeSessionMutation({
+                    await completeSessionMutation.mutateAsync({
                         sessionId,
                         cardsStudied: studyCards.length,
                         cardsCorrect: finalCorrect,
@@ -135,8 +122,6 @@ export default function StudyPage() {
         completeSessionMutation,
         currentCard,
         currentCardIndex,
-        deckId,
-        recordEventMutation,
         recordReviewMutation,
         sessionId,
         studyCards.length,
@@ -184,7 +169,7 @@ export default function StudyPage() {
     }, [currentCard, sessionComplete, showAnswer, handleShowAnswer, handleConfidence]);
 
     // Loading state (include brief init when cards loaded but session order not yet frozen)
-    if (deck === undefined || dueCards === undefined || allCards === undefined || (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete)) {
+    if (deckLoading || dueLoading || (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete)) {
         return (
             <div className="flex-1 bg-background text-foreground">
                 <AppHeader title="Study" backHref="/decks" backLabel="Decks" />
@@ -235,7 +220,7 @@ export default function StudyPage() {
                             <h1 className="text-2xl font-bold text-text-primary mb-2">No cards to study</h1>
                             <p className="text-text-secondary mb-6">This deck doesn&apos;t have any cards yet.</p>
                             <Link
-                                href={`/decks/${deck._id}`}
+                                href={`/decks/${deck.id}`}
                                 className="inline-block bg-accent-primary text-text-inverse px-4 py-2 rounded-md hover:bg-accent-primary-hover transition-colors"
                             >
                                 Add Cards
@@ -323,7 +308,7 @@ export default function StudyPage() {
                         />
                     </div>
                 </div>
-                <Card variant="default" className="min-h-[300px] sm:min-h-[400px] flex flex-col">
+                <CardUi variant="default" className="min-h-[300px] sm:min-h-[400px] flex flex-col">
                     <div className="flex-1 flex flex-col justify-center">
                         {!showAnswer ? (
                             // Front of card
@@ -401,7 +386,7 @@ export default function StudyPage() {
                             </div>
                         )}
                     </div>
-                </Card>
+                </CardUi>
             </main>
         </div>
     );

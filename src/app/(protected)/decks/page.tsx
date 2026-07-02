@@ -3,18 +3,21 @@
 import { useState } from 'react';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { useRouter } from 'next/navigation';
-import { useQuery } from 'convex/react';
 import { Info } from 'lucide-react';
-import { api } from '../../../../convex/_generated/api';
+import { useDecks } from '@/lib/hooks';
 import { CreateDeckCard, DeckCard } from '@/components/features/decks/DeckCard';
 import { CreateDeckModal } from '@/components/features/decks/CreateDeckModal';
 import { ImportDeckModal } from '@/components/features/decks/ImportDeckModal';
 import { Modal } from '@/components/ui/Modal';
 import { PageLoader } from '@/components/ui/PageLoader';
+import {
+  MAX_CARDS_PER_DECK,
+  MAX_CARDS_PER_USER,
+  MAX_DECKS_PER_USER,
+} from '@/lib/limits';
 
 export default function DecksPage() {
-    const decks = useQuery(api.decks.list);
-    const limits = useQuery(api.limits.getLimits);
+    const { data: decks, isLoading } = useDecks();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
@@ -29,7 +32,7 @@ export default function DecksPage() {
             if (a.lastStudied && b.lastStudied) return b.lastStudied - a.lastStudied;
             if (a.lastStudied && !b.lastStudied) return -1;
             if (!a.lastStudied && b.lastStudied) return 1;
-            return b._creationTime - a._creationTime;
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         })
         : [];
 
@@ -49,7 +52,7 @@ export default function DecksPage() {
         setIsImportModalOpen(false);
     };
 
-    if (decks === undefined || limits === undefined) {
+    if (isLoading) {
         return (
             <div className="min-h-screen bg-background text-foreground">
                 <AppHeader title="My Decks" />
@@ -60,11 +63,12 @@ export default function DecksPage() {
         );
     }
 
-    const totalCards = decks.reduce((total, deck) => total + deck.cardCount, 0);
-    const totalDue = decks.reduce((total, deck) => total + (deck.dueCount ?? 0), 0);
+    const decksList = decks ?? [];
+    const totalCards = decksList.reduce((total, deck) => total + deck.cardCount, 0);
+    const totalDue = decksList.reduce((total, deck) => total + (deck.dueCount ?? 0), 0);
 
-    const deckUsagePct = decks.length / limits.maxDecks;
-    const cardUsagePct = totalCards / limits.maxCardsPerUser;
+    const deckUsagePct = decksList.length / MAX_DECKS_PER_USER;
+    const cardUsagePct = totalCards / MAX_CARDS_PER_USER;
     const deckNearLimit = deckUsagePct >= 0.8;
     const cardNearLimit = cardUsagePct >= 0.8;
 
@@ -79,13 +83,13 @@ export default function DecksPage() {
                     <div className="flex flex-wrap items-center justify-between gap-y-3">
                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
                             <span className={deckNearLimit ? 'text-status-warning-text font-medium' : 'text-text-secondary'}>
-                                <span className="font-medium">{decks.length}</span>
-                                <span className="text-text-tertiary">/{limits.maxDecks}</span>
+                                <span className="font-medium">{decksList.length}</span>
+                                <span className="text-text-tertiary">/{MAX_DECKS_PER_USER}</span>
                                 {' '}decks
                             </span>
                             <span className={cardNearLimit ? 'text-status-warning-text font-medium' : 'text-text-secondary'}>
                                 <span className="font-medium">{totalCards.toLocaleString()}</span>
-                                <span className="text-text-tertiary">/{limits.maxCardsPerUser.toLocaleString()}</span>
+                                <span className="text-text-tertiary">/{MAX_CARDS_PER_USER.toLocaleString()}</span>
                                 {' '}cards
                             </span>
                             {totalDue > 0 ? (
@@ -121,7 +125,7 @@ export default function DecksPage() {
                     <CreateDeckCard onClick={handleOpenModal} />
                     {sortedDecks.map((deck) => (
                         <DeckCard
-                            key={deck._id}
+                            key={deck.id}
                             deck={deck}
                             onClick={(deckId) => router.push(`/decks/${deckId}`)}
                         />
@@ -158,19 +162,19 @@ export default function DecksPage() {
                         <div className="flex justify-between">
                             <span className="text-text-secondary">Decks</span>
                             <span className="font-medium text-text-primary">
-                                {decks.length} / {limits.maxDecks}
+                                {decksList.length} / {MAX_DECKS_PER_USER}
                             </span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-text-secondary">Total cards</span>
                             <span className="font-medium text-text-primary">
-                                {totalCards.toLocaleString()} / {limits.maxCardsPerUser.toLocaleString()}
+                                {totalCards.toLocaleString()} / {MAX_CARDS_PER_USER.toLocaleString()}
                             </span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-text-secondary">Cards per deck</span>
                             <span className="font-medium text-text-primary">
-                                up to {limits.maxCardsPerDeck.toLocaleString()}
+                                up to {MAX_CARDS_PER_DECK.toLocaleString()}
                             </span>
                         </div>
                     </div>
