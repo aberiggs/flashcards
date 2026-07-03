@@ -25,11 +25,11 @@ export async function listDecks(userId: string): Promise<DeckWithStats[]> {
       updatedAt: decks.updatedAt,
       cardCount: sql<number>`count(${cards.id})::int`,
       dueCount:
-        sql<number>`count(${cards.id}) filter (where ${cards.nextReview} <= now())::int`,
+        sql<number>`(count(${cards.id}) filter (where ${cards.nextReview} <= now()))::int`,
       lastStudied:
-        sql<number>`max(extract(epoch from ${cards.lastStudied}) * 1000)::bigint`,
+        sql<number>`(max(extract(epoch from ${cards.lastStudied}) * 1000))::bigint`,
       nextReviewAt:
-        sql<number>`min(extract(epoch from ${cards.nextReview}) filter (where ${cards.nextReview} > now()) * 1000)::bigint`,
+        sql<number>`(min(extract(epoch from ${cards.nextReview}) filter (where ${cards.nextReview} > now()) * 1000))::bigint`,
     })
     .from(decks)
     .leftJoin(cards, eq(cards.deckId, decks.id))
