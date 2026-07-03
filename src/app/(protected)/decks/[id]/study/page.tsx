@@ -12,6 +12,7 @@ import {
   useCompleteSession,
   type Card,
 } from '@/lib/hooks';
+import { api } from '@/lib/api';
 import { qualityFromConfidence, type ConfidenceLevel } from '@/lib/sm2';
 import { Card as CardUi } from '@/components/ui/Card';
 import { AppHeader } from '@/components/layout/AppHeader';
@@ -57,13 +58,14 @@ export default function StudyPage() {
         }
     }, [dueCards, sessionCards, sessionComplete, startSessionMutation]);
 
-    // Complete the session if the user navigates away mid-session
+    // Complete the session if the user navigates away mid-session.
+    // Uses keepalive so the request survives the page unload.
     useEffect(() => {
         return () => {
             const { sessionId: sid, cardsCorrect: correct, cardsIncorrect: incorrect, sessionComplete: done } = sessionStateRef.current;
             const reviewed = correct + incorrect;
             if (sid && !done && reviewed > 0) {
-                void completeSessionMutation.mutateAsync({
+                api.patchKeepalive(`/api/decks/${deckId}/study`, {
                     sessionId: sid,
                     cardsStudied: reviewed,
                     cardsCorrect: correct,

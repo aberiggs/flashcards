@@ -47,4 +47,16 @@ export const api = {
   patch: <T>(url: string, body?: unknown) =>
     request<T>(url, { method: "PATCH", body: body ? JSON.stringify(body) : undefined }),
   delete: <T>(url: string) => request<T>(url, { method: "DELETE" }),
+  /**
+   * Fire-and-forget PATCH with keepalive — the browser completes the request
+   * even after the page unloads. Use for cleanup calls on unmount where you
+   * can't await the result (e.g. completing a study session on navigation).
+   */
+  patchKeepalive: (url: string, body: unknown) =>
+    void fetch(url, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      keepalive: true,
+    }),
 };
