@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "../components/theme/ThemeProvider";
 import { ToastProvider } from "../components/ui/Toast";
@@ -39,7 +38,6 @@ export default function RootLayout({
             </ThemeProvider>
           </QueryProvider>
         </AuthSessionProvider>
-        <Analytics />
       </body>
     </html>
   );

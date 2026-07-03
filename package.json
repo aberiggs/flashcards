@@ -15,7 +15,6 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
-    "@vercel/analytics": "^1.6.1",
     "bcryptjs": "^3.0.3",
     "drizzle-orm": "^0.38.3",
     "lucide-react": "^0.468.0",

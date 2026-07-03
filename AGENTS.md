@@ -15,7 +15,7 @@ generation, and OAuth authentication (GitHub + Google).
 | Charts     | Recharts                                                |
 | Icons      | Lucide React                                            |
 | Data       | TanStack Query (request/response + refetch — no realtime) |
-| Deployment | Docker Compose (Next.js + Postgres) or Vercel + managed Postgres |
+| Deployment | Docker Compose (Next.js + Postgres) — self-hosted, no cloud dependencies |
 
 ---
 
@@ -256,8 +256,6 @@ After completing any feature work or making meaningful changes, update `docs/fea
 
 - **Keep current capabilities current**: add or revise user-visible functionality in
   the appropriate section.
-- **Track ideas in GitHub Issues**: for new follow-on ideas, first check for duplicates,
-  then create or link an issue instead of adding local roadmap checkboxes.
 - **Keep descriptions honest**: write feature notes as user-visible capabilities, not
   implementation details.
 - **Don't over-document**: trivial bug fixes and refactors don't need feature doc updates.

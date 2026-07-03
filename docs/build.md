@@ -6,6 +6,7 @@
 - **Backend**: Postgres + Drizzle ORM, exposed via Next.js Route Handlers
 - **Auth**: Auth.js (NextAuth v5) with Credentials provider (email + password, JWT sessions — no OAuth, no DB session table)
 - **Data fetching**: TanStack Query (request/response + refetch — no realtime)
+- **Deployment**: Docker Compose (Next.js + Postgres)
 
 All server code lives under `src/server/` (query functions, auth helpers) and
 `src/app/api/` (Route Handlers). The DB schema is `src/db/schema.ts`.
@@ -18,7 +19,7 @@ All server code lives under `src/server/` (query functions, auth helpers) and
 
 - Node.js 20+
 - npm
-- Postgres 14+ (local install, Docker, or a cloud instance)
+- Docker (for Postgres)
 
 ### First-time setup
 
@@ -28,13 +29,15 @@ All server code lives under `src/server/` (query functions, auth helpers) and
    npm install
    ```
 
-2. **Create the database**
+2. **Start Postgres**
 
    ```bash
-   createdb flashcards
+   docker compose -f docker-compose.dev.yml up -d
    ```
 
-   (Or use Docker: `docker run -d --name flashcards-pg -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=flashcards -p 5432:5432 postgres:17-alpine`)
+   This runs a Postgres 17 container on port 5432 with a `flashcards` database.
+   Stop it with `docker compose -f docker-compose.dev.yml down`. Wipe the data
+   with `down -v`.
 
 3. **Configure environment**
 
@@ -43,7 +46,7 @@ All server code lives under `src/server/` (query functions, auth helpers) and
    ```
 
    Edit `.env.local` and fill in:
-   - `DATABASE_URL` — your Postgres connection string
+   - `DATABASE_URL` — `postgres://postgres:postgres@localhost:5432/flashcards`
    - `AUTH_SECRET` — generate with `openssl rand -base64 32`
    - `NEXTAUTH_URL=http://localhost:3000`
 
@@ -65,20 +68,12 @@ All server code lives under `src/server/` (query functions, auth helpers) and
    registration form. Create the first account — registration closes
    automatically after that.
 
-### Running the app
-
-```bash
-npm run dev
-```
-
-Starts Next.js (Turbopack) on http://localhost:3000.
-
 ### npm scripts reference
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start Next.js dev server |
-| `npm run build` | Production build (Next.js) |
+| `npm run dev` | Start Next.js dev server (Turbopack) |
+| `npm run build` | Production build (Next.js standalone output) |
 | `npm run start` | Run the production build locally |
 | `npm run lint` | Run ESLint |
 | `npm run typecheck` | Run `tsc --noEmit` |
@@ -104,20 +99,20 @@ The workflow at `.github/workflows/deploy.yml` runs on every push/PR:
 2. `npm run lint`
 3. `npm run typecheck` (or `npx tsc --noEmit`)
 
-No Convex codegen step needed anymore — types are inferred from Drizzle directly.
+No codegen step needed — types are inferred from Drizzle directly.
 
 ---
 
-## Deployment
+## Deployment (Docker Compose)
 
-### Docker Compose (self-hosted)
-
-The simplest self-hosted deployment: a single `docker compose up` brings up
+The canonical self-hosted deployment: a single `docker compose up` brings up
 Postgres + the Next.js app with migrations applied automatically.
 
+### Setup
+
 1. Copy `.env.example` to `.env` on the host and fill in:
-   - `AUTH_SECRET` (required)
-   - `NEXTAUTH_URL` — the public URL of your deployment
+   - `AUTH_SECRET` (required — `openssl rand -base64 32`)
+   - `NEXTAUTH_URL` — the public URL of your deployment (e.g. `http://flashcards.lan:3000`)
    - Optionally `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` (defaults: `postgres`/`postgres`/`flashcards`)
 
 2. Start it:
@@ -129,16 +124,27 @@ Postgres + the Next.js app with migrations applied automatically.
 3. Visit the app. Since no users exist, you'll see a registration form —
    create the first account. Registration closes automatically after that.
 
-The Compose file runs `drizzle-kit migrate` before starting the server, so the
-DB schema is always current. Postgres data persists in the `db_data` volume.
+### How it works
 
-### Vercel (frontend hosting + managed Postgres)
+- The `web` service builds from the `Dockerfile` (multi-stage Next.js
+  standalone build).
+- On startup, it runs `drizzle-kit migrate` before starting the server, so
+  the DB schema is always current.
+- Postgres data persists in the `db_data` Docker volume.
+- The app listens on port 3000.
 
-For a hosted deployment without Docker:
+### Operations
 
-1. Create a Vercel project linked to this repo.
-2. Provision a Postgres instance (Vercel Postgres, Supabase, Neon, etc.) and set `DATABASE_URL` in Vercel env vars.
-3. Set `AUTH_SECRET` and `NEXTAUTH_URL` in Vercel env vars.
-4. Run migrations once: `DATABASE_URL=… npm run db:migrate` (or wire it into a build step).
-5. Push to `main` — Vercel builds and deploys automatically.
-6. Visit the app and create the first account via the registration form.
+```bash
+docker compose up -d      # start
+docker compose down       # stop
+docker compose down -v    # stop + wipe database
+docker compose logs -f    # tail logs
+docker compose pull && docker compose up -d   # update to a new image
+```
+
+### Behind a reverse proxy
+
+If you're putting it behind nginx/Traefik/Caddy with HTTPS, set
+`NEXTAUTH_URL` to the public-facing URL (e.g. `https://flashcards.yourdomain`)
+so auth redirects work correctly.
