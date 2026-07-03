@@ -94,11 +94,12 @@ export function CreateDeckModal({ isOpen, onClose }: CreateDeckModalProps) {
                     </button>
                     <button
                         type="submit"
+                        disabled={createDeck.isPending}
                         className="flex-1 bg-accent-primary text-text-inverse py-2.5 px-4 rounded-lg font-medium cursor-pointer
               hover:bg-accent-primary-hover transition-colors duration-200
-              focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2"
+              focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Create Deck
+                        {createDeck.isPending ? 'Creating…' : 'Create Deck'}
                     </button>
                 </div>
             </form>

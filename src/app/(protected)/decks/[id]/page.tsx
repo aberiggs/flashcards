@@ -441,6 +441,7 @@ export default function DeckDetailPage() {
                     onSave={handleAddCard}
                     saveLabel="Add Card"
                     autoFocus
+                    saving={addCardMutation.isPending}
                 />
             </Modal>
 
