@@ -8,18 +8,42 @@ Designed for homelabbers: runs as a single Docker Compose stack (Next.js +
 Postgres) with email/password auth — no OAuth provider accounts, no cloud
 dependencies.
 
-## Quick start (Docker)
+## Quick start (Docker on a homelab)
 
-```bash
-cp .env.example .env
-# Edit .env — set AUTH_SECRET:
-#   openssl rand -base64 32
-docker compose up -d
-```
+Pre-built images are published to `ghcr.io/aberiggs/flashcards` on every push
+to `main`, so on your server you only need Docker — no source checkout, no
+build step.
 
-Visit http://localhost:3000. Since no users exist yet, you'll see a
-registration form — create the first account and you're in. Registration
-closes automatically after that.
+1. Grab the `docker-compose.yml` from this repo and put it in a directory on
+   your server (e.g. `~/flashcards/`).
+2. Generate an auth secret and create an `.env` next to it:
+
+   ```bash
+   openssl rand -base64 32   # paste the output as AUTH_SECRET below
+   cat > .env <<'EOF'
+   AUTH_SECRET=paste-the-output-of-openssl-rand-above
+   NEXTAUTH_URL=http://flashcards.lan:3000   # public URL of the app
+
+   # Optional overrides:
+   # WEB_PORT=8080                           # host port (default 3000)
+   # POSTGRES_DATA_PATH=/mnt/raid/flashcards/pgdata
+   # POSTGRES_USER=postgres
+   # POSTGRES_PASSWORD=postgres
+   # POSTGRES_DB=flashcards
+   EOF
+   ```
+
+3. Start it:
+
+   ```bash
+   docker compose up -d
+   ```
+
+Visit `NEXTAUTH_URL` (default http://localhost:3000). Since no users exist
+yet, you'll see a registration form — create the first account and you're in.
+Registration closes automatically after that.
+
+Updates: `docker compose pull && docker compose up -d`.
 
 ## Quick start (local dev)
 
