@@ -93,11 +93,20 @@ All server code lives under `src/server/` (query functions, auth helpers) and
 
 ## CI pipeline (GitHub Actions)
 
-The workflow at `.github/workflows/deploy.yml` runs on every push/PR:
+The workflow at `.github/workflows/ci.yml` runs on every push/PR:
 
 1. `npm ci`
 2. `npm run lint`
-3. `npm run typecheck` (or `npx tsc --noEmit`)
+3. `npx tsc --noEmit`
+
+On pushes to `main` (only), the `build-and-push` job also builds the Docker
+image and publishes it to GitHub Container Registry:
+
+- `ghcr.io/aberiggs/flashcards:latest`
+- `ghcr.io/aberiggs/flashcards:sha-<commit>`
+
+GHCR is free for public repos. Pulling the image on the server requires no
+authentication (public repo) or a PAT with `read:packages` (private repo).
 
 No codegen step needed — types are inferred from Drizzle directly.
 
@@ -105,46 +114,105 @@ No codegen step needed — types are inferred from Drizzle directly.
 
 ## Deployment (Docker Compose)
 
-The canonical self-hosted deployment: a single `docker compose up` brings up
-Postgres + the Next.js app with migrations applied automatically.
+The canonical self-hosted deployment: a single `docker compose up -d` pulls
+the pre-built image from GitHub Container Registry and brings up Postgres +
+the Next.js app with migrations applied automatically. No source checkout or
+build toolchain needed on the server.
+
+### Prerequisites
+
+- Docker Engine + the Compose plugin
+- The `docker-compose.yml` from this repo (just that one file)
+- An `.env` next to it (see below)
 
 ### Setup
 
-1. Copy `.env.example` to `.env` on the host and fill in:
-   - `AUTH_SECRET` (required — `openssl rand -base64 32`)
-   - `NEXTAUTH_URL` — the public URL of your deployment (e.g. `http://flashcards.lan:3000`)
-   - Optionally `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` (defaults: `postgres`/`postgres`/`flashcards`)
+1. Copy `docker-compose.yml` from this repo into a directory on your server
+   (e.g. `~/flashcards/`).
 
-2. Start it:
+2. Generate an auth secret, then create `.env` in the same directory:
+
+   ```bash
+   openssl rand -base64 32   # paste the output as AUTH_SECRET below
+   cat > .env <<'EOF'
+   AUTH_SECRET=paste-the-output-of-openssl-rand-above
+   NEXTAUTH_URL=http://flashcards.lan:3000   # public URL of the app
+
+   # Optional overrides (defaults shown):
+   # WEB_PORT=3000                           # host port for the web app
+   # POSTGRES_DATA_PATH=./pgdata             # where DB data lives on the host
+   # POSTGRES_USER=postgres
+   # POSTGRES_PASSWORD=postgres
+   # POSTGRES_DB=flashcards
+   EOF
+   ```
+
+   What each does:
+
+   - **`AUTH_SECRET`** — signs session JWTs. Required. Generate with
+     `openssl rand -base64 32`.
+   - **`NEXTAUTH_URL`** — the public URL of your deployment (used for auth
+     redirects). If you're behind a reverse proxy with HTTPS, set this to
+     the public-facing URL (e.g. `https://flashcards.yourdomain`).
+   - **`WEB_PORT`** — host port the app is published on. Default `3000`.
+     Change it if you want to run on a different port (e.g. `8080`).
+   - **`POSTGRES_DATA_PATH`** — where Postgres stores its data on the host.
+     Default `./pgdata` (relative to the compose directory). Set to an
+     absolute path on a dedicated disk for control over disk placement, e.g.
+     `/mnt/raid/flashcards/pgdata`.
+   - **`POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`** — Postgres
+     credentials. The `web` service uses these to build its `DATABASE_URL`.
+
+3. Start it:
 
    ```bash
    docker compose up -d
    ```
 
-3. Visit the app. Since no users exist, you'll see a registration form —
-   create the first account. Registration closes automatically after that.
+4. Visit the app at `NEXTAUTH_URL`. Since no users exist yet, you'll see a
+   registration form — create the first account. Registration closes
+   automatically after that.
 
 ### How it works
 
-- The `web` service builds from the `Dockerfile` (multi-stage Next.js
-  standalone build).
-- On startup, it runs `drizzle-kit migrate` before starting the server, so
-  the DB schema is always current.
-- Postgres data persists in the `db_data` Docker volume.
-- The app listens on port 3000.
+- The `web` service pulls `ghcr.io/aberiggs/flashcards:latest` (published by
+  CI on every push to `main`). On startup it runs `drizzle-kit migrate`
+  before starting the server, so the DB schema is always current.
+- The `db` service runs `postgres:17-alpine`. Its data is bind-mounted to
+  `POSTGRES_DATA_PATH` on the host (default `./pgdata`).
+- Postgres is **not** published to the host — only the `web` service can
+  reach it over the internal compose network (hostname `db`). If you need to
+  connect from the host (e.g. for Drizzle Studio), add a `ports:` block to
+  the `db` service temporarily.
+- The app listens on `WEB_PORT` (default 3000).
 
 ### Operations
 
 ```bash
-docker compose up -d      # start
-docker compose down       # stop
-docker compose down -v    # stop + wipe database
-docker compose logs -f    # tail logs
-docker compose pull && docker compose up -d   # update to a new image
+docker compose up -d                                 # start
+docker compose down                                   # stop
+docker compose down -v                                # stop + wipe database
+docker compose logs -f                                # tail logs
+docker compose pull && docker compose up -d           # update to newest image
+docker compose up -d --force-recreate web             # recreate web after image pull
 ```
+
+### Updating
+
+When a new commit lands on `main`, CI pushes a new `:latest` image to GHCR.
+On your server:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+Compose detects the new image and recreates the `web` container. Postgres
+data on the host is untouched.
 
 ### Behind a reverse proxy
 
 If you're putting it behind nginx/Traefik/Caddy with HTTPS, set
 `NEXTAUTH_URL` to the public-facing URL (e.g. `https://flashcards.yourdomain`)
-so auth redirects work correctly.
+so auth redirects work correctly. You can also set `WEB_PORT` to something
+internal (e.g. `127.0.0.1:3000:3000` in `ports:`) and let the proxy handle
+the public port.
