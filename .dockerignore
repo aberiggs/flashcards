@@ -14,9 +14,6 @@ docker-compose.yml
 .env*
 !.env.example
 
-# Drizzle migrations are copied explicitly in the Dockerfile
-drizzle
-
 # Docs / config not needed at runtime
 docs
 AGENTS.md
