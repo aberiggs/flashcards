@@ -1,8 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { useMutation } from 'convex/react';
-import { api } from '../../../../convex/_generated/api';
+import { useImportDeck } from '@/lib/hooks';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { parseDeckFile, type ParsedCard } from '@/lib/parseDeck';
@@ -30,7 +29,7 @@ interface ImportDeckModalProps {
 const PREVIEW_CARD_COUNT = 3;
 
 export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
-    const importDeck = useMutation(api.import.importDeck);
+    const importDeck = useImportDeck();
     const { toast } = useToast();
 
     const [step, setStep] = useState<Step>('pick');
@@ -111,7 +110,7 @@ export function ImportDeckModal({ isOpen, onClose }: ImportDeckModalProps) {
         setStep('importing');
 
         try {
-            await importDeck({
+            await importDeck.mutateAsync({
                 name: trimmed,
                 description: parsed.description,
                 cards: parsed.cards,

@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
-import { useMutation } from 'convex/react';
-import { api } from '../../../../convex/_generated/api';
+import { useCreateDeck } from '@/lib/hooks';
 import { useToast } from '@/components/ui/Toast';
 
 interface CreateDeckModalProps {
@@ -12,7 +11,7 @@ interface CreateDeckModalProps {
 }
 
 export function CreateDeckModal({ isOpen, onClose }: CreateDeckModalProps) {
-    const createDeck = useMutation(api.decks.create);
+    const createDeck = useCreateDeck();
     const { toast } = useToast();
     const [deckName, setDeckName] = useState('');
     const [error, setError] = useState('');
@@ -39,7 +38,7 @@ export function CreateDeckModal({ isOpen, onClose }: CreateDeckModalProps) {
 
         setError('');
         try {
-            await createDeck({
+            await createDeck.mutateAsync({
                 name: trimmedName,
                 description: 'Add your first card to get started',
             });
@@ -95,11 +94,12 @@ export function CreateDeckModal({ isOpen, onClose }: CreateDeckModalProps) {
                     </button>
                     <button
                         type="submit"
+                        disabled={createDeck.isPending}
                         className="flex-1 bg-accent-primary text-text-inverse py-2.5 px-4 rounded-lg font-medium cursor-pointer
               hover:bg-accent-primary-hover transition-colors duration-200
-              focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2"
+              focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Create Deck
+                        {createDeck.isPending ? 'Creating…' : 'Create Deck'}
                     </button>
                 </div>
             </form>

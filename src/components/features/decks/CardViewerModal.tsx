@@ -2,18 +2,18 @@
 
 import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Info, Pencil, Trash2, X, RotateCcw } from 'lucide-react';
-import type { Doc, Id } from '../../../../convex/_generated/dataModel';
+import type { Card } from '@/lib/hooks';
 import { MarkdownContent } from '@/components/ui/MarkdownContent';
 import { FlipCard } from './FlipCard';
 import { CardEditForm } from './CardEditForm';
 
 interface CardViewerModalProps {
-    cards: Doc<"cards">[];
+    cards: Card[];
     initialIndex: number;
     isOpen: boolean;
     onClose: () => void;
-    onEdit: (card: Doc<"cards">, front: string, back: string) => void;
-    onDelete: (cardId: Id<"cards">) => void;
+    onEdit: (card: Card, front: string, back: string) => void;
+    onDelete: (cardId: number) => void;
     /** When set, this content replaces the card viewer (e.g. card info). Escape will call onCancelInfo. */
     infoContent?: ReactNode | null;
     onCancelInfo?: () => void;
@@ -193,7 +193,7 @@ export function CardViewerModal({
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => onDelete(card._id)}
+                                        onClick={() => onDelete(card.id)}
                                         className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-text-secondary hover:text-accent-error hover:bg-accent-error/10 transition-colors cursor-pointer"
                                         aria-label="Delete card"
                                     >

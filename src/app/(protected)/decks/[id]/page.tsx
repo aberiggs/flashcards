@@ -2,10 +2,8 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
-import { Pencil, Trash2, Plus, Layers, Sparkles } from 'lucide-react';
-import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../../../../convex/_generated/api';
-import type { Id } from '../../../../../convex/_generated/dataModel';
+import { Pencil, Trash2, Plus, Layers } from 'lucide-react';
+import { useDeck, useDeckStats, useUpdateDeck, useDeleteDeck, useCreateCard, useUpdateCard, useDeleteCard, type Card } from '@/lib/hooks';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { getMemoryStage } from '@/lib/memoryStage';
@@ -16,7 +14,6 @@ import { ReviewForecastWidget } from '@/components/features/dashboard/ReviewFore
 import { CardPreview } from '@/components/features/decks/CardPreview';
 import { CardViewerModal } from '@/components/features/decks/CardViewerModal';
 import { CardEditForm } from '@/components/features/decks/CardEditForm';
-import { GenerateCardsModal } from '@/components/features/decks/GenerateCardsModal';
 import { ExportDeckButton } from '@/components/features/decks/ExportDeckButton';
 import Link from 'next/link';
 
@@ -28,7 +25,7 @@ interface CardFormData {
 export default function DeckDetailPage() {
     const { id } = useParams();
     const router = useRouter();
-    const deckId = id as Id<"decks">;
+    const deckId = Number(id as string);
 
     const timeZone =
         typeof Intl !== "undefined"
@@ -37,13 +34,13 @@ export default function DeckDetailPage() {
 
     const { toast } = useToast();
 
-    const deckWithCards = useQuery(api.decks.getWithCards, { id: deckId });
-    const deckStats = useQuery(api.stats.deckStats, { deckId, timeZone });
-    const updateDeckMutation = useMutation(api.decks.update);
-    const deleteDeckMutation = useMutation(api.decks.remove);
-    const addCardMutation = useMutation(api.cards.create);
-    const updateCardMutation = useMutation(api.cards.update);
-    const deleteCardMutation = useMutation(api.cards.remove);
+    const { data: deckWithCards, isLoading } = useDeck(deckId);
+    const { data: deckStats } = useDeckStats(deckId, timeZone);
+    const updateDeckMutation = useUpdateDeck(deckId);
+    const deleteDeckMutation = useDeleteDeck();
+    const addCardMutation = useCreateCard(deckId);
+    const updateCardMutation = useUpdateCard(deckId);
+    const deleteCardMutation = useDeleteCard(deckId);
 
     const [editingName, setEditingName] = useState(false);
     const [editingDescription, setEditingDescription] = useState(false);
@@ -53,8 +50,7 @@ export default function DeckDetailPage() {
     const [addForm, setAddForm] = useState<CardFormData>({ front: '', back: '' });
     const [isDeleteDeckModalOpen, setIsDeleteDeckModalOpen] = useState(false);
     const [isDeleteCardModalOpen, setIsDeleteCardModalOpen] = useState(false);
-    const [cardToDeleteId, setCardToDeleteId] = useState<Id<"cards"> | null>(null);
-    const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+    const [cardToDeleteId, setCardToDeleteId] = useState<number | null>(null);
     const [isDeletingCard, setIsDeletingCard] = useState(false);
     const [isDeletingDeck, setIsDeletingDeck] = useState(false);
     const [viewingCardIndex, setViewingCardIndex] = useState<number | null>(null);
@@ -62,7 +58,6 @@ export default function DeckDetailPage() {
     const [infoCardIndex, setInfoCardIndex] = useState(0);
 
     const nameInputRef = useRef<HTMLInputElement>(null);
-
     const descInputRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
@@ -84,7 +79,7 @@ export default function DeckDetailPage() {
         }
     }, [editingDescription]);
 
-    if (deckWithCards === undefined) {
+    if (isLoading) {
         return (
             <div className="min-h-screen bg-background text-foreground">
                 <AppHeader title="Deck" backHref="/decks" backLabel="Decks" />
@@ -95,7 +90,7 @@ export default function DeckDetailPage() {
         );
     }
 
-    if (deckWithCards === null) {
+    if (!deckWithCards) {
         return (
             <div className="min-h-screen bg-background text-foreground">
                 <AppHeader title="Deck" backHref="/decks" backLabel="Decks" />
@@ -114,8 +109,9 @@ export default function DeckDetailPage() {
         );
     }
 
-    const cards = deckWithCards.cards;
-    const dueCount = cards.filter((c) => !c.nextReview || c.nextReview <= Date.now()).length;
+    const cards: Card[] = deckWithCards.cards;
+    const now = Date.now();
+    const dueCount = cards.filter((c) => new Date(c.nextReview).getTime() <= now).length;
     const hasDue = dueCount > 0;
 
     const handleSaveName = async () => {
@@ -127,7 +123,7 @@ export default function DeckDetailPage() {
         }
         if (name !== deckWithCards.name) {
             try {
-                await updateDeckMutation({ id: deckId, name, description: deckWithCards.description ?? '' });
+                await updateDeckMutation.mutateAsync({ name, description: deckWithCards.description ?? '' });
                 toast.success('Deck name updated');
             } catch (err) {
                 setDeckName(deckWithCards.name);
@@ -141,7 +137,7 @@ export default function DeckDetailPage() {
         const description = deckDescription.trim();
         if (description !== (deckWithCards.description ?? '')) {
             try {
-                await updateDeckMutation({ id: deckId, name: deckWithCards.name, description: description || undefined });
+                await updateDeckMutation.mutateAsync({ name: deckWithCards.name, description: description || undefined });
                 toast.success('Description updated');
             } catch (err) {
                 setDeckDescription(deckWithCards.description ?? '');
@@ -153,8 +149,7 @@ export default function DeckDetailPage() {
     const handleAddCard = async () => {
         if (addForm.front.trim() && addForm.back.trim()) {
             try {
-                await addCardMutation({
-                    deckId,
+                await addCardMutation.mutateAsync({
                     front: addForm.front.trim(),
                     back: addForm.back.trim(),
                 });
@@ -167,11 +162,11 @@ export default function DeckDetailPage() {
         }
     };
 
-    const handleEditCard = async (card: (typeof cards)[number], front: string, back: string) => {
+    const handleEditCard = async (card: Card, front: string, back: string) => {
         if (front.trim() && back.trim()) {
             try {
-                await updateCardMutation({
-                    id: card._id,
+                await updateCardMutation.mutateAsync({
+                    cardId: card.id,
                     front: front.trim(),
                     back: back.trim(),
                 });
@@ -186,7 +181,7 @@ export default function DeckDetailPage() {
         if (cardToDeleteId) {
             setIsDeletingCard(true);
             try {
-                await deleteCardMutation({ id: cardToDeleteId });
+                await deleteCardMutation.mutateAsync(cardToDeleteId);
                 toast.success('Card deleted');
                 setCardToDeleteId(null);
                 setIsDeleteCardModalOpen(false);
@@ -201,7 +196,7 @@ export default function DeckDetailPage() {
     const handleDeleteDeckConfirm = async () => {
         setIsDeletingDeck(true);
         try {
-            await deleteDeckMutation({ id: deckId });
+            await deleteDeckMutation.mutateAsync(deckId);
             setIsDeleteDeckModalOpen(false);
             router.push('/decks');
         } catch (err) {
@@ -210,7 +205,7 @@ export default function DeckDetailPage() {
         }
     };
 
-    const openDeleteCardModal = (cardId: Id<"cards">) => {
+    const openDeleteCardModal = (cardId: number) => {
         setCardToDeleteId(cardId);
         setIsDeleteCardModalOpen(true);
     };
@@ -292,8 +287,15 @@ export default function DeckDetailPage() {
                             )}
                             <ExportDeckButton
                                 deckName={deckWithCards.name}
-                                description={deckWithCards.description}
-                                cards={cards}
+                                description={deckWithCards.description ?? undefined}
+                                cards={cards.map((c) => ({
+                                    front: c.front,
+                                    back: c.back,
+                                    efactor: c.efactor,
+                                    repetitions: c.repetitions,
+                                    nextReview: new Date(c.nextReview).getTime(),
+                                    lastStudied: c.lastStudied ? new Date(c.lastStudied).getTime() : undefined,
+                                }))}
                             />
                             <button
                                 type="button"
@@ -344,14 +346,6 @@ export default function DeckDetailPage() {
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => setIsGenerateModalOpen(true)}
-                                className="inline-flex items-center gap-2 border border-border-primary text-text-primary px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-surface-secondary transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
-                            >
-                                <Sparkles className="w-4 h-4" aria-hidden />
-                                Generate with AI
-                            </button>
-                            <button
-                                type="button"
                                 onClick={() => setIsAddModalOpen(true)}
                                 className="inline-flex items-center gap-2 bg-accent-primary text-text-inverse px-4 py-2.5 rounded-lg text-sm font-medium hover:bg-accent-primary-hover transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-accent-primary focus:ring-offset-2 focus:ring-offset-surface-primary"
                             >
@@ -376,7 +370,7 @@ export default function DeckDetailPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {cards.map((card, index) => (
                                 <CardPreview
-                                    key={card._id}
+                                    key={card.id}
                                     front={card.front}
                                     index={index}
                                     onClick={() => {
@@ -408,15 +402,13 @@ export default function DeckDetailPage() {
                     viewingCardIndex !== null && showingCardInfo && cards.length > 0 ? (() => {
                         const safeInfoIndex = Math.min(infoCardIndex, cards.length - 1);
                         const infoCard = cards[safeInfoIndex];
-                        const reps = infoCard.repetitions ?? 0;
+                        const reps = infoCard.repetitions;
                         const stage = getMemoryStage(reps);
-                        const nextReview = infoCard.nextReview;
+                        const nextReviewMs = new Date(infoCard.nextReview).getTime();
                         const nextReviewLabel =
-                            nextReview == null
-                                ? 'Not scheduled'
-                                : nextReview <= Date.now()
-                                    ? 'Due for review'
-                                    : new Date(nextReview).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+                            nextReviewMs <= now
+                                ? 'Due for review'
+                                : new Date(nextReviewMs).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
                         return (
                             <div className="space-y-6">
                                 <div>
@@ -449,6 +441,7 @@ export default function DeckDetailPage() {
                     onSave={handleAddCard}
                     saveLabel="Add Card"
                     autoFocus
+                    saving={addCardMutation.isPending}
                 />
             </Modal>
 
@@ -513,13 +506,6 @@ export default function DeckDetailPage() {
                     </button>
                 </div>
             </Modal>
-
-            {/* Generate Cards Modal */}
-            <GenerateCardsModal
-                isOpen={isGenerateModalOpen}
-                onClose={() => setIsGenerateModalOpen(false)}
-                deckId={deckId}
-            />
         </div>
     );
 }

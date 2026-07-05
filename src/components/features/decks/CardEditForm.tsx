@@ -11,6 +11,8 @@ interface CardEditFormProps {
   saveLabel?: string;
   /** Auto-focus the front textarea on mount. */
   autoFocus?: boolean;
+  /** Disables the save button and shows a pending label while true. */
+  saving?: boolean;
 }
 
 /**
@@ -25,6 +27,7 @@ export function CardEditForm({
   onSave,
   saveLabel = 'Save Changes',
   autoFocus = false,
+  saving = false,
 }: CardEditFormProps) {
   return (
     <div className="flex flex-col gap-4 h-full">
@@ -69,10 +72,10 @@ export function CardEditForm({
             <button
               type="button"
               onClick={onSave}
-              disabled={!front.trim() || !back.trim()}
+              disabled={!front.trim() || !back.trim() || saving}
               className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
-              {saveLabel}
+              {saving ? 'Saving…' : saveLabel}
             </button>
           )}
         </div>

@@ -7,23 +7,22 @@ import {
   useState,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { useQuery } from 'convex/react';
-import { api } from '../../../convex/_generated/api';
+import { useSearch } from '@/lib/hooks';
 import { Search, Layers, CreditCard, X } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 interface DeckResult {
-  _id: string;
+  id: number;
   name: string;
-  description?: string;
+  description: string | null;
   cardCount: number;
 }
 
 interface CardResult {
-  _id: string;
+  id: number;
   front: string;
-  deckId: string;
+  deckId: number;
   deckName: string;
 }
 
@@ -102,10 +101,10 @@ function SearchDropdown({
             const idx = globalIndex++;
             const isFocused = idx === focusedIndex;
             return (
-              <li key={deck._id} role="option" aria-selected={isFocused}>
+              <li key={deck.id} role="option" aria-selected={isFocused}>
                 <button
                   type="button"
-                  onClick={() => onNavigate(`/decks/${deck._id}`)}
+                  onClick={() => onNavigate(`/decks/${deck.id}`)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors cursor-pointer ${
                     isFocused
                       ? 'bg-accent-primary/10 text-text-primary'
@@ -146,7 +145,7 @@ function SearchDropdown({
             const idx = globalIndex++;
             const isFocused = idx === focusedIndex;
             return (
-              <li key={card._id} role="option" aria-selected={isFocused}>
+              <li key={card.id} role="option" aria-selected={isFocused}>
                 <button
                   type="button"
                   onClick={() => onNavigate(`/decks/${card.deckId}`)}
@@ -195,10 +194,7 @@ export function SearchBar() {
 
   // Only run query when we have ≥2 chars — skip when empty/short
   const shouldSearch = debouncedQuery.length >= 2;
-  const results = useQuery(
-    api.search.search,
-    shouldSearch ? { query: debouncedQuery } : 'skip'
-  );
+  const { data: results } = useSearch(debouncedQuery, shouldSearch);
 
   const decks: DeckResult[] = results?.decks ?? [];
   const cards: CardResult[] = results?.cards ?? [];
@@ -291,7 +287,7 @@ export function SearchBar() {
         if (focusedIndex < 0) break;
         const href =
           focusedIndex < decks.length
-            ? `/decks/${decks[focusedIndex]._id}`
+            ? `/decks/${decks[focusedIndex].id}`
             : `/decks/${cards[focusedIndex - decks.length].deckId}`;
         navigate(href);
         break;

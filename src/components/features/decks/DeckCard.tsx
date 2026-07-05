@@ -4,19 +4,19 @@ import { Plus, Layers, Clock, CalendarClock } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 
 interface DeckWithStats {
-    _id: string;
+    id: number;
     name: string;
-    description?: string;
-    _creationTime: number;
+    description?: string | null;
+    createdAt: string;
     cardCount: number;
-    lastStudied?: number;
+    lastStudied?: number | null;
     dueCount?: number;
-    nextReviewAt?: number;
+    nextReviewAt?: number | null;
 }
 
 interface DeckCardProps {
     deck: DeckWithStats;
-    onClick?: (deckId: string) => void;
+    onClick?: (deckId: number) => void;
 }
 
 function formatLastStudied(timestamp: number) {
@@ -63,7 +63,7 @@ export function DeckCard({ deck, onClick }: DeckCardProps) {
         <Card
             variant="hover"
             className="flex flex-col min-h-[220px]"
-            onClick={onClick ? () => onClick(deck._id) : undefined}
+            onClick={onClick ? () => onClick(deck.id) : undefined}
         >
             <div className="flex-1 flex flex-col min-w-0">
                 <div className="flex items-start justify-between gap-3 mb-3">
