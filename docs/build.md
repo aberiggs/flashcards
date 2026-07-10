@@ -137,15 +137,19 @@ build toolchain needed on the server.
    cat > .env <<'EOF'
    AUTH_SECRET=paste-the-output-of-openssl-rand-above
    NEXTAUTH_URL=http://flashcards.lan:3000   # public URL of the app
+   POSTGRES_USER=flashcards                  # choose a DB username
+   POSTGRES_PASSWORD=choose-a-strong-db-password
+   POSTGRES_DB=flashcards
 
    # Optional overrides (defaults shown):
    # WEB_PORT=3000                           # host port for the web app
    # POSTGRES_DATA_PATH=./pgdata             # where DB data lives on the host
-   # POSTGRES_USER=postgres
-   # POSTGRES_PASSWORD=postgres
-   # POSTGRES_DB=flashcards
    EOF
    ```
+
+   All of `AUTH_SECRET`, `NEXTAUTH_URL`, `POSTGRES_USER`, `POSTGRES_PASSWORD`,
+   and `POSTGRES_DB` are **required** — Compose will refuse to start if any is
+   missing, rather than silently falling back to insecure defaults.
 
    What each does:
 
@@ -154,14 +158,15 @@ build toolchain needed on the server.
    - **`NEXTAUTH_URL`** — the public URL of your deployment (used for auth
      redirects). If you're behind a reverse proxy with HTTPS, set this to
      the public-facing URL (e.g. `https://flashcards.yourdomain`).
+   - **`POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`** — Postgres
+     credentials. No defaults — you must set all three. The `web` service uses
+     these to build its `DATABASE_URL`.
    - **`WEB_PORT`** — host port the app is published on. Default `3000`.
      Change it if you want to run on a different port (e.g. `8080`).
-   - **`POSTGRES_DATA_PATH`** — where Postgres stores its data on the host.
-     Default `./pgdata` (relative to the compose directory). Set to an
-     absolute path on a dedicated disk for control over disk placement, e.g.
-     `/mnt/raid/flashcards/pgdata`.
-   - **`POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`** — Postgres
-     credentials. The `web` service uses these to build its `DATABASE_URL`.
+    - **`POSTGRES_DATA_PATH`** — where Postgres stores its data on the host.
+      Default `./pgdata` (relative to the compose directory). Set to an
+      absolute path on a dedicated disk for control over disk placement, e.g.
+      `/mnt/raid/flashcards/pgdata`.
 
 3. Start it:
 
