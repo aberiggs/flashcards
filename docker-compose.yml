@@ -11,8 +11,9 @@ services:
       POSTGRES_DB: "${POSTGRES_DB:?POSTGRES_DB is required}"
     volumes:
       # Bind-mount Postgres data to a host path you control.
-      # Override POSTGRES_DATA_PATH in .env to place it elsewhere.
-      - ${POSTGRES_DATA_PATH:-/media/IronWolf1/AppData/flashcards/pgdata}:/var/lib/postgresql/data
+      # Set POSTGRES_DATA_PATH in .env to an absolute path on a dedicated disk
+      # (e.g. /mnt/raid/flashcards/pgdata). Defaults to ./pgdata.
+      - ${POSTGRES_DATA_PATH:-./pgdata}:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s

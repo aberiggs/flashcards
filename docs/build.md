@@ -143,7 +143,7 @@ build toolchain needed on the server.
 
    # Optional overrides (defaults shown):
    # WEB_PORT=3000                           # host port for the web app
-   # POSTGRES_DATA_PATH=/media/IronWolf1/AppData/flashcards/pgdata
+   # POSTGRES_DATA_PATH=./pgdata             # where DB data lives on the host
    EOF
    ```
 
@@ -163,9 +163,10 @@ build toolchain needed on the server.
      these to build its `DATABASE_URL`.
    - **`WEB_PORT`** — host port the app is published on. Default `3000`.
      Change it if you want to run on a different port (e.g. `8080`).
-   - **`POSTGRES_DATA_PATH`** — where Postgres stores its data on the host.
-     Default `/media/IronWolf1/AppData/flashcards/pgdata`. Override to place
-     it elsewhere.
+    - **`POSTGRES_DATA_PATH`** — where Postgres stores its data on the host.
+      Default `./pgdata` (relative to the compose directory). Set to an
+      absolute path on a dedicated disk for control over disk placement, e.g.
+      `/mnt/raid/flashcards/pgdata`.
 
 3. Start it:
 
