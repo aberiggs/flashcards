@@ -7,6 +7,9 @@ import { verifyPassword } from "@/server/queries/auth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
+  // Trust the Host header from the reverse proxy so auth redirects use the
+  // public HTTPS URL (NEXTAUTH_URL) instead of being rejected as untrusted.
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
