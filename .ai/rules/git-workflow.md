@@ -8,6 +8,9 @@ based off the `main` branch, unless the user explicitly says otherwise.
 - Do not push directly to `main`, and do not merge a PR without explicit user
   approval.
 - Keep commits focused; stage only the intended files and never commit secrets.
+- When the user asks you to implement a feature or fix based off a GitHub
+  issue, default to committing the work to a branch and opening a draft PR
+  without asking for confirmation. Verify (lint + typecheck + tests) first.
 - **You do not need to ask permission** to commit to a feature branch or open a
   draft PR. Just go ahead and do it after the work is verified (lint + typecheck
   + tests pass). The "don't commit unless asked" rule in the global agent

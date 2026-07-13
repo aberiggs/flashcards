@@ -13,6 +13,7 @@ User-facing capabilities.
 - Review mode with flip-to-reveal, progress tracking, and confidence ratings.
 - Keyboard-first study controls (`Space` to reveal, `1-4` to rate confidence) with on-screen hints.
 - SM-2 scheduling with due-card filtering and stage progression.
+- Due cards are ordered by overdue day-bucket, then SRS level (lower repetitions first), then shuffled within level so recall isn't tied to creation order.
 - Session tracking for streaks, activity, and accuracy metrics.
 
 ## Dashboard and insights

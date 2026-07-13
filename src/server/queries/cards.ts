@@ -1,4 +1,4 @@
-import { and, asc, eq, lt } from "drizzle-orm";
+import { and, asc, desc, eq, lt } from "drizzle-orm";
 import { db } from "@/db";
 import { cards, decks } from "@/db/schema";
 import {
@@ -36,13 +36,24 @@ export async function getDueCardsByDeck(
   if (!(await deckOwnedBy(userId, deckId))) return [];
   // Due = nextReview <= now. The nextReview column is NOT NULL (defaults to
   // now()), so newly-created cards are immediately due.
+  // Ordering (issue #49):
+  //   1. Overdue day-bucket asc — most overdue day first (cards due within the
+  //      same day of each other are treated as equally urgent).
+  //   2. repetitions asc — lower SRS level (New/Learning) before higher
+  //      (Reviewing/Mastered), so struggling cards surface earlier.
+  //   3. random() — shuffle within a day-bucket + SRS level so the user
+  //      recalls from memory rather than a memorized creation order. The study
+  //      page freezes this order into sessionCards at session start, so the
+  //      randomness is effectively per session.
   return db
     .select()
     .from(cards)
-    .where(
-      and(eq(cards.deckId, deckId), lt(cards.nextReview, sql`now()`))
-    )
-    .orderBy(asc(cards.nextReview));
+    .where(and(eq(cards.deckId, deckId), lt(cards.nextReview, sql`now()`)))
+    .orderBy(
+      desc(sql`floor(extract(epoch from (now() - ${cards.nextReview})) / 86400)`),
+      asc(cards.repetitions),
+      sql`random()`
+    );
 }
 
 export async function createCard(

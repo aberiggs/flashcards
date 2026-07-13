@@ -110,25 +110,78 @@ describe("getCardsByDeck", () => {
 });
 
 describe("getDueCardsByDeck", () => {
-  it("returns only cards whose nextReview <= now, most overdue first", async () => {
+  it("excludes not-yet-due cards and orders by overdue day-bucket then SRS level", async () => {
     const user = await createTestUser(db);
     const deck = await seedDeck(db, user.id);
-    const past = await seedCard(db, deck.id, {
+    const DAY = 24 * 60 * 60 * 1000;
+    // Two days overdue, low SRS level (reps=0).
+    const twoDaysOldNew = await seedCard(db, deck.id, {
+      front: "twoDaysOldNew",
+      nextReview: new Date(Date.now() - 2 * DAY),
+      repetitions: 0,
+    });
+    // One day overdue, reps=0.
+    const oneDayOldNew = await seedCard(db, deck.id, {
+      front: "oneDayOldNew",
+      nextReview: new Date(Date.now() - 1 * DAY),
+      repetitions: 0,
+    });
+    // Same day-bucket as oneDayOldNew but reps=1 -> sorts after reps=0.
+    const oneDayOldLearning = await seedCard(db, deck.id, {
+      front: "oneDayOldLearning",
+      nextReview: new Date(Date.now() - 1 * DAY - 60_000),
+      repetitions: 1,
+    });
+    // Not due yet.
+    await seedCard(db, deck.id, {
+      front: "future",
+      nextReview: new Date(Date.now() + DAY),
+    });
+
+    const result = await getDueCardsByDeck(user.id, deck.id);
+
+    expect(result.map((c) => c.front)).toEqual([
+      "twoDaysOldNew",
+      "oneDayOldNew",
+      "oneDayOldLearning",
+    ]);
+    expect(result.map((c) => c.id)).toEqual([
+      twoDaysOldNew.id,
+      oneDayOldNew.id,
+      oneDayOldLearning.id,
+    ]);
+  });
+
+  it("returns only cards whose nextReview <= now", async () => {
+    const user = await createTestUser(db);
+    const deck = await seedDeck(db, user.id);
+    await seedCard(db, deck.id, {
       front: "past",
       nextReview: new Date(Date.now() - 60_000),
     });
-    const older = await seedCard(db, deck.id, {
-      front: "older",
-      nextReview: new Date(Date.now() - 120_000),
-    });
-    // Not due yet.
     await seedCard(db, deck.id, {
       front: "future",
       nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
     const result = await getDueCardsByDeck(user.id, deck.id);
-    expect(result.map((c) => c.front)).toEqual(["older", "past"]);
-    expect(result.map((c) => c.id)).toEqual([older.id, past.id]);
+    expect(result.map((c) => c.front)).toEqual(["past"]);
+  });
+
+  it("shuffles cards within the same day-bucket and SRS level", async () => {
+    const user = await createTestUser(db);
+    const deck = await seedDeck(db, user.id);
+    const fronts = ["a", "b", "c", "d"];
+    for (const front of fronts) {
+      await seedCard(db, deck.id, {
+        front,
+        nextReview: new Date(Date.now() - 30_000),
+        repetitions: 0,
+      });
+    }
+    const result = await getDueCardsByDeck(user.id, deck.id);
+    // Order within the level is random, but the set must be exactly the seeded
+    // fronts.
+    expect(result.map((c) => c.front).sort()).toEqual([...fronts].sort());
   });
 
   it("returns an empty array when the deck is not owned", async () => {
