@@ -50,4 +50,15 @@ drizzle/                  # Generated migration SQL files (committed)
 drizzle.config.ts         # Drizzle Kit configuration
 Dockerfile                # Multi-stage Next.js standalone build
 docker-compose.yml        # Next.js + Postgres self-host deployment
+vitest.config.ts          # Vitest config (node env, tsconfig paths, sequential files)
+tests/
+  setup/
+    global-setup.ts       # Starts Postgres testcontainer once per run, applies migrations
+    test-env.ts           # beforeEach: truncates all app tables
+    db-helpers.ts         # resetDb, createTestUser, seedDeck/Card/Session
+    route-helpers.ts       # mockAuth() + setAuthUserId() for route handler tests
+    types.ts              # Db type alias
+  unit/                   # Pure-logic tests (sm2, parseDeck, exportDeck, memoryStage)
+  server/                 # Server query layer tests (real Postgres)
+  routes/                 # Route handler tests (mocked auth, real Postgres)
 ```
