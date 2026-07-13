@@ -34,8 +34,8 @@ export async function getDueCardsByDeck(
   deckId: number
 ): Promise<(typeof cards.$inferSelect)[]> {
   if (!(await deckOwnedBy(userId, deckId))) return [];
-  // Due = no nextReview (never studied) OR nextReview <= now.
-  // Sort: most overdue first (asc nextReview), then new cards (null nextReview) last.
+  // Due = nextReview <= now. The nextReview column is NOT NULL (defaults to
+  // now()), so newly-created cards are immediately due.
   return db
     .select()
     .from(cards)
