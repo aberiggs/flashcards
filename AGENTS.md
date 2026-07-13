@@ -25,7 +25,7 @@ Read the ones relevant to what you're touching.
 | [`.ai/rules/styling.md`](.ai/rules/styling.md) | Tailwind v4 `@theme`, CSS variable tokens, when to use `style=`. |
 | [`.ai/rules/accessibility.md`](.ai/rules/accessibility.md) | aria-labels, decorative icons, keyboard handlers, focus rings. |
 | [`.ai/rules/state-management.md`](.ai/rules/state-management.md) | React built-ins + TanStack Query, snapshot-into-local-state for sessions. |
-| [`.ai/rules/git-workflow.md`](.ai/rules/git-workflow.md) | All changes via draft PRs off `main`, unless the user says otherwise. |
+| [`.ai/rules/git-workflow.md`](.ai/rules/git-workflow.md) | Draft PRs off `main`; commit at every checkpoint without waiting to be asked. |
 | [`.ai/rules/auth.md`](.ai/rules/auth.md) | NextAuth v5 Credentials provider, JWT sessions, first-user setup, env vars. |
 | [`.ai/rules/keeping-docs-current.md`](.ai/rules/keeping-docs-current.md) | When to update `docs/features.md` and `docs/build.md`. |
 | [`.ai/rules/do-not.md`](.ai/rules/do-not.md) | Global state libs, test frameworks, `console.log`, Prettier/ESLint changes. |

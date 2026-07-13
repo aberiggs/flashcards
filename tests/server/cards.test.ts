@@ -110,25 +110,45 @@ describe("getCardsByDeck", () => {
 });
 
 describe("getDueCardsByDeck", () => {
-  it("returns only cards whose nextReview <= now, most overdue first", async () => {
+  it("returns only due cards for the deck (no ordering — client owns sort)", async () => {
     const user = await createTestUser(db);
     const deck = await seedDeck(db, user.id);
-    const past = await seedCard(db, deck.id, {
-      front: "past",
-      nextReview: new Date(Date.now() - 60_000),
-    });
-    const older = await seedCard(db, deck.id, {
-      front: "older",
-      nextReview: new Date(Date.now() - 120_000),
-    });
-    // Not due yet.
+    const DAY = 24 * 60 * 60 * 1000;
+    const dueIds: number[] = [];
+    // Two days overdue, reps=0.
+    dueIds.push(
+      (await seedCard(db, deck.id, {
+        front: "twoDaysOldNew",
+        nextReview: new Date(Date.now() - 2 * DAY),
+        repetitions: 0,
+      })).id
+    );
+    // One day overdue, reps=0.
+    dueIds.push(
+      (await seedCard(db, deck.id, {
+        front: "oneDayOldNew",
+        nextReview: new Date(Date.now() - 1 * DAY - 30_000),
+        repetitions: 0,
+      })).id
+    );
+    // Same day-bucket, reps=1.
+    dueIds.push(
+      (await seedCard(db, deck.id, {
+        front: "oneDayOldLearning",
+        nextReview: new Date(Date.now() - 1 * DAY - 60_000),
+        repetitions: 1,
+      })).id
+    );
+    // Not due yet — must be excluded.
     await seedCard(db, deck.id, {
       front: "future",
-      nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      nextReview: new Date(Date.now() + DAY),
     });
+
     const result = await getDueCardsByDeck(user.id, deck.id);
-    expect(result.map((c) => c.front)).toEqual(["older", "past"]);
-    expect(result.map((c) => c.id)).toEqual([older.id, past.id]);
+
+    // Set membership only; ordering is the client's job (see sortDueCards).
+    expect(new Set(result.map((c) => c.id))).toEqual(new Set(dueIds));
   });
 
   it("returns an empty array when the deck is not owned", async () => {

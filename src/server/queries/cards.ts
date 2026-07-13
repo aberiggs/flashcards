@@ -36,13 +36,14 @@ export async function getDueCardsByDeck(
   if (!(await deckOwnedBy(userId, deckId))) return [];
   // Due = nextReview <= now. The nextReview column is NOT NULL (defaults to
   // now()), so newly-created cards are immediately due.
+  // Ordering is intentionally NOT done here — the client's sortDueCards
+  // (src/lib/sortDueCards.ts) owns the day-bucket → SRS level → shuffle
+  // ordering. Keeping it client-side makes it unit-testable with a seeded
+  // random and avoids per-row random() in the DB query.
   return db
     .select()
     .from(cards)
-    .where(
-      and(eq(cards.deckId, deckId), lt(cards.nextReview, sql`now()`))
-    )
-    .orderBy(asc(cards.nextReview));
+    .where(and(eq(cards.deckId, deckId), lt(cards.nextReview, sql`now()`)));
 }
 
 export async function createCard(
