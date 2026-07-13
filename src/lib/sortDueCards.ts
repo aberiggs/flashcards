@@ -14,6 +14,10 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
  * Pure function — does not mutate the input. Pass a `random` function for
  * deterministic tests (a stable comparator is used, so the same `random`
  * sequence always produces the same order).
+ *
+ * Input is expected to be due cards only (nextReview <= now). The bucket is
+ * clamped at 0 so that any future-dated card passed in cannot outrank an
+ * overdue one — it simply sorts as if due now.
  */
 export function sortDueCards(
   cards: Card[],
@@ -22,7 +26,10 @@ export function sortDueCards(
 ): Card[] {
   const tagged = cards.map((card) => ({
     card,
-    bucket: Math.floor((now - new Date(card.nextReview).getTime()) / MS_PER_DAY),
+    bucket: Math.max(
+      0,
+      Math.floor((now - new Date(card.nextReview).getTime()) / MS_PER_DAY)
+    ),
     shuffle: random(),
   }));
 

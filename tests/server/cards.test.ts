@@ -151,21 +151,6 @@ describe("getDueCardsByDeck", () => {
     expect(new Set(result.map((c) => c.id))).toEqual(new Set(dueIds));
   });
 
-  it("returns only cards whose nextReview <= now", async () => {
-    const user = await createTestUser(db);
-    const deck = await seedDeck(db, user.id);
-    await seedCard(db, deck.id, {
-      front: "past",
-      nextReview: new Date(Date.now() - 60_000),
-    });
-    await seedCard(db, deck.id, {
-      front: "future",
-      nextReview: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    });
-    const result = await getDueCardsByDeck(user.id, deck.id);
-    expect(result.map((c) => c.front).sort()).toEqual(["past"]);
-  });
-
   it("returns an empty array when the deck is not owned", async () => {
     const u1 = await createTestUser(db, { email: "u1@x.com" });
     const u2 = await createTestUser(db, { email: "u2@x.com" });

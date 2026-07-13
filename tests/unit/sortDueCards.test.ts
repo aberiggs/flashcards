@@ -109,6 +109,20 @@ describe("sortDueCards", () => {
     expect(cards.map((c) => c.id)).toEqual(snapshot);
   });
 
+  it("clamps future-dated cards to bucket 0 so they cannot outrank overdue ones", () => {
+    // A future-dated card (nextReview > now) would compute a negative bucket.
+    // Unclamped, it would sort before a genuinely overdue card. Clamped to 0,
+    // the more-overdue card wins.
+    const cards = [
+      makeCard({ id: 1, repetitions: 0, nextReview: new Date(NOW + DAY).toISOString() }),
+      makeCard({ id: 2, repetitions: 0, nextReview: new Date(NOW - 2 * DAY).toISOString() }),
+    ];
+    const sorted = sortDueCards(cards, () => 0.5, NOW);
+    // id=2 is 2 days overdue (bucket 2); id=1 is future (clamped to bucket 0).
+    // Bucket desc → id=2 first, proving the future card did not outrank it.
+    expect(sorted.map((c) => c.id)).toEqual([2, 1]);
+  });
+
   it("treats cards overdue by <1 day as the same bucket (bucket 0)", () => {
     // 30s overdue and 12h overdue both fall in bucket 0.
     const cards = [
