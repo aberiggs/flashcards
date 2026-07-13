@@ -1,22 +1,22 @@
 ---
 name: completing-task
-description: Use when finishing any software engineering task in the flashcards repo. Covers running lint and typecheck, updating docs/features.md and docs/build.md for user-visible or build/deploy changes, and the no-commit-unless-asked rule.
+description: Use when finishing any software engineering task in the flashcards repo. Covers running lint, typecheck, and tests, updating docs/features.md and docs/build.md for user-visible or build/deploy changes, and the commit-at-every-checkpoint rule.
 ---
 
 # Completing a task
 
 Run these before considering a task done:
 
-## 1. Lint and type-check
+## 1. Lint, type-check, and test
 
 ```bash
 npm run lint
 npm run typecheck
+npm run test
 ```
 
-CI runs exactly these two checks on every push/PR. No test runner exists in this
-project — do not add one ad-hoc. If tests are needed, plan the framework choice
-first.
+CI runs lint + typecheck on every push/PR, and tests run via Vitest with
+testcontainers (requires Docker). Run all three locally before committing.
 
 If you can't find the correct command, ask the user and suggest writing it into
 `AGENTS.md` so future sessions know.
@@ -35,11 +35,13 @@ tooling**, update `docs/build.md`.
 
 ## 3. Commit
 
-Do **not** commit unless the user explicitly asks. If asked, stage only the
-intended files and never commit secrets.
+Follow [`.ai/rules/git-workflow.md`](../../rules/git-workflow.md) — commit at
+every checkpoint and push to the feature branch without waiting to be asked.
+Stage only the intended files and never commit secrets. Only direct commits to
+`main` require explicit approval.
 
 ## 4. Iterate on these AI docs
 
 If you ran into a rough edge, an undocumented convention, or a clarification
-during the work, update the relevant file under `.ai/rules/` or `.ai/skills/` so
-the next session doesn't hit the same problem. See `.ai/rules/iterating-on-ai-docs.md`.
+during the work, update the relevant file under `.ai/rules/` or
+`.ai/skills/` so the next session doesn't hit the same problem. See `.ai/rules/iterating-on-ai-docs.md`.
