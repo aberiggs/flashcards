@@ -35,7 +35,11 @@ export async function search(
       id: decks.id,
       name: decks.name,
       description: decks.description,
-      cardCount: sql<number>`(select count(*) from ${cards} where ${cards.deckId} = ${decks.id})::int`,
+      // Correlated subquery counting cards for each deck. Written as a fully
+      // raw SQL string because interpolating Drizzle column refs (e.g.
+      // ${decks.id}) inside sql`...` strips the table qualifier, leaving an
+      // ambiguous "id" that Postgres resolves to the inner cards table.
+      cardCount: sql<number>`(select count(*) from cards where cards.deck_id = decks.id)::int`,
     })
     .from(decks)
     .where(

@@ -9,6 +9,7 @@
 | Icons      | Lucide React                                            |
 | Data       | TanStack Query (request/response + refetch — no realtime) |
 | Deployment | Docker Compose (Next.js + Postgres) — self-hosted, no cloud dependencies |
+| Tests      | Vitest + @testcontainers/postgresql (real Postgres per run) |
 
 ## Commands
 
@@ -30,13 +31,20 @@ npm run db:studio     # open Drizzle Studio (DB browser)
 
 # Production build (Next.js standalone output)
 npm run build
+
+# Tests (Vitest). Spins up a Postgres container via testcontainers — Docker must be running.
+npm run test        # run once
+npm run test:watch  # watch mode
+npm run test:ci     # CI mode (adds github-actions reporter)
 ```
 
-> **No test runner exists.** There are no Jest, Vitest, Playwright, or other test
-> frameworks in this project. CI runs `npm run lint` and `npx tsc --noEmit` only.
+> **Tests use Vitest** with `@testcontainers/postgresql`. DB-backed suites share
+> a single Postgres 16 container started in `tests/setup/global-setup.ts`; each
+> test file truncates between cases via `beforeEach` in `tests/setup/test-env.ts`.
+> Files run sequentially (`fileParallelism: false`) because they share one DB.
 
 ## CI / CD
 
-- **Every push/PR**: `npm ci` → `npm run lint` → `npx tsc --noEmit`
+- **Every push/PR**: `npm ci` → `npm run lint` → `npx tsc --noEmit` (check job), and `npm run test:ci` (test job, requires Docker for testcontainers).
 - **Docker Compose** is the canonical self-host deployment (`docker compose up`).
 - No codegen step needed — Drizzle types are inferred from `src/db/schema.ts`.

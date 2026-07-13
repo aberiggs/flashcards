@@ -42,6 +42,7 @@ description.
 | [`.ai/skills/building-client-component/SKILL.md`](.ai/skills/building-client-component/SKILL.md) | Create a `'use client'` component: props, imports, Tailwind tokens, a11y. |
 | [`.ai/skills/schema-migration/SKILL.md`](.ai/skills/schema-migration/SKILL.md) | Edit `schema.ts` → `db:generate` → `db:migrate` → commit the SQL file. |
 | [`.ai/skills/completing-task/SKILL.md`](.ai/skills/completing-task/SKILL.md) | Run lint + typecheck, update docs, don't commit unless asked. |
+| [`.ai/skills/adding-test/SKILL.md`](.ai/skills/adding-test/SKILL.md) | Add a Vitest test: pure-logic, server query, or route handler. |
 
 ## Quick reference
 
@@ -50,7 +51,7 @@ description.
 - **Type-check**: `npm run typecheck`
 - **DB migrate**: `npm run db:generate` then `npm run db:migrate`
 - **Build**: `npm run build`
-- **No test runner** — CI runs `npm run lint` and `npx tsc --noEmit` only.
+- **Test**: `npm run test` (requires Docker — testcontainers starts Postgres)
 
 ## Keep these docs current
 
