@@ -17,7 +17,7 @@ All server code lives under `src/server/` (query functions, auth helpers) and
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 22+
 - npm
 - Docker (for Postgres)
 
