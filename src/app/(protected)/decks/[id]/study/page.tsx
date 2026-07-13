@@ -14,6 +14,7 @@ import {
 } from '@/lib/hooks';
 import { api } from '@/lib/api';
 import { qualityFromConfidence, type ConfidenceLevel } from '@/lib/sm2';
+import { sortDueCards } from '@/lib/sortDueCards';
 import { Card as CardUi } from '@/components/ui/Card';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PageLoader } from '@/components/ui/PageLoader';
@@ -53,7 +54,7 @@ export default function StudyPage() {
 
     useEffect(() => {
         if (dueCards && dueCards.length > 0 && sessionCards === null && !sessionComplete) {
-            setSessionCards(dueCards);
+            setSessionCards(sortDueCards(dueCards));
             startSessionMutation.mutateAsync().then((res) => setSessionId(res.id));
         }
     }, [dueCards, sessionCards, sessionComplete, startSessionMutation]);

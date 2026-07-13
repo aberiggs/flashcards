@@ -8,6 +8,11 @@ based off the `main` branch, unless the user explicitly says otherwise.
 - Do not push directly to `main`, and do not merge a PR without explicit user
   approval.
 - Keep commits focused; stage only the intended files and never commit secrets.
+- **Commit at every checkpoint.** When doing feature work and you reach a
+  checkpoint (a coherent unit of progress is complete and verified), commit
+  and push to the feature branch immediately — do not wait to be asked. The
+  user growing tired of having to say "now commit" each time is the failure
+  mode this rule exists to prevent.
 - When the user asks you to implement a feature or fix based off a GitHub
   issue, default to committing the work to a branch and opening a draft PR
   without asking for confirmation. Verify (lint + typecheck + tests) first.
