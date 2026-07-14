@@ -54,3 +54,12 @@ the neighbor better than you found it.
 - If the bad pattern is load-bearing or the fix is risky, leave a `// TODO:`
   comment naming the issue and move on. Don't rewrite the world unprompted.
 - When in doubt, ask the user before a wider refactor.
+
+## Scratch workspace
+
+`.scratch/` is a gitignored directory for ad-hoc work: screenshots, visual
+QA output, temporary scripts, anything you don't want in the repo. Put all
+throwaway files there instead of cluttering the project root.
+
+`.playwright-mcp/` is also gitignored — Playwright MCP writes screenshots
+and snapshots there automatically.
