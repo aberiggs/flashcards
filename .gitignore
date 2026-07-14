@@ -40,8 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# scratch workspace (screenshots, ad-hoc visual QA, temporary files)
-.scratch/
+# workspace (screenshots, ad-hoc visual QA, temporary files)
+.workspace/
 
 # playwright mcp output (browser automation screenshots/snapshots)
 .playwright-mcp/

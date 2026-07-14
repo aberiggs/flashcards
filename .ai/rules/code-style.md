@@ -55,9 +55,9 @@ the neighbor better than you found it.
   comment naming the issue and move on. Don't rewrite the world unprompted.
 - When in doubt, ask the user before a wider refactor.
 
-## Scratch workspace
+## Workspace
 
-`.scratch/` is a gitignored directory for ad-hoc work: screenshots, visual
+`.workspace/` is a gitignored directory for ad-hoc work: screenshots, visual
 QA output, temporary scripts, anything you don't want in the repo. Put all
 throwaway files there instead of cluttering the project root.
 
