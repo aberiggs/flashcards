@@ -52,27 +52,29 @@ All server code lives under `src/server/` (query functions, auth helpers) and
 
    That's it — no OAuth provider setup needed.
 
-4. **Run migrations**
-
-   ```bash
-   npm run db:migrate
-   ```
-
-5. **Start the app and create your account**
+4. **Start everything**
 
    ```bash
    npm run dev
    ```
 
-   Visit http://localhost:3000. Since no users exist yet, you'll see a
-   registration form. Create the first account — registration closes
-   automatically after that.
+   This bundled script starts Postgres (if it isn't running), applies pending
+   migrations, and launches the Next.js dev server with HMR. Visit
+   http://localhost:3000. Since no users exist yet, you'll see a registration
+   form. Create the first account — registration closes automatically after
+   that.
+
+   Ctrl+C stops the dev server but leaves Postgres running so the next
+   `npm run dev` is fast. Run `npm run dev:down` to stop Postgres when you're
+   done for the day.
 
 ### npm scripts reference
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start Next.js dev server (Turbopack) |
+| `npm run dev` | Start Postgres + migrate + Next.js dev server (bundled) |
+| `npm run dev:next` | Start only the Next.js dev server (Turbopack) |
+| `npm run dev:down` | Stop the dev Postgres container |
 | `npm run build` | Production build (Next.js standalone output) |
 | `npm run start` | Run the production build locally |
 | `npm run lint` | Run ESLint |

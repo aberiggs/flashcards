@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from "react";
-import Link from "next/link";
 import { useSession, signIn } from "next-auth/react";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { Footer } from "@/components/layout/Footer";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { MemoryStagesWidget } from "@/components/features/dashboard/MemoryStagesWidget";
 import { ReviewForecastWidget } from "@/components/features/dashboard/ReviewForecastWidget";
-import { StreakWidget } from "@/components/features/dashboard/StreakWidget";
+import { IntervalStatsWidget } from "@/components/features/dashboard/IntervalStatsWidget";
 import { ActivityHeatmapWidget } from "@/components/features/dashboard/ActivityHeatmapWidget";
-import { useDashboardStats, useGamificationStats, useActivityHistory, useRegistrationOpen } from "@/lib/hooks";
+import { HeroCTAWidget } from "@/components/features/dashboard/HeroCTAWidget";
+import { useDashboardStats, useIntervalStats, useActivityHistory, useRegistrationOpen } from "@/lib/hooks";
 import { api, ApiError } from "@/lib/api";
 
 function AuthenticatedContent() {
@@ -19,48 +19,38 @@ function AuthenticatedContent() {
       ? Intl.DateTimeFormat().resolvedOptions().timeZone
       : "UTC";
   const { data: stats } = useDashboardStats(timeZone);
-  const { data: gamification } = useGamificationStats(timeZone);
+  const { data: intervals } = useIntervalStats(timeZone);
   const { data: activity } = useActivityHistory(timeZone);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <AppHeader />
 
-      <main className="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 animate-fade-in-up">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl sm:text-4xl font-bold text-text-primary mb-4">
-            Welcome back
-          </h1>
-          <p className="text-lg text-text-secondary max-w-xl mx-auto">
-            Ready to study? Pick up where you left off or create a new deck.
-          </p>
-        </div>
-
-        {gamification && (
-          <div className="mb-6">
-            <StreakWidget data={gamification} />
-          </div>
-        )}
-        {activity && (
-          <div className="mb-6">
-            <ActivityHeatmapWidget data={activity} timeZone={timeZone} />
-          </div>
-        )}
-
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 sm:py-10 animate-fade-in-up">
         {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
-            <MemoryStagesWidget data={stats.memoryStages} />
-            <ReviewForecastWidget data={stats.reviewForecast} />
+          <div className="mb-8">
+            <HeroCTAWidget dueNow={stats.dueNow} nextDueAt={stats.nextDueAt} />
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link
-            href="/decks"
-            className="inline-flex items-center justify-center px-6 py-3 text-base font-medium rounded-md text-text-inverse bg-accent-primary hover:bg-accent-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-primary transition-colors"
-          >
-            View Decks
-          </Link>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 flex flex-col gap-6">
+            {stats && (
+              <ReviewForecastWidget data={stats.reviewForecast} timeZone={timeZone} />
+            )}
+            {activity && (
+              <ActivityHeatmapWidget data={activity} timeZone={timeZone} />
+            )}
+          </div>
+
+          <div className="lg:col-span-1 flex flex-col gap-6">
+            {intervals && (
+              <IntervalStatsWidget data={intervals} />
+            )}
+            {stats && (
+              <MemoryStagesWidget data={stats.memoryStages} />
+            )}
+          </div>
         </div>
       </main>
 

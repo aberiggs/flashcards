@@ -1,14 +1,5 @@
 'use client';
 
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Legend,
-  Tooltip,
-} from 'recharts';
-
 export interface MemoryStagesData {
   new: number;
   learning: number;
@@ -16,41 +7,32 @@ export interface MemoryStagesData {
   mastered: number;
 }
 
-const STAGE_COLORS: Record<keyof MemoryStagesData, string> = {
-  new: 'var(--chart-new)',
-  learning: 'var(--chart-learning)',
-  reviewing: 'var(--chart-reviewing)',
-  mastered: 'var(--chart-mastered)',
-};
-
-const STAGE_LABELS: Record<keyof MemoryStagesData, string> = {
-  new: 'New',
-  learning: 'Learning',
-  reviewing: 'Reviewing',
-  mastered: 'Mastered',
-};
+const STAGE_META: {
+  key: keyof MemoryStagesData;
+  label: string;
+  color: string;
+}[] = [
+  { key: 'new', label: 'New', color: 'var(--chart-new)' },
+  { key: 'learning', label: 'Learning', color: 'var(--chart-learning)' },
+  { key: 'reviewing', label: 'Reviewing', color: 'var(--chart-reviewing)' },
+  { key: 'mastered', label: 'Mastered', color: 'var(--chart-mastered)' },
+];
 
 interface MemoryStagesWidgetProps {
   data: MemoryStagesData;
 }
 
 export function MemoryStagesWidget({ data }: MemoryStagesWidgetProps) {
-  const chartData = (['new', 'learning', 'reviewing', 'mastered'] as const)
-    .filter((key) => data[key] > 0)
-    .map((key) => ({
-      name: STAGE_LABELS[key],
-      value: data[key],
-      fill: STAGE_COLORS[key],
-    }));
+  const total =
+    data.new + data.learning + data.reviewing + data.mastered;
 
-  const total = chartData.reduce((sum, d) => sum + d.value, 0);
   if (total === 0) {
     return (
       <div className="rounded-xl border border-border-primary bg-surface-primary p-5 shadow-sm">
         <h3 className="text-sm font-semibold text-text-primary mb-4">
           Memory stages
         </h3>
-        <div className="flex min-h-[180px] items-center justify-center text-text-tertiary text-sm">
+        <div className="flex min-h-44 items-center justify-center text-text-tertiary text-sm">
           No cards yet — create a deck to get started
         </div>
       </div>
@@ -59,69 +41,63 @@ export function MemoryStagesWidget({ data }: MemoryStagesWidgetProps) {
 
   return (
     <div className="rounded-xl border border-border-primary bg-surface-primary p-5 shadow-sm">
-      <h3 className="text-sm font-semibold text-text-primary mb-4">
-        Memory stages
-      </h3>
-      <div className="h-[200px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={chartData}
-              cx="50%"
-              cy="50%"
-              innerRadius={50}
-              outerRadius={70}
-              paddingAngle={2}
-              dataKey="value"
-              nameKey="name"
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={index} fill={entry.fill} stroke="none" />
-              ))}
-            </Pie>
-            <Tooltip
-              content={(props) => {
-                const { active, payload } = props;
-                if (!active || !payload?.length) return null;
-                const item = payload[0];
-                const value = item.value;
-                if (value == null) return null;
-                return (
-                  <div
-                    className="rounded-lg border px-3 py-2 shadow-md"
-                    style={{
-                      backgroundColor: 'var(--surface-primary)',
-                      borderColor: 'var(--border-primary)',
-                      color: 'var(--text-primary)',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    <span style={{ color: 'var(--text-secondary)' }}>
-                      {item.name}:{' '}
-                    </span>
-                    <span style={{ color: 'var(--text-primary)' }}>
-                      {value} ({Math.round((value / total) * 100)}%)
-                    </span>
-                  </div>
-                );
-              }}
-            />
-            <Legend
-              verticalAlign="bottom"
-              height={36}
-              formatter={(value) => (
-                <span
-                  className="text-text-secondary"
-                  style={{ fontSize: 12, color: 'var(--text-secondary)' }}
-                >
-                  {value}
-                </span>
-              )}
-              wrapperStyle={{ color: 'var(--text-secondary)' }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
+      <div className="flex items-baseline justify-between mb-4">
+        <h3 className="text-sm font-semibold text-text-primary">
+          Memory stages
+        </h3>
+        <span className="text-xs text-text-tertiary tabular-nums">
+          {total} card{total !== 1 ? 's' : ''}
+        </span>
       </div>
+
+      <div
+        className="flex h-3 w-full overflow-hidden rounded-full border border-border-primary"
+        role="img"
+        aria-label={`Memory stages: ${STAGE_META.map((s) => `${s.label} ${data[s.key]}`).join(', ')}`}
+      >
+        {STAGE_META.map((stage) => {
+          const value = data[stage.key];
+          if (value === 0) return null;
+          const pct = (value / total) * 100;
+          return (
+            <div
+              key={stage.key}
+              className="h-full"
+              style={{
+                backgroundColor: stage.color,
+                width: `${pct}%`,
+              }}
+              title={`${stage.label}: ${value} (${Math.round(pct)}%)`}
+            />
+          );
+        })}
+      </div>
+
+      <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2">
+        {STAGE_META.map((stage) => {
+          const value = data[stage.key];
+          const pct =
+            value === 0 ? 0 : Math.round((value / total) * 100);
+          return (
+            <li
+              key={stage.key}
+              className="flex items-center justify-between gap-2 text-xs"
+            >
+              <span className="flex items-center gap-1.5 text-text-secondary min-w-0">
+                <span
+                  className="size-2.5 shrink-0 rounded-sm"
+                  style={{ backgroundColor: stage.color }}
+                  aria-hidden
+                />
+                <span className="truncate">{stage.label}</span>
+              </span>
+              <span className="text-text-tertiary tabular-nums shrink-0">
+                {value} · {pct}%
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

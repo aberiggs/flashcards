@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
 import { Pencil, Trash2, Plus, Layers } from 'lucide-react';
-import { useDeck, useDeckStats, useUpdateDeck, useDeleteDeck, useCreateCard, useUpdateCard, useDeleteCard, type Card } from '@/lib/hooks';
+import { useDeck, useDeckStats, useDeckIntervalStats, useUpdateDeck, useDeleteDeck, useCreateCard, useUpdateCard, useDeleteCard, type Card } from '@/lib/hooks';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { getMemoryStage } from '@/lib/memoryStage';
@@ -11,6 +11,7 @@ import { AppHeader } from '@/components/layout/AppHeader';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { MemoryStagesWidget } from '@/components/features/dashboard/MemoryStagesWidget';
 import { ReviewForecastWidget } from '@/components/features/dashboard/ReviewForecastWidget';
+import { IntervalStatsWidget } from '@/components/features/dashboard/IntervalStatsWidget';
 import { CardPreview } from '@/components/features/decks/CardPreview';
 import { CardViewerModal } from '@/components/features/decks/CardViewerModal';
 import { CardEditForm } from '@/components/features/decks/CardEditForm';
@@ -36,6 +37,7 @@ export default function DeckDetailPage() {
 
     const { data: deckWithCards, isLoading } = useDeck(deckId);
     const { data: deckStats } = useDeckStats(deckId, timeZone);
+    const { data: deckIntervals } = useDeckIntervalStats(deckId, timeZone);
     const updateDeckMutation = useUpdateDeck(deckId);
     const deleteDeckMutation = useDeleteDeck();
     const addCardMutation = useCreateCard(deckId);
@@ -321,18 +323,23 @@ export default function DeckDetailPage() {
                 </section>
 
                 {/* Section B: Stats Widgets */}
+                {deckIntervals && (
+                    <section className="mb-6">
+                        <IntervalStatsWidget data={deckIntervals} />
+                    </section>
+                )}
                 <section className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
                     {deckStats ? (
                         <>
                             <MemoryStagesWidget data={deckStats.memoryStages} />
-                            <ReviewForecastWidget data={deckStats.reviewForecast} />
+                            <ReviewForecastWidget data={deckStats.reviewForecast} timeZone={timeZone} />
                         </>
                     ) : (
                         <>
-                            <div className="rounded-xl border border-border-primary bg-surface-primary p-5 shadow-sm min-h-[200px] flex items-center justify-center">
+                            <div className="rounded-xl border border-border-primary bg-surface-primary p-5 shadow-sm min-h-44 flex items-center justify-center">
                                 <span className="text-text-tertiary text-sm">Loading stats…</span>
                             </div>
-                            <div className="rounded-xl border border-border-primary bg-surface-primary p-5 shadow-sm min-h-[200px] flex items-center justify-center">
+                            <div className="rounded-xl border border-border-primary bg-surface-primary p-5 shadow-sm min-h-44 flex items-center justify-center">
                                 <span className="text-text-tertiary text-sm">Loading stats…</span>
                             </div>
                         </>

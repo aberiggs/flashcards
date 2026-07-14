@@ -43,6 +43,7 @@ description.
 | [`.ai/skills/schema-migration/SKILL.md`](.ai/skills/schema-migration/SKILL.md) | Edit `schema.ts` → `db:generate` → `db:migrate` → commit the SQL file. |
 | [`.ai/skills/completing-task/SKILL.md`](.ai/skills/completing-task/SKILL.md) | Run lint + typecheck, update docs, don't commit unless asked. |
 | [`.ai/skills/adding-test/SKILL.md`](.ai/skills/adding-test/SKILL.md) | Add a Vitest test: pure-logic, server query, or route handler. |
+| [`.opencode/skills/frontend/SKILL.md`](.opencode/skills/frontend/SKILL.md) | Frontend visual/UX work: Tailwind v4 tokens, widget conventions, a11y, established patterns, "don't copy bad patterns" rule. |
 
 ## Quick reference
 
