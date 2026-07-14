@@ -35,10 +35,7 @@ export function ReviewForecastWidget({ data, timeZone }: ReviewForecastWidgetPro
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).formatToParts(new Date())
-    .map((p) => p.value)
-    .join('-')
-    .replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3');
+  }).format(new Date());
 
   const chartData = data.map((d) => ({
     label: formatShortDate(d.date),
