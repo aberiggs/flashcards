@@ -10,38 +10,49 @@ import {
   Cell,
 } from 'recharts';
 
-export interface ReviewForecastData {
-  today: number;
-  tomorrow: number;
-  in3Days: number;
-  in7Days: number;
+export interface ReviewForecastDay {
+  date: string;
+  count: number;
 }
-
-const BUCKET_LABELS = ['Today', 'Tomorrow', '3 days', '7 days'] as const;
-const BAR_COLOR = 'var(--chart-bar)';
 
 interface ReviewForecastWidgetProps {
-  data: ReviewForecastData;
+  data: ReviewForecastDay[];
+  timeZone?: string;
 }
 
-export function ReviewForecastWidget({ data }: ReviewForecastWidgetProps) {
-  const chartData = [
-    { label: BUCKET_LABELS[0], value: data.today, key: 'today' },
-    { label: BUCKET_LABELS[1], value: data.tomorrow, key: 'tomorrow' },
-    { label: BUCKET_LABELS[2], value: data.in3Days, key: 'in3Days' },
-    { label: BUCKET_LABELS[3], value: data.in7Days, key: 'in7Days' },
-  ];
+const BAR_COLOR = 'var(--chart-bar)';
+const TODAY_COLOR = 'var(--accent-primary)';
+
+function formatShortDate(iso: string): string {
+  const d = new Date(`${iso}T00:00:00`);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+export function ReviewForecastWidget({ data, timeZone }: ReviewForecastWidgetProps) {
+  const tz = timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const todayKey = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());
+
+  const chartData = data.map((d) => ({
+    label: formatShortDate(d.date),
+    value: d.count,
+    date: d.date,
+    isToday: d.date === todayKey,
+  }));
 
   const totalScheduled = chartData.reduce((sum, d) => sum + d.value, 0);
-  const maxValue = Math.max(...chartData.map((d) => d.value), 1);
 
   if (totalScheduled === 0) {
     return (
       <div className="rounded-xl border border-border-primary bg-surface-primary p-5 shadow-sm">
         <h3 className="text-sm font-semibold text-text-primary mb-4">
-          Review forecast
+          Review forecast · next 30 days
         </h3>
-        <div className="flex min-h-[180px] items-center justify-center text-text-tertiary text-sm">
+        <div className="flex min-h-44 items-center justify-center text-text-tertiary text-sm">
           No scheduled reviews — study some cards to see your forecast
         </div>
       </div>
@@ -50,31 +61,39 @@ export function ReviewForecastWidget({ data }: ReviewForecastWidgetProps) {
 
   return (
     <div className="rounded-xl border border-border-primary bg-surface-primary p-5 shadow-sm">
-      <h3 className="text-sm font-semibold text-text-primary mb-4">
-        Review forecast
-      </h3>
-      <div className="h-[200px] w-full">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-text-primary">
+          Review forecast · next 30 days
+        </h3>
+        <span className="text-xs text-text-tertiary">
+          {totalScheduled} card{totalScheduled !== 1 ? 's' : ''} due
+        </span>
+      </div>
+      <div className="h-40 sm:h-48 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={chartData}
-            layout="vertical"
-            margin={{ top: 0, right: 24, left: 0, bottom: 0 }}
+            margin={{ top: 4, right: 8, left: -24, bottom: 0 }}
           >
             <XAxis
-              type="number"
-              domain={[0, maxValue]}
-              hide
-            />
-            <YAxis
-              type="category"
               dataKey="label"
-              width={70}
+              interval={4}
               tick={{
-                fill: 'var(--text-secondary)',
-                fontSize: 12,
+                fill: 'var(--text-tertiary)',
+                fontSize: 11,
               }}
               axisLine={false}
               tickLine={false}
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={{
+                fill: 'var(--text-tertiary)',
+                fontSize: 11,
+              }}
+              axisLine={false}
+              tickLine={false}
+              width={40}
             />
             <Tooltip
               cursor={{
@@ -82,10 +101,12 @@ export function ReviewForecastWidget({ data }: ReviewForecastWidgetProps) {
                 fillOpacity: 0.4,
               }}
               content={(props) => {
-                const { active, payload, label } = props;
+                const { active, payload } = props;
                 if (!active || !payload?.length) return null;
-                const value = payload[0]?.value;
-                if (value == null) return null;
+                const entry = payload[0]?.payload as
+                  | { date: string; value: number }
+                  | undefined;
+                if (!entry) return null;
                 return (
                   <div
                     className="rounded-lg border px-3 py-2 shadow-md"
@@ -97,10 +118,10 @@ export function ReviewForecastWidget({ data }: ReviewForecastWidgetProps) {
                     }}
                   >
                     <span style={{ color: 'var(--text-secondary)' }}>
-                      {label}:{' '}
+                      {entry.date}:{' '}
                     </span>
                     <span style={{ color: 'var(--text-primary)' }}>
-                      {value} cards
+                      {entry.value} card{entry.value !== 1 ? 's' : ''}
                     </span>
                   </div>
                 );
@@ -109,16 +130,15 @@ export function ReviewForecastWidget({ data }: ReviewForecastWidgetProps) {
             <Bar
               dataKey="value"
               fill={BAR_COLOR}
-              radius={[0, 4, 4, 0]}
+              radius={[2, 2, 0, 0]}
               maxBarSize={24}
-              label={{
-                position: 'right',
-                fill: 'var(--text-secondary)',
-                fontSize: 12,
-              }}
             >
               {chartData.map((entry) => (
-                <Cell key={entry.key} fill={BAR_COLOR} fillOpacity={0.9} />
+                <Cell
+                  key={entry.date}
+                  fill={entry.isToday ? TODAY_COLOR : BAR_COLOR}
+                  fillOpacity={entry.isToday ? 1 : 0.85}
+                />
               ))}
             </Bar>
           </BarChart>

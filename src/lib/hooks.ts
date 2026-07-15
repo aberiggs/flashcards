@@ -54,24 +54,30 @@ export interface MemoryStages {
   mastered: number;
 }
 
-export interface ReviewForecast {
-  today: number;
-  tomorrow: number;
-  in3Days: number;
-  in7Days: number;
+export interface ReviewForecastDay {
+  date: string;
+  count: number;
 }
 
 export interface DashboardStats {
   memoryStages: MemoryStages;
-  reviewForecast: ReviewForecast;
+  reviewForecast: ReviewForecastDay[];
+  dueNow: number;
+  nextDueAt: number | null;
 }
 
-export interface GamificationStats {
-  streak: number;
-  todayCards: number;
-  weekCards: number;
+export type IntervalKey = "1w" | "1m" | "1y";
+
+export interface IntervalStats {
+  sessions: number;
+  cardsReviewed: number;
+  cardsCorrect: number;
   accuracyRate: number | null;
+  prevCardsReviewed: number;
+  cardsDeltaPct: number | null;
 }
+
+export type IntervalStatsResponse = Record<IntervalKey, IntervalStats>;
 
 export interface SearchResult {
   decks: {
@@ -98,7 +104,8 @@ const qk = {
   dueCards: (id: number) => ["decks", id, "due"] as const,
   deckStats: (id: number) => ["decks", id, "stats"] as const,
   dashboardStats: (tz: string) => ["stats", "dashboard", tz] as const,
-  gamification: (tz: string) => ["stats", "gamification", tz] as const,
+  intervals: (tz: string) => ["stats", "intervals", tz] as const,
+  deckIntervals: (id: number, tz: string) => ["decks", id, "intervals", tz] as const,
   activity: (tz: string) => ["stats", "activity", tz] as const,
   search: (q: string) => ["search", q] as const,
 };
@@ -249,6 +256,7 @@ export function useStartSession(deckId: number) {
 }
 
 export function useCompleteSession(deckId: number) {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: (input: {
       sessionId: number;
@@ -256,6 +264,12 @@ export function useCompleteSession(deckId: number) {
       cardsCorrect: number;
       cardsIncorrect: number;
     }) => api.patch<{ ok: true }>(`/api/decks/${deckId}/study`, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["stats"] });
+      qc.invalidateQueries({ queryKey: qk.deckStats(deckId) });
+      qc.invalidateQueries({ queryKey: ["decks", deckId, "intervals"] });
+      qc.invalidateQueries({ queryKey: qk.decks });
+    },
   });
 }
 
@@ -271,12 +285,12 @@ export function useDashboardStats(timeZone: string) {
   });
 }
 
-export function useGamificationStats(timeZone: string) {
+export function useIntervalStats(timeZone: string) {
   const { status } = useSession();
   return useQuery({
-    queryKey: qk.gamification(timeZone),
+    queryKey: qk.intervals(timeZone),
     queryFn: () =>
-      api.get<GamificationStats>(`/api/stats/gamification?tz=${encodeURIComponent(timeZone)}`),
+      api.get<IntervalStatsResponse>(`/api/stats/intervals?tz=${encodeURIComponent(timeZone)}`),
     enabled: status === "authenticated",
   });
 }
@@ -298,6 +312,18 @@ export function useDeckStats(deckId: number, timeZone: string) {
     queryFn: () =>
       api.get<DashboardStats>(
         `/api/decks/${deckId}/stats?tz=${encodeURIComponent(timeZone)}`
+      ),
+    enabled: status === "authenticated",
+  });
+}
+
+export function useDeckIntervalStats(deckId: number, timeZone: string) {
+  const { status } = useSession();
+  return useQuery({
+    queryKey: qk.deckIntervals(deckId, timeZone),
+    queryFn: () =>
+      api.get<IntervalStatsResponse>(
+        `/api/decks/${deckId}/intervals?tz=${encodeURIComponent(timeZone)}`
       ),
     enabled: status === "authenticated",
   });

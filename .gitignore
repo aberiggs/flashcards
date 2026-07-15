@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# workspace (screenshots, ad-hoc visual QA, temporary files)
+.workspace/
+
+# playwright mcp output (browser automation screenshots/snapshots)
+.playwright-mcp/

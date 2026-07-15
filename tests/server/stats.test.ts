@@ -3,7 +3,8 @@ import { db } from "@/db";
 import {
   dashboardStats,
   deckStats,
-  gamificationStats,
+  intervalStats,
+  deckIntervalStats,
   activityHistory,
 } from "@/server/queries/stats";
 import {
@@ -20,10 +21,14 @@ describe("dashboardStats", () => {
   it("returns zeroed stats for a user with no cards", async () => {
     const user = await createTestUser(db);
     const stats = await dashboardStats(user.id, TZ);
-    expect(stats).toEqual({
-      memoryStages: { new: 0, learning: 0, reviewing: 0, mastered: 0 },
-      reviewForecast: { today: 0, tomorrow: 0, in3Days: 0, in7Days: 0 },
+    expect(stats.memoryStages).toEqual({
+      new: 0,
+      learning: 0,
+      reviewing: 0,
+      mastered: 0,
     });
+    expect(stats.reviewForecast).toHaveLength(30);
+    expect(stats.reviewForecast.every((d) => d.count === 0)).toBe(true);
   });
 
   it("classifies cards into memory stages by repetitions", async () => {
@@ -44,28 +49,34 @@ describe("dashboardStats", () => {
     });
   });
 
-  it("counts review forecast by nextReview buckets", async () => {
+  it("builds a 30-day per-day forecast from nextReview", async () => {
     const user = await createTestUser(db);
     const deck = await seedDeck(db, user.id);
     const now = Date.now();
-    await seedCard(db, deck.id, { nextReview: new Date(now - 1000) }); // today
+    const todayStart = Math.floor(now / MS_PER_DAY) * MS_PER_DAY;
+    await seedCard(db, deck.id, { nextReview: new Date(now - MS_PER_DAY) }); // overdue -> today
+    await seedCard(db, deck.id, { nextReview: new Date(now + 1000) }); // today
     await seedCard(db, deck.id, {
-      nextReview: new Date(now + 1 * MS_PER_DAY + 1000),
-    }); // tomorrow
+      nextReview: new Date(todayStart + 1 * MS_PER_DAY + 1000),
+    }); // day 2
     await seedCard(db, deck.id, {
-      nextReview: new Date(now + 3 * MS_PER_DAY),
-    }); // in3Days
+      nextReview: new Date(todayStart + 5 * MS_PER_DAY),
+    }); // day 6
     await seedCard(db, deck.id, {
-      nextReview: new Date(now + 7 * MS_PER_DAY),
-    }); // in7Days
+      nextReview: new Date(todayStart + 29 * MS_PER_DAY),
+    }); // day 30 (last bucket)
     await seedCard(db, deck.id, {
-      nextReview: new Date(now + 30 * MS_PER_DAY),
-    }); // beyond
+      nextReview: new Date(todayStart + 30 * MS_PER_DAY),
+    }); // beyond horizon — excluded
     const stats = await dashboardStats(user.id, TZ);
-    expect(stats.reviewForecast.today).toBe(1);
-    expect(stats.reviewForecast.tomorrow).toBe(1);
-    expect(stats.reviewForecast.in3Days).toBe(1);
-    expect(stats.reviewForecast.in7Days).toBe(1);
+    expect(stats.reviewForecast).toHaveLength(30);
+    const today = stats.reviewForecast[0];
+    expect(today.count).toBe(2); // overdue + today
+    expect(stats.reviewForecast[1].count).toBe(1); // day 2
+    expect(stats.reviewForecast[5].count).toBe(1); // day 6
+    expect(stats.reviewForecast[29].count).toBe(1); // last bucket
+    const total = stats.reviewForecast.reduce((s, d) => s + d.count, 0);
+    expect(total).toBe(5);
   });
 
   it("only counts the calling user's cards", async () => {
@@ -105,22 +116,43 @@ describe("deckStats", () => {
       reviewing: 0,
       mastered: 1,
     });
+    expect(stats?.reviewForecast).toHaveLength(30);
   });
 });
 
-describe("gamificationStats", () => {
-  it("returns zeroes when the user has no sessions", async () => {
+describe("intervalStats", () => {
+  it("returns zeroed stats for a user with no sessions", async () => {
     const user = await createTestUser(db);
-    const stats = await gamificationStats(user.id, TZ);
+    const stats = await intervalStats(user.id, TZ);
     expect(stats).toEqual({
-      streak: 0,
-      todayCards: 0,
-      weekCards: 0,
-      accuracyRate: null,
+      "1w": {
+        sessions: 0,
+        cardsReviewed: 0,
+        cardsCorrect: 0,
+        accuracyRate: null,
+        prevCardsReviewed: 0,
+        cardsDeltaPct: null,
+      },
+      "1m": {
+        sessions: 0,
+        cardsReviewed: 0,
+        cardsCorrect: 0,
+        accuracyRate: null,
+        prevCardsReviewed: 0,
+        cardsDeltaPct: null,
+      },
+      "1y": {
+        sessions: 0,
+        cardsReviewed: 0,
+        cardsCorrect: 0,
+        accuracyRate: null,
+        prevCardsReviewed: 0,
+        cardsDeltaPct: null,
+      },
     });
   });
 
-  it("aggregates today/week card counts from completed sessions", async () => {
+  it("aggregates 1w sessions, cards, and accuracy", async () => {
     const user = await createTestUser(db);
     const deck = await seedDeck(db, user.id);
     const now = new Date();
@@ -134,36 +166,71 @@ describe("gamificationStats", () => {
     });
     await seedSession(db, user.id, {
       deckId: deck.id,
-      startedAt: new Date(now.getTime() - 3 * MS_PER_DAY),
-      completedAt: new Date(now.getTime() - 3 * MS_PER_DAY),
+      startedAt: new Date(now.getTime() - 2 * MS_PER_DAY),
+      completedAt: new Date(now.getTime() - 2 * MS_PER_DAY),
       cardsStudied: 10,
       cardsCorrect: 8,
       cardsIncorrect: 2,
     });
-    const stats = await gamificationStats(user.id, TZ);
-    expect(stats?.todayCards).toBe(5);
-    expect(stats?.weekCards).toBe(15);
-    expect(stats?.accuracyRate).toBe(Math.round(((4 + 8) / 15) * 100));
+    // Previous week session (8 days ago).
+    await seedSession(db, user.id, {
+      deckId: deck.id,
+      startedAt: new Date(now.getTime() - 8 * MS_PER_DAY),
+      completedAt: new Date(now.getTime() - 8 * MS_PER_DAY),
+      cardsStudied: 7,
+      cardsCorrect: 7,
+      cardsIncorrect: 0,
+    });
+    const stats = await intervalStats(user.id, TZ);
+    const week = stats["1w"];
+    expect(week.sessions).toBe(2);
+    expect(week.cardsReviewed).toBe(15);
+    expect(week.cardsCorrect).toBe(12);
+    expect(week.accuracyRate).toBe(Math.round((12 / 15) * 100));
+    expect(week.prevCardsReviewed).toBe(7);
+    // (15 - 7) / 7 * 100 = 114.28 -> 114
+    expect(week.cardsDeltaPct).toBe(114);
   });
 
-  it("computes a streak from consecutive day-key sessions", async () => {
+  it("computes null delta when previous interval had zero reviews", async () => {
     const user = await createTestUser(db);
     const deck = await seedDeck(db, user.id);
     const now = new Date();
-    // Sessions today, yesterday, the day before — streak 3.
-    for (let i = 0; i < 3; i++) {
-      const t = new Date(now.getTime() - i * MS_PER_DAY);
-      await seedSession(db, user.id, {
-        deckId: deck.id,
-        startedAt: t,
-        completedAt: t,
-        cardsStudied: 1,
-        cardsCorrect: 0,
-        cardsIncorrect: 1,
-      });
-    }
-    const stats = await gamificationStats(user.id, TZ);
-    expect(stats?.streak).toBe(3);
+    await seedSession(db, user.id, {
+      deckId: deck.id,
+      startedAt: now,
+      completedAt: now,
+      cardsStudied: 3,
+      cardsCorrect: 3,
+    });
+    const stats = await intervalStats(user.id, TZ);
+    expect(stats["1w"].cardsDeltaPct).toBeNull();
+    expect(stats["1w"].prevCardsReviewed).toBe(0);
+  });
+
+  it("computes negative delta when current is less than previous", async () => {
+    const user = await createTestUser(db);
+    const deck = await seedDeck(db, user.id);
+    const now = new Date();
+    // Previous week: 10 cards.
+    await seedSession(db, user.id, {
+      deckId: deck.id,
+      startedAt: new Date(now.getTime() - 8 * MS_PER_DAY),
+      completedAt: new Date(now.getTime() - 8 * MS_PER_DAY),
+      cardsStudied: 10,
+      cardsCorrect: 10,
+    });
+    // This week: 5 cards.
+    await seedSession(db, user.id, {
+      deckId: deck.id,
+      startedAt: now,
+      completedAt: now,
+      cardsStudied: 5,
+      cardsCorrect: 5,
+    });
+    const stats = await intervalStats(user.id, TZ);
+    // (5 - 10) / 10 * 100 = -50
+    expect(stats["1w"].cardsDeltaPct).toBe(-50);
   });
 
   it("ignores incomplete (not completed) sessions", async () => {
@@ -176,9 +243,9 @@ describe("gamificationStats", () => {
       completedAt: null,
       cardsStudied: 99,
     });
-    const stats = await gamificationStats(user.id, TZ);
-    expect(stats?.todayCards).toBe(0);
-    expect(stats?.streak).toBe(0);
+    const stats = await intervalStats(user.id, TZ);
+    expect(stats["1w"].cardsReviewed).toBe(0);
+    expect(stats["1w"].sessions).toBe(0);
   });
 
   it("scopes to the calling user", async () => {
@@ -193,7 +260,6 @@ describe("gamificationStats", () => {
       completedAt: now,
       cardsStudied: 5,
       cardsCorrect: 5,
-      cardsIncorrect: 0,
     });
     await seedSession(db, u2.id, {
       deckId: d2.id,
@@ -201,11 +267,43 @@ describe("gamificationStats", () => {
       completedAt: now,
       cardsStudied: 100,
       cardsCorrect: 0,
-      cardsIncorrect: 100,
     });
-    const stats = await gamificationStats(u1.id, TZ);
-    expect(stats?.todayCards).toBe(5);
-    expect(stats?.accuracyRate).toBe(100);
+    const stats = await intervalStats(u1.id, TZ);
+    expect(stats["1w"].cardsReviewed).toBe(5);
+    expect(stats["1w"].accuracyRate).toBe(100);
+  });
+});
+
+describe("deckIntervalStats", () => {
+  it("returns null when the deck is not owned", async () => {
+    const u1 = await createTestUser(db, { email: "u1@x.com" });
+    const u2 = await createTestUser(db, { email: "u2@x.com" });
+    const deck = await seedDeck(db, u1.id);
+    expect(await deckIntervalStats(u2.id, deck.id, TZ)).toBeNull();
+  });
+
+  it("scopes to the given deck", async () => {
+    const user = await createTestUser(db);
+    const d1 = await seedDeck(db, user.id, { name: "D1" });
+    const d2 = await seedDeck(db, user.id, { name: "D2" });
+    const now = new Date();
+    await seedSession(db, user.id, {
+      deckId: d1.id,
+      startedAt: now,
+      completedAt: now,
+      cardsStudied: 4,
+      cardsCorrect: 4,
+    });
+    await seedSession(db, user.id, {
+      deckId: d2.id,
+      startedAt: now,
+      completedAt: now,
+      cardsStudied: 20,
+      cardsCorrect: 0,
+    });
+    const stats = await deckIntervalStats(user.id, d1.id, TZ);
+    expect(stats?.["1w"].cardsReviewed).toBe(4);
+    expect(stats?.["1w"].accuracyRate).toBe(100);
   });
 });
 
@@ -255,5 +353,29 @@ describe("activityHistory", () => {
       cardsStudied: 99,
     });
     expect(await activityHistory(user.id, TZ)).toEqual({});
+  });
+
+  it("includes sessions up to 182 days ago but excludes older ones", async () => {
+    const user = await createTestUser(db);
+    const deck = await seedDeck(db, user.id);
+    const now = new Date();
+    // 181 days ago — just inside the 182-day window
+    await seedSession(db, user.id, {
+      deckId: deck.id,
+      startedAt: new Date(now.getTime() - 181 * MS_PER_DAY),
+      completedAt: new Date(now.getTime() - 181 * MS_PER_DAY),
+      cardsStudied: 3,
+    });
+    // 183 days ago — just outside the window
+    await seedSession(db, user.id, {
+      deckId: deck.id,
+      startedAt: new Date(now.getTime() - 183 * MS_PER_DAY),
+      completedAt: new Date(now.getTime() - 183 * MS_PER_DAY),
+      cardsStudied: 99,
+    });
+    const history = await activityHistory(user.id, TZ);
+    expect(history).not.toBeNull();
+    const totalCards = Object.values(history!).reduce((sum, c) => sum + c, 0);
+    expect(totalCards).toBe(3);
   });
 });

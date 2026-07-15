@@ -4,6 +4,7 @@ import {
   createTestUser,
   seedDeck,
   seedCard,
+  seedSession,
 } from "../setup/db-helpers";
 import { mockAuth, setAuthUserId } from "../setup/route-helpers";
 
@@ -12,7 +13,8 @@ mockAuth();
 import { GET as searchRoute } from "@/app/api/search/route";
 import { POST as importRoute } from "@/app/api/import/route";
 import { GET as dashboardRoute } from "@/app/api/stats/dashboard/route";
-import { GET as gamificationRoute } from "@/app/api/stats/gamification/route";
+import { GET as intervalsRoute } from "@/app/api/stats/intervals/route";
+import { GET as deckIntervalsRoute } from "@/app/api/decks/[id]/intervals/route";
 import { GET as activityRoute } from "@/app/api/stats/activity/route";
 
 function req(url: string, init: RequestInit = {}): Request {
@@ -123,27 +125,117 @@ describe("GET /api/stats/dashboard", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.memoryStages).toBeDefined();
-    expect(body.reviewForecast).toBeDefined();
+    expect(Array.isArray(body.reviewForecast)).toBe(true);
+    expect(body.reviewForecast).toHaveLength(30);
     expect(body.memoryStages.new).toBe(1);
   });
 });
 
-describe("GET /api/stats/gamification", () => {
+describe("GET /api/stats/intervals", () => {
   beforeEach(() => setAuthUserId(null));
 
   it("returns 401 when not authenticated", async () => {
-    const res = await gamificationRoute(req("http://localhost/api/stats/gamification"));
+    const res = await intervalsRoute(req("http://localhost/api/stats/intervals"));
     expect(res.status).toBe(401);
   });
 
-  it("returns zeroes for a user with no sessions", async () => {
+  it("returns zeroed stats for a user with no sessions", async () => {
     const user = await createTestUser(db);
     setAuthUserId(user.id);
-    const res = await gamificationRoute(req("http://localhost/api/stats/gamification?tz=UTC"));
+    const res = await intervalsRoute(req("http://localhost/api/stats/intervals?tz=UTC"));
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.streak).toBe(0);
-    expect(body.accuracyRate).toBeNull();
+    expect(body["1w"].sessions).toBe(0);
+    expect(body["1w"].cardsReviewed).toBe(0);
+    expect(body["1w"].accuracyRate).toBeNull();
+    expect(body["1w"].cardsDeltaPct).toBeNull();
+    expect(body["1m"]).toBeDefined();
+    expect(body["1y"]).toBeDefined();
+  });
+
+  it("aggregates 1w stats from completed sessions", async () => {
+    const user = await createTestUser(db);
+    const deck = await seedDeck(db, user.id);
+    const now = new Date();
+    await seedSession(db, user.id, {
+      deckId: deck.id,
+      startedAt: now,
+      completedAt: now,
+      cardsStudied: 5,
+      cardsCorrect: 4,
+      cardsIncorrect: 1,
+    });
+    setAuthUserId(user.id);
+    const res = await intervalsRoute(req("http://localhost/api/stats/intervals?tz=UTC"));
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body["1w"].sessions).toBe(1);
+    expect(body["1w"].cardsReviewed).toBe(5);
+    expect(body["1w"].accuracyRate).toBe(80);
+  });
+});
+
+describe("GET /api/decks/:id/intervals", () => {
+  beforeEach(() => setAuthUserId(null));
+
+  it("returns 401 when not authenticated", async () => {
+    const res = await deckIntervalsRoute(
+      req("http://localhost/api/decks/1/intervals"),
+      { params: Promise.resolve({ id: "1" }) }
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 for a non-numeric deck id", async () => {
+    const user = await createTestUser(db);
+    setAuthUserId(user.id);
+    const res = await deckIntervalsRoute(
+      req("http://localhost/api/decks/abc/intervals?tz=UTC"),
+      { params: Promise.resolve({ id: "abc" }) }
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 404 when the deck is not owned", async () => {
+    const u1 = await createTestUser(db, { email: "u1@x.com" });
+    const u2 = await createTestUser(db, { email: "u2@x.com" });
+    const deck = await seedDeck(db, u1.id);
+    setAuthUserId(u2.id);
+    const res = await deckIntervalsRoute(
+      req(`http://localhost/api/decks/${deck.id}/intervals?tz=UTC`),
+      { params: Promise.resolve({ id: String(deck.id) }) }
+    );
+    expect(res.status).toBe(404);
+  });
+
+  it("returns interval stats scoped to the deck", async () => {
+    const user = await createTestUser(db);
+    const d1 = await seedDeck(db, user.id, { name: "D1" });
+    const d2 = await seedDeck(db, user.id, { name: "D2" });
+    const now = new Date();
+    await seedSession(db, user.id, {
+      deckId: d1.id,
+      startedAt: now,
+      completedAt: now,
+      cardsStudied: 4,
+      cardsCorrect: 4,
+    });
+    await seedSession(db, user.id, {
+      deckId: d2.id,
+      startedAt: now,
+      completedAt: now,
+      cardsStudied: 20,
+      cardsCorrect: 0,
+    });
+    setAuthUserId(user.id);
+    const res = await deckIntervalsRoute(
+      req(`http://localhost/api/decks/${d1.id}/intervals?tz=UTC`),
+      { params: Promise.resolve({ id: String(d1.id) }) }
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body["1w"].cardsReviewed).toBe(4);
+    expect(body["1w"].accuracyRate).toBe(100);
   });
 });
 
