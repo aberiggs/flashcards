@@ -1,9 +1,12 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Pencil, Trash2, Plus, Layers } from 'lucide-react';
 import { useDeck, useDeckStats, useDeckIntervalStats, useUpdateDeck, useDeleteDeck, useCreateCard, useUpdateCard, useDeleteCard, type Card } from '@/lib/hooks';
+import { useDebounce } from '@/lib/useDebounce';
+import { filterDeckCards, type CardSortKey, type DueFilter, type StageFilter } from '@/lib/filterDeckCards';
+import { startOfTodayInTimezone } from '@/lib/startOfToday';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
 import { getMemoryStage } from '@/lib/memoryStage';
@@ -15,6 +18,7 @@ import { IntervalStatsWidget } from '@/components/features/dashboard/IntervalSta
 import { CardPreview } from '@/components/features/decks/CardPreview';
 import { CardViewerModal } from '@/components/features/decks/CardViewerModal';
 import { CardEditForm } from '@/components/features/decks/CardEditForm';
+import { CardBrowserFilters } from '@/components/features/decks/CardBrowserFilters';
 import { ExportDeckButton } from '@/components/features/decks/ExportDeckButton';
 import Link from 'next/link';
 
@@ -58,6 +62,59 @@ export default function DeckDetailPage() {
     const [viewingCardIndex, setViewingCardIndex] = useState<number | null>(null);
     const [showingCardInfo, setShowingCardInfo] = useState(false);
     const [infoCardIndex, setInfoCardIndex] = useState(0);
+
+    // ── Card browser filters ────────────────────────────────────────────────
+    const [filterQuery, setFilterQuery] = useState('');
+    const [stageFilter, setStageFilter] = useState<StageFilter>('all');
+    const [dueFilter, setDueFilter] = useState<DueFilter>('all');
+    const [sortKey, setSortKey] = useState<CardSortKey>('oldest');
+    const debouncedQuery = useDebounce(filterQuery, 200);
+
+    // Recompute start-of-today once per render. Fine to recompute — it's cheap
+    // and stays consistent across renders within the same calendar day.
+    const startOfTodayMs = useMemo(
+        () => startOfTodayInTimezone(timeZone),
+        [timeZone]
+    );
+
+    const allCards: Card[] = useMemo(
+        () => deckWithCards?.cards ?? [],
+        [deckWithCards]
+    );
+
+    const filteredCards = useMemo(
+        () => filterDeckCards(allCards, {
+            query: debouncedQuery,
+            stageFilter,
+            dueFilter,
+            sortKey,
+            now: Date.now(),
+            startOfTodayMs,
+        }),
+        [allCards, debouncedQuery, stageFilter, dueFilter, sortKey, startOfTodayMs]
+    );
+
+    // Cards passed to the viewer modal — the filtered set when filters are
+    // active, otherwise the full deck. The viewer's arrow-key navigation
+    // walks this list.
+    const viewerCards: Card[] = filteredCards.length < allCards.length
+        ? allCards.filter((c) => filteredCards.some((f) => f.id === c.id))
+        : allCards;
+
+    // Close the viewer if filters change while it's open. Tracking by id
+    // would be cleaner, but the existing modal uses indices and rewiring
+    // that is out of scope for this PR.
+    useEffect(() => {
+        setViewingCardIndex(null);
+        setShowingCardInfo(false);
+    }, [debouncedQuery, stageFilter, dueFilter, sortKey]);
+
+    const handleClearFilters = () => {
+        setFilterQuery('');
+        setStageFilter('all');
+        setDueFilter('all');
+        setSortKey('oldest');
+    };
 
     const nameInputRef = useRef<HTMLInputElement>(null);
     const descInputRef = useRef<HTMLTextAreaElement>(null);
@@ -374,26 +431,63 @@ export default function DeckDetailPage() {
                             </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {cards.map((card, index) => (
-                                <CardPreview
-                                    key={card.id}
-                                    front={card.front}
-                                    index={index}
-                                    onClick={() => {
-                                    setViewingCardIndex(index);
-                                    setShowingCardInfo(false);
-                                }}
-                                />
-                            ))}
-                        </div>
+                        <>
+                            <CardBrowserFilters
+                                query={filterQuery}
+                                onQueryChange={setFilterQuery}
+                                stageFilter={stageFilter}
+                                onStageFilterChange={setStageFilter}
+                                dueFilter={dueFilter}
+                                onDueFilterChange={setDueFilter}
+                                sortKey={sortKey}
+                                onSortKeyChange={setSortKey}
+                                totalCount={cards.length}
+                                filteredCount={filteredCards.length}
+                                onClear={handleClearFilters}
+                            />
+
+                            <div className="mt-4">
+                                {filteredCards.length === 0 ? (
+                                    <div className="rounded-xl border border-border-primary bg-surface-primary p-12 text-center">
+                                        <p className="text-text-secondary mb-4">No cards match these filters.</p>
+                                        <button
+                                            type="button"
+                                            onClick={handleClearFilters}
+                                            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium
+                                                       border border-border-primary text-text-primary bg-surface-secondary
+                                                       hover:bg-surface-tertiary transition-colors cursor-pointer
+                                                       focus:outline-none focus:ring-2 focus:ring-accent-primary"
+                                        >
+                                            Clear filters
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {filteredCards.map((card) => {
+                                            const originalIndex = cards.findIndex((c) => c.id === card.id);
+                                            return (
+                                                <CardPreview
+                                                    key={card.id}
+                                                    front={card.front}
+                                                    index={originalIndex}
+                                                    onClick={() => {
+                                                        setViewingCardIndex(viewerCards.findIndex((c) => c.id === card.id));
+                                                        setShowingCardInfo(false);
+                                                    }}
+                                                />
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        </>
                     )}
                 </section>
             </main>
 
-            {/* Card Viewer Modal */}
+            {/* Card Viewer Modal — walks the filtered list when filters active */}
             <CardViewerModal
-                cards={cards}
+                cards={viewerCards}
                 initialIndex={viewingCardIndex ?? 0}
                 isOpen={viewingCardIndex !== null}
                 onClose={() => {
@@ -406,9 +500,9 @@ export default function DeckDetailPage() {
                     openDeleteCardModal(cardId);
                 }}
                 infoContent={
-                    viewingCardIndex !== null && showingCardInfo && cards.length > 0 ? (() => {
-                        const safeInfoIndex = Math.min(infoCardIndex, cards.length - 1);
-                        const infoCard = cards[safeInfoIndex];
+                    viewingCardIndex !== null && showingCardInfo && viewerCards.length > 0 ? (() => {
+                        const safeInfoIndex = Math.min(infoCardIndex, viewerCards.length - 1);
+                        const infoCard = viewerCards[safeInfoIndex];
                         const reps = infoCard.repetitions;
                         const stage = getMemoryStage(reps);
                         const nextReviewMs = new Date(infoCard.nextReview).getTime();
