@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSearch } from '@/lib/hooks';
+import { useDebounce } from '@/lib/useDebounce';
 import { Search, Layers, CreditCard, X } from 'lucide-react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -27,15 +28,6 @@ interface CardResult {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-function useDebounce<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const id = setTimeout(() => setDebounced(value), delayMs);
-    return () => clearTimeout(id);
-  }, [value, delayMs]);
-  return debounced;
-}
 
 function truncate(text: string, max: number): string {
   return text.length <= max ? text : text.slice(0, max) + '…';
