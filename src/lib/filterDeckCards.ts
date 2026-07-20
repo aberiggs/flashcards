@@ -1,4 +1,4 @@
-import type { MemoryStage } from "@/lib/memoryStage";
+import { getMemoryStage, type MemoryStage } from "@/lib/memoryStage";
 
 // ── Filter option types ─────────────────────────────────────────────────────
 
@@ -49,13 +49,6 @@ function toMs(value: string | number | Date): number {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function getStage(repetitions: number): MemoryStage {
-  if (repetitions === 0) return "New";
-  if (repetitions <= 2) return "Learning";
-  if (repetitions <= 5) return "Reviewing";
-  return "Mastered";
-}
-
 /**
  * Filter and sort a deck's cards in-memory. Pure: no IO, no globals. All
  * time-dependent comparisons are parameterized via `now` and
@@ -88,7 +81,7 @@ export function filterDeckCards(
     }
 
     if (opts.stageFilter !== "all") {
-      if (getStage(card.repetitions) !== opts.stageFilter) continue;
+      if (getMemoryStage(card.repetitions) !== opts.stageFilter) continue;
     }
 
     if (opts.dueFilter !== "all") {

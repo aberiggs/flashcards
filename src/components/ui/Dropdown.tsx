@@ -73,7 +73,7 @@ export function Dropdown({
 
   // Anchoring for the listbox. The listbox sizes to its content (w-max) and
   // attaches to the left or right edge of the trigger depending on which side
-  // has more room. Re-measured on every open so it survives resize/scroll.
+  // has more room. Re-measured on every open so it survives resize.
   const [listboxStyle, setListboxStyle] = useState<React.CSSProperties>({
     minWidth: 'max-content',
   });
@@ -153,13 +153,15 @@ export function Dropdown({
     };
     document.addEventListener('mousedown', handleClick);
     window.addEventListener('resize', measureAndPosition);
-    window.addEventListener('scroll', measureAndPosition, true);
+    // The listbox is absolutely positioned relative to the trigger's
+    // `relative` parent, so it scrolls with the trigger — no repositioning
+    // is needed on scroll. Only viewport resizes change the anchor
+    // geometry, so we listen for resize alone.
     // Measure on first paint after open.
     const id = requestAnimationFrame(measureAndPosition);
     return () => {
       document.removeEventListener('mousedown', handleClick);
       window.removeEventListener('resize', measureAndPosition);
-      window.removeEventListener('scroll', measureAndPosition, true);
       cancelAnimationFrame(id);
     };
   }, [isOpen, measureAndPosition]);

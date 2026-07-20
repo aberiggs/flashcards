@@ -1,7 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Pencil, Trash2, Plus, Layers } from 'lucide-react';
 import { useDeck, useDeckStats, useDeckIntervalStats, useUpdateDeck, useDeleteDeck, useCreateCard, useUpdateCard, useDeleteCard, type Card } from '@/lib/hooks';
 import { useDebounce } from '@/lib/useDebounce';
@@ -59,9 +59,11 @@ export default function DeckDetailPage() {
     const [cardToDeleteId, setCardToDeleteId] = useState<number | null>(null);
     const [isDeletingCard, setIsDeletingCard] = useState(false);
     const [isDeletingDeck, setIsDeletingDeck] = useState(false);
-    const [viewingCardIndex, setViewingCardIndex] = useState<number | null>(null);
+    // Track the viewed card by id (not index) so sort-only changes keep the
+    // same card in view — its position in viewerCards just updates.
+    const [viewingCardId, setViewingCardId] = useState<number | null>(null);
     const [showingCardInfo, setShowingCardInfo] = useState(false);
-    const [infoCardIndex, setInfoCardIndex] = useState(0);
+    const [infoCardId, setInfoCardId] = useState<number | null>(null);
 
     // ── Card browser filters ────────────────────────────────────────────────
     const [filterQuery, setFilterQuery] = useState('');
@@ -71,10 +73,16 @@ export default function DeckDetailPage() {
     const debouncedQuery = useDebounce(filterQuery, 200);
 
     // Recompute start-of-today once per render. Fine to recompute — it's cheap
-    // and stays consistent across renders within the same calendar day.
+    // and stays consistent across renders within the same calendar day. We
+    // also key the memo on the current calendar date in the user's tz so it
+    // recomputes when `now` crosses into a new day (e.g. the user leaves the
+    // page open past midnight); within the same day the result is identical
+    // so the extra work is a no-op.
+    const now = Date.now();
     const startOfTodayMs = useMemo(
         () => startOfTodayInTimezone(timeZone),
-        [timeZone]
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [timeZone, new Date(now).toLocaleDateString('en-CA', { timeZone })]
     );
 
     const allCards: Card[] = useMemo(
@@ -94,25 +102,57 @@ export default function DeckDetailPage() {
         [allCards, debouncedQuery, stageFilter, dueFilter, sortKey, startOfTodayMs]
     );
 
-    // Cards passed to the viewer modal — the filtered set when filters are
-    // active, otherwise the full deck. The viewer's arrow-key navigation
-    // walks this list. Use a Set for the membership check so a 500-card
-    // deck doesn't degrade to O(n²) on every render.
-    const filteredCardIds = useMemo(
-        () => new Set(filteredCards.map((c) => c.id)),
-        [filteredCards]
+    // Cards passed to the viewer modal — the filtered set (in the same
+    // order the grid displays it) when filters are active, otherwise the
+    // full deck. The viewer's arrow-key navigation walks this list, so it
+    // must match the grid's sort order. Map the filtered DeckCardOutput
+    // back to the original Card objects (which carry Date fields the
+    // viewer modal needs) by id.
+    const cardsById = useMemo(
+        () => new Map(allCards.map((c) => [c.id, c])),
+        [allCards]
     );
-    const viewerCards: Card[] = filteredCards.length < allCards.length
-        ? allCards.filter((c) => filteredCardIds.has(c.id))
-        : allCards;
+    const viewerCards: Card[] = useMemo(
+        () => filteredCards.length < allCards.length
+            ? filteredCards.map((c) => cardsById.get(c.id)).filter((c): c is Card => c !== undefined)
+            : allCards,
+        [filteredCards, allCards, cardsById]
+    );
 
-    // Close the viewer if filters change while it's open. Tracking by id
-    // would be cleaner, but the existing modal uses indices and rewiring
-    // that is out of scope for this PR.
+    // Close the viewer if filters change the membership of the visible
+    // set. Sort-only changes don't alter which cards are visible, so we
+    // intentionally exclude `sortKey` — the viewer stays on the same
+    // card (tracked by id) and walks viewerCards in the new sorted order.
     useEffect(() => {
-        setViewingCardIndex(null);
+        setViewingCardId(null);
         setShowingCardInfo(false);
-    }, [debouncedQuery, stageFilter, dueFilter, sortKey]);
+    }, [debouncedQuery, stageFilter, dueFilter]);
+
+    // Resolve the viewed card's id to an index into viewerCards. Recompute
+    // whenever the set or order changes — e.g. a sort change moves the
+    // viewed card to a different index, and we want the viewer to follow it.
+    const viewingCardIndex = useMemo(() => {
+        if (viewingCardId === null) return null;
+        const idx = viewerCards.findIndex((c) => c.id === viewingCardId);
+        return idx === -1 ? null : idx;
+    }, [viewingCardId, viewerCards]);
+
+    const infoCardIndex = useMemo(() => {
+        if (infoCardId === null || viewerCards.length === 0) return 0;
+        const idx = viewerCards.findIndex((c) => c.id === infoCardId);
+        return idx === -1 ? 0 : idx;
+    }, [infoCardId, viewerCards]);
+
+    // Track the currently-viewed card by id as the user navigates inside the
+    // viewer. Stabilized with useCallback so CardViewerModal's navigation
+    // effect doesn't re-fire on every parent render.
+    const handleViewerNavigate = useCallback(
+        (index: number) => {
+            const card = viewerCards[index];
+            if (card) setViewingCardId(card.id);
+        },
+        [viewerCards]
+    );
 
     const handleClearFilters = () => {
         setFilterQuery('');
@@ -174,7 +214,6 @@ export default function DeckDetailPage() {
     }
 
     const cards: Card[] = deckWithCards.cards;
-    const now = Date.now();
     const dueCount = cards.filter((c) => new Date(c.nextReview).getTime() <= now).length;
     const hasDue = dueCount > 0;
 
@@ -468,15 +507,14 @@ export default function DeckDetailPage() {
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        {filteredCards.map((card) => {
-                                            const originalIndex = cards.findIndex((c) => c.id === card.id);
+                                        {filteredCards.map((card, gridIndex) => {
                                             return (
                                                 <CardPreview
                                                     key={card.id}
                                                     front={card.front}
-                                                    index={originalIndex}
+                                                    index={gridIndex}
                                                     onClick={() => {
-                                                        setViewingCardIndex(viewerCards.findIndex((c) => c.id === card.id));
+                                                        setViewingCardId(card.id);
                                                         setShowingCardInfo(false);
                                                     }}
                                                 />
@@ -496,12 +534,12 @@ export default function DeckDetailPage() {
                 initialIndex={viewingCardIndex ?? 0}
                 isOpen={viewingCardIndex !== null}
                 onClose={() => {
-                    setViewingCardIndex(null);
+                    setViewingCardId(null);
                     setShowingCardInfo(false);
                 }}
                 onEdit={handleEditCard}
                 onDelete={(cardId) => {
-                    setViewingCardIndex(null);
+                    setViewingCardId(null);
                     openDeleteCardModal(cardId);
                 }}
                 infoContent={
@@ -531,9 +569,11 @@ export default function DeckDetailPage() {
                 }
                 onCancelInfo={() => setShowingCardInfo(false)}
                 onShowInfo={(index) => {
-                    setInfoCardIndex(index);
+                    const card = viewerCards[index];
+                    if (card) setInfoCardId(card.id);
                     setShowingCardInfo(true);
                 }}
+                onNavigate={handleViewerNavigate}
             />
 
             {/* Add Card Modal */}
