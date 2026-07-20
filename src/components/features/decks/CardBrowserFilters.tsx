@@ -165,8 +165,6 @@ export function CardBrowserFilters({
           className="min-w-[150px] flex-1 sm:flex-none sm:w-auto"
         />
 
-        <div className="hidden sm:block w-px h-7 bg-border-primary mx-1" aria-hidden />
-
         <Dropdown
           options={SORT_OPTIONS}
           value={sortKey}
