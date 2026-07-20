@@ -68,7 +68,7 @@ export function CardBrowserFilters({
   const filtered = filteredCount < totalCount;
 
   return (
-    <div className="rounded-xl border border-border-primary bg-surface-primary shadow-sm overflow-hidden">
+    <div className="rounded-xl border border-border-primary bg-surface-primary shadow-sm">
       {/* ── Row 1: search + count ─────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 sm:px-5 sm:py-4 border-b border-border-primary">
         <div className="relative flex-1 min-w-0">
