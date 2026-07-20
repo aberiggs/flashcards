@@ -96,9 +96,14 @@ export default function DeckDetailPage() {
 
     // Cards passed to the viewer modal — the filtered set when filters are
     // active, otherwise the full deck. The viewer's arrow-key navigation
-    // walks this list.
+    // walks this list. Use a Set for the membership check so a 500-card
+    // deck doesn't degrade to O(n²) on every render.
+    const filteredCardIds = useMemo(
+        () => new Set(filteredCards.map((c) => c.id)),
+        [filteredCards]
+    );
     const viewerCards: Card[] = filteredCards.length < allCards.length
-        ? allCards.filter((c) => filteredCards.some((f) => f.id === c.id))
+        ? allCards.filter((c) => filteredCardIds.has(c.id))
         : allCards;
 
     // Close the viewer if filters change while it's open. Tracking by id
