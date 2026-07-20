@@ -71,6 +71,13 @@ export function Dropdown({
   const listRef = useRef<HTMLUListElement>(null);
   const listboxId = useId();
 
+  // Anchoring for the listbox. The listbox sizes to its content (w-max) and
+  // attaches to the left or right edge of the trigger depending on which side
+  // has more room. Re-measured on every open so it survives resize/scroll.
+  const [listboxStyle, setListboxStyle] = useState<React.CSSProperties>({
+    minWidth: 'max-content',
+  });
+
   const selectedIndex = useMemo(
     () => Math.max(
       0,
@@ -79,13 +86,59 @@ export function Dropdown({
     [options, value]
   );
 
+  // Position the listbox relative to the trigger. Called on open and on
+  // viewport changes while open. The listbox is sized to fit its longest
+  // option (measured off-screen) and anchored to the left or right edge of
+  // the trigger depending on which side has more room.
+  const measureAndPosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    const list = listRef.current;
+    if (!trigger || !list) return;
+    const tRect = trigger.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const margin = 8; // px of breathing room from the viewport edge
+
+    // Measure the natural (untruncated) width of the widest option. We use
+    // scrollWidth because it reports the content's natural width even when
+    // the span is currently being clipped by the listbox's initial width.
+    const optionSpans = Array.from(list.querySelectorAll('[data-option-text]'));
+    let contentWidth = 0;
+    for (const span of optionSpans) {
+      const spanEl = span as HTMLElement;
+      contentWidth = Math.max(contentWidth, spanEl.scrollWidth);
+    }
+    // Add horizontal padding (px-3 = 12px each side = 24px), the check icon
+    // column (size-4 + gap-2 = 16+8 = 24px), and a small buffer.
+    const naturalListWidth = Math.ceil(contentWidth) + 24 + 24 + 4;
+
+    const spaceRight = vw - tRect.left - margin;
+    const spaceLeft = tRect.right - margin;
+    const fitsOnRight = naturalListWidth <= spaceRight;
+    const style: React.CSSProperties = {
+      minWidth: naturalListWidth,
+      width: naturalListWidth,
+    };
+    if (fitsOnRight) {
+      style.left = 0;
+      style.right = 'auto';
+    } else {
+      style.right = 0;
+      style.left = 'auto';
+    }
+    // Clamp width to remaining viewport space so very long option lists don't
+    // overflow in either direction.
+    const maxWidth = fitsOnRight ? spaceRight : spaceLeft;
+    style.maxWidth = Math.max(maxWidth, 160);
+    setListboxStyle(style);
+  }, []);
+
   // Open with the currently-selected option focused so the keyboard user
   // can immediately adjust from their current choice.
   useEffect(() => {
     if (isOpen) setActiveIndex(selectedIndex);
   }, [isOpen, selectedIndex]);
 
-  // Click outside → close
+  // Click outside → close. Also reposition on viewport changes while open.
   useEffect(() => {
     if (!isOpen) return;
     const handleClick = (e: MouseEvent) => {
@@ -99,8 +152,17 @@ export function Dropdown({
       setIsOpen(false);
     };
     document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [isOpen]);
+    window.addEventListener('resize', measureAndPosition);
+    window.addEventListener('scroll', measureAndPosition, true);
+    // Measure on first paint after open.
+    const id = requestAnimationFrame(measureAndPosition);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      window.removeEventListener('resize', measureAndPosition);
+      window.removeEventListener('scroll', measureAndPosition, true);
+      cancelAnimationFrame(id);
+    };
+  }, [isOpen, measureAndPosition]);
 
   // Scroll active option into view
   useEffect(() => {
@@ -234,7 +296,8 @@ export function Dropdown({
             activeIndex >= 0 ? `${listboxId}-opt-${activeIndex}` : undefined
           }
           aria-label={ariaLabel}
-          className="absolute z-50 mt-1.5 w-full overflow-auto rounded-lg border border-border-primary bg-surface-primary shadow-lg
+          style={listboxStyle}
+          className="absolute z-50 mt-1.5 overflow-auto rounded-lg border border-border-primary bg-surface-primary shadow-lg
                      max-h-60 py-1 animate-fade-in-up outline-none"
         >
           {options.map((option, index) => {
@@ -252,10 +315,10 @@ export function Dropdown({
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
                 onClick={() => selectIndex(index)}
-                className={`flex items-center gap-2 px-3 py-2 text-sm cursor-pointer select-none transition-colors
+                className={`flex items-center gap-2 px-3 py-2 text-sm cursor-pointer select-none transition-colors whitespace-nowrap
                   ${isActive ? 'bg-accent-primary/10 text-text-primary' : 'text-text-secondary hover:bg-surface-secondary hover:text-text-primary'}`}
               >
-                <span className="flex-1 truncate">{option.label}</span>
+                <span data-option-text className="whitespace-nowrap">{option.label}</span>
                 {isSelected && (
                   <Check
                     className="shrink-0 size-4 text-accent-primary"
