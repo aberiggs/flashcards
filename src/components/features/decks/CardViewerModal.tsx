@@ -49,11 +49,6 @@ export function CardViewerModal({
         setIsEditing(false);
     }, [initialIndex]);
 
-    // Notify parent of navigation so it can track the viewed card by id.
-    useEffect(() => {
-        if (isOpen) onNavigate?.(currentIndex);
-    }, [currentIndex, isOpen, onNavigate]);
-
     const safeIndex = Math.min(currentIndex, cards.length - 1);
     const card = cards[safeIndex];
 
@@ -76,12 +71,22 @@ export function CardViewerModal({
     const canGoNext = currentIndex < cards.length - 1;
 
     const goToPrev = useCallback(() => {
-        if (canGoPrev) { setCurrentIndex((i) => i - 1); setIsFlipped(false); setIsEditing(false); }
-    }, [canGoPrev]);
+        if (!canGoPrev) return;
+        const next = currentIndex - 1;
+        setCurrentIndex(next);
+        setIsFlipped(false);
+        setIsEditing(false);
+        onNavigate?.(next);
+    }, [canGoPrev, currentIndex, onNavigate]);
 
     const goToNext = useCallback(() => {
-        if (canGoNext) { setCurrentIndex((i) => i + 1); setIsFlipped(false); setIsEditing(false); }
-    }, [canGoNext]);
+        if (!canGoNext) return;
+        const next = currentIndex + 1;
+        setCurrentIndex(next);
+        setIsFlipped(false);
+        setIsEditing(false);
+        onNavigate?.(next);
+    }, [canGoNext, currentIndex, onNavigate]);
 
     const handleFlip = useCallback(() => {
         if (!isEditing) setIsFlipped((prev) => !prev);
