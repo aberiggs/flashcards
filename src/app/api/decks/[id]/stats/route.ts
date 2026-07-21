@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuthUserId } from "@/server/auth";
-import { deckStats } from "@/server/queries/stats";
+import { deckStats, normalizeHorizon } from "@/server/queries/stats";
 import { badRequest, notFound, parseIdParam, unauthorized } from "@/server/api";
 
 export async function GET(
@@ -11,10 +11,12 @@ export async function GET(
   if (userId === null) return unauthorized();
   const deckId = parseIdParam((await params).id);
   if (deckId === null) return badRequest("Invalid deck id");
+  const url = new URL(req.url);
   const timeZone =
-    new URL(req.url).searchParams.get("tz") ??
+    url.searchParams.get("tz") ??
     Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const stats = await deckStats(userId, deckId, timeZone);
+  const horizon = normalizeHorizon(url.searchParams.get("horizon"));
+  const stats = await deckStats(userId, deckId, timeZone, horizon);
   if (!stats) return notFound("Deck not found");
   return NextResponse.json(stats);
 }

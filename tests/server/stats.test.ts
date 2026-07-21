@@ -79,6 +79,41 @@ describe("dashboardStats", () => {
     expect(total).toBe(5);
   });
 
+  it("24h horizon returns 24 hour-buckets tagged bucket='hour'", async () => {
+    const user = await createTestUser(db);
+    const deck = await seedDeck(db, user.id);
+    const now = Date.now();
+    const MS_PER_HOUR = 60 * 60 * 1000;
+    const hourStart = Math.floor(now / MS_PER_HOUR) * MS_PER_HOUR;
+    // Overdue (rolls into current hour bucket).
+    await seedCard(db, deck.id, { nextReview: new Date(now - MS_PER_HOUR) });
+    // Current hour.
+    await seedCard(db, deck.id, { nextReview: new Date(now + 1000) });
+    // 3 hours from now.
+    await seedCard(db, deck.id, {
+      nextReview: new Date(hourStart + 3 * MS_PER_HOUR + 1000),
+    });
+    // 25 hours from now — beyond horizon, excluded.
+    await seedCard(db, deck.id, {
+      nextReview: new Date(hourStart + 25 * MS_PER_HOUR),
+    });
+    const stats = await dashboardStats(user.id, TZ, "24h");
+    expect(stats.reviewForecast).toHaveLength(24);
+    expect(stats.reviewForecast.every((b) => b.bucket === "hour")).toBe(true);
+    expect(stats.reviewForecast[0].count).toBe(2); // overdue + current
+    expect(stats.reviewForecast[3].count).toBe(1);
+    const total = stats.reviewForecast.reduce((s, d) => s + d.count, 0);
+    expect(total).toBe(3);
+  });
+
+  it("24h horizon produces empty buckets for a user with no due cards", async () => {
+    const user = await createTestUser(db);
+    const stats = await dashboardStats(user.id, TZ, "24h");
+    expect(stats.reviewForecast).toHaveLength(24);
+    expect(stats.reviewForecast.every((b) => b.bucket === "hour")).toBe(true);
+    expect(stats.reviewForecast.every((b) => b.count === 0)).toBe(true);
+  });
+
   it("only counts the calling user's cards", async () => {
     const u1 = await createTestUser(db, { email: "u1@x.com" });
     const u2 = await createTestUser(db, { email: "u2@x.com" });
