@@ -56,18 +56,16 @@
   --chart-streak: #f59e0b;
   --chart-activity: #3b82f6;
 
-  /* Card tier badge colors — 7-step plant progression (Seed → Fruit).
-     Deliberately not derived from the 4 chart-* tokens: the badges need a
-     distinct hue per tier so adjacent levels stay distinguishable at a
-     glance. The first four echo the coarse stage colors so the dashboard
-     bar and the badges don't clash. */
-  --tier-seed: #94a3b8;
-  --tier-sprout: #3b82f6;
-  --tier-seedling: #f59e0b;
-  --tier-sapling: #8b5cf6;
-  --tier-bud: #ec4899;
-  --tier-bloom: #10b981;
-  --tier-fruit: #f59e0b;
+  /* Card tier badge colors — 6-step forest progression (Acorn → Forest).
+     Brown for the unreviewed acorn (it isn't green yet), then a clear
+     lightness ramp through greens so adjacent tiers stay distinguishable
+     at a glance. Kept light enough to read against the light surface. */
+  --tier-acorn: #ca8a04;
+  --tier-sprout: #a3e635;
+  --tier-sapling: #65a30d;
+  --tier-tree: #16a34a;
+  --tier-grove: #15803d;
+  --tier-forest: #166534;
 
   /* Shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -131,13 +129,12 @@
   --chart-activity: #60a5fa;
 
   /* Card tier badge colors — slightly softer in dark mode */
-  --tier-seed: #94a3b8;
-  --tier-sprout: #60a5fa;
-  --tier-seedling: #fbbf24;
-  --tier-sapling: #a78bfa;
-  --tier-bud: #f472b6;
-  --tier-bloom: #34d399;
-  --tier-fruit: #fbbf24;
+  --tier-acorn: #d97706;
+  --tier-sprout: #bef264;
+  --tier-sapling: #4ade80;
+  --tier-tree: #22c55e;
+  --tier-grove: #16a34a;
+  --tier-forest: #14532d;
 
   /* Shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
@@ -202,13 +199,12 @@
     --chart-activity: #60a5fa;
 
     /* Card tier badge colors — slightly softer in dark mode */
-    --tier-seed: #94a3b8;
-    --tier-sprout: #60a5fa;
-    --tier-seedling: #fbbf24;
-    --tier-sapling: #a78bfa;
-    --tier-bud: #f472b6;
-    --tier-bloom: #34d399;
-    --tier-fruit: #fbbf24;
+    --tier-acorn: #d97706;
+    --tier-sprout: #bef264;
+    --tier-sapling: #4ade80;
+    --tier-tree: #22c55e;
+    --tier-grove: #16a34a;
+    --tier-forest: #14532d;
 
     /* Shadow */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
@@ -252,13 +248,12 @@
   --color-status-close-bg: var(--status-close-bg);
   --color-status-close-border: var(--status-close-border);
   --color-status-close-text: var(--status-close-text);
-  --color-tier-seed: var(--tier-seed);
+  --color-tier-acorn: var(--tier-acorn);
   --color-tier-sprout: var(--tier-sprout);
-  --color-tier-seedling: var(--tier-seedling);
   --color-tier-sapling: var(--tier-sapling);
-  --color-tier-bud: var(--tier-bud);
-  --color-tier-bloom: var(--tier-bloom);
-  --color-tier-fruit: var(--tier-fruit);
+  --color-tier-tree: var(--tier-tree);
+  --color-tier-grove: var(--tier-grove);
+  --color-tier-forest: var(--tier-forest);
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);

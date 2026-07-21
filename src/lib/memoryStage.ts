@@ -3,74 +3,81 @@
  *
  * Two parallel views over `repetitions`:
  *
- * - {@link MemoryStage} rolls up into the 4 coarse buckets the dashboard
- *   widget and stage filter use (New / Learning / Reviewing / Mastered).
- *   Stable surface — do not rename without updating the widget, the stage
- *   filter, and the route tests.
+ * - {@link MemoryStage} rolls up into the 4 coarse buckets the stage filter
+ *   uses (New / Learning / Reviewing / Mastered). Stable surface — do not
+ *   rename without updating the filter and route tests.
  *
- * - {@link CardTier} is the finer, user-facing 7-tier progression with plant
- *   metaphor names. One tier per `repetitions` value 0-5, and everything
- *   ≥6 collapses into the final tier. Used for per-card badges and the
- *   viewer info panel so progress feels more granular and rewarding.
+ * - {@link CardTier} is the finer, user-facing 6-tier "forest" progression
+ *   (Acorn → Forest). Grouped by SM-2 reality: the early tiers change per
+ *   review because intervals jump fast there (1d → 6d → 15d), while the
+ *   mature tiers each span multiple reps because by then intervals are
+ *   weeks/months/years — one good review shouldn't bump a Tree straight to
+ *   a Forest. Used for per-card badges and the dashboard widget so progress
+ *   feels granular and rewarding without misrepresenting how far along a
+ *   card actually is.
+ *
+ * Repetition → tier boundaries (and the matching coarse stage):
+ *   0      → Acorn    (New)
+ *   1      → Sprout   (Learning)
+ *   2      → Sapling  (Learning)
+ *   3–4    → Tree     (Reviewing)
+ *   5–7    → Grove    (Reviewing)
+ *   8+     → Forest   (Mastered)
  */
 export type MemoryStage = 'New' | 'Learning' | 'Reviewing' | 'Mastered';
 
 export type CardTier =
-  | 'Seed'
+  | 'Acorn'
   | 'Sprout'
-  | 'Seedling'
   | 'Sapling'
-  | 'Bud'
-  | 'Bloom'
-  | 'Fruit';
+  | 'Tree'
+  | 'Grove'
+  | 'Forest';
 
 export function getMemoryStage(repetitions: number): MemoryStage {
-    if (repetitions === 0) return 'New';
+    if (repetitions <= 0) return 'New';
     if (repetitions <= 2) return 'Learning';
-    if (repetitions <= 5) return 'Reviewing';
+    if (repetitions <= 7) return 'Reviewing';
     return 'Mastered';
 }
 
 /**
- * Tier → parent stage roll-up. Used by the MemoryStages widget so it can keep
- * showing the 4-bucket bar while badges elsewhere show the finer tier.
+ * Tier → parent stage roll-up. Used by the stage filter so it can map a
+ * fine tier back to its coarse bucket.
  */
 export const TIER_TO_STAGE: Record<CardTier, MemoryStage> = {
-    Seed: 'New',
+    Acorn: 'New',
     Sprout: 'Learning',
-    Seedling: 'Learning',
-    Sapling: 'Reviewing',
-    Bud: 'Reviewing',
-    Bloom: 'Reviewing',
-    Fruit: 'Mastered',
+    Sapling: 'Learning',
+    Tree: 'Reviewing',
+    Grove: 'Reviewing',
+    Forest: 'Mastered',
 };
 
 /**
- * Ordered tier list (lowest → highest). Drives badge color and ordinal display.
+ * Ordered tier list (lowest → highest). Drives badge color and widget order.
  */
 export const CARD_TIERS: CardTier[] = [
-    'Seed',
+    'Acorn',
     'Sprout',
-    'Seedling',
     'Sapling',
-    'Bud',
-    'Bloom',
-    'Fruit',
+    'Tree',
+    'Grove',
+    'Forest',
 ];
 
 export function getCardTier(repetitions: number): CardTier {
-    if (repetitions <= 0) return 'Seed';
+    if (repetitions <= 0) return 'Acorn';
     if (repetitions === 1) return 'Sprout';
-    if (repetitions === 2) return 'Seedling';
-    if (repetitions === 3) return 'Sapling';
-    if (repetitions === 4) return 'Bud';
-    if (repetitions === 5) return 'Bloom';
-    return 'Fruit';
+    if (repetitions === 2) return 'Sapling';
+    if (repetitions <= 4) return 'Tree';
+    if (repetitions <= 7) return 'Grove';
+    return 'Forest';
 }
 
 /**
- * Zero-based ordinal of a tier in {@link CARD_TIERS}. Handy for "level 4/7"
- * style badges.
+ * Zero-based ordinal of a tier in {@link CARD_TIERS}. Handy when a consumer
+ * needs the rank rather than the name.
  */
 export function tierOrdinal(tier: CardTier): number {
     return CARD_TIERS.indexOf(tier);

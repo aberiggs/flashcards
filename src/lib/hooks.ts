@@ -2,6 +2,7 @@ import {
   useQuery,
   useMutation,
   useQueryClient,
+  keepPreviousData,
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useSession } from "next-auth/react";
@@ -48,13 +49,12 @@ export interface DeckWithCards extends Deck {
 }
 
 export interface MemoryStages {
-  seed: number;
+  acorn: number;
   sprout: number;
-  seedling: number;
   sapling: number;
-  bud: number;
-  bloom: number;
-  fruit: number;
+  tree: number;
+  grove: number;
+  forest: number;
 }
 
 export interface ReviewForecastBucket {
@@ -297,6 +297,7 @@ export function useDashboardStats(timeZone: string, horizon: ForecastHorizon = "
         `/api/stats/dashboard?tz=${encodeURIComponent(timeZone)}&horizon=${horizon}`
       ),
     enabled: status === "authenticated",
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -333,6 +334,7 @@ export function useDeckStats(
         `/api/decks/${deckId}/stats?tz=${encodeURIComponent(timeZone)}&horizon=${horizon}`
       ),
     enabled: status === "authenticated",
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -358,6 +360,7 @@ export function useSearch(query: string, enabled: boolean) {
       api.get<SearchResult>(`/api/search?q=${encodeURIComponent(query)}`),
     enabled: status === "authenticated" && enabled,
     staleTime: 10_000,
+    placeholderData: keepPreviousData,
   });
 }
 

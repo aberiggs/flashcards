@@ -75,19 +75,17 @@ function getHourKey(timestamp: number, timeZone: string): string {
 
 /**
  * Per-tier card counts for the memory-stages chart. One bucket per
- * {@link CardTier} (Seed / Sprout / Seedling / Sapling / Bud / Bloom /
- * Fruit). The older 4-bucket roll-up is gone — the dashboard now shows the
- * full 7-tier progression. The 4-bucket {@link getMemoryStage} roll-up is
- * still used by the stage filter in the deck page.
+ * {@link CardTier} (Acorn / Sprout / Sapling / Tree / Grove / Forest).
+ * The 4-bucket {@link getMemoryStage} roll-up is still used by the stage
+ * filter in the deck page.
  */
 export interface MemoryStages {
-  seed: number;
+  acorn: number;
   sprout: number;
-  seedling: number;
   sapling: number;
-  bud: number;
-  bloom: number;
-  fruit: number;
+  tree: number;
+  grove: number;
+  forest: number;
 }
 
 /**
@@ -237,13 +235,12 @@ function buildCardAggregates(
   nextDueAt: number | null;
 } {
   const memoryStages: MemoryStages = {
-    seed: 0,
+    acorn: 0,
     sprout: 0,
-    seedling: 0,
     sapling: 0,
-    bud: 0,
-    bloom: 0,
-    fruit: 0,
+    tree: 0,
+    grove: 0,
+    forest: 0,
   };
   let dueNow = 0;
   let nextDueAt: number | null = null;

@@ -22,13 +22,12 @@ describe("dashboardStats", () => {
     const user = await createTestUser(db);
     const stats = await dashboardStats(user.id, TZ);
     expect(stats.memoryStages).toEqual({
-      seed: 0,
+      acorn: 0,
       sprout: 0,
-      seedling: 0,
       sapling: 0,
-      bud: 0,
-      bloom: 0,
-      fruit: 0,
+      tree: 0,
+      grove: 0,
+      forest: 0,
     });
     expect(stats.reviewForecast).toHaveLength(30);
     expect(stats.reviewForecast.every((d) => d.count === 0)).toBe(true);
@@ -37,23 +36,23 @@ describe("dashboardStats", () => {
   it("classifies cards into tiers by repetitions", async () => {
     const user = await createTestUser(db);
     const deck = await seedDeck(db, user.id);
-    await seedCard(db, deck.id, { repetitions: 0 }); // Seed
+    await seedCard(db, deck.id, { repetitions: 0 }); // Acorn
     await seedCard(db, deck.id, { repetitions: 1 }); // Sprout
-    await seedCard(db, deck.id, { repetitions: 2 }); // Seedling
-    await seedCard(db, deck.id, { repetitions: 3 }); // Sapling
-    await seedCard(db, deck.id, { repetitions: 4 }); // Bud
-    await seedCard(db, deck.id, { repetitions: 5 }); // Bloom
-    await seedCard(db, deck.id, { repetitions: 6 }); // Fruit
-    await seedCard(db, deck.id, { repetitions: 10 }); // Fruit
+    await seedCard(db, deck.id, { repetitions: 2 }); // Sapling
+    await seedCard(db, deck.id, { repetitions: 3 }); // Tree
+    await seedCard(db, deck.id, { repetitions: 4 }); // Tree
+    await seedCard(db, deck.id, { repetitions: 5 }); // Grove
+    await seedCard(db, deck.id, { repetitions: 7 }); // Grove
+    await seedCard(db, deck.id, { repetitions: 8 }); // Forest
+    await seedCard(db, deck.id, { repetitions: 20 }); // Forest
     const stats = await dashboardStats(user.id, TZ);
     expect(stats.memoryStages).toEqual({
-      seed: 1,
+      acorn: 1,
       sprout: 1,
-      seedling: 1,
       sapling: 1,
-      bud: 1,
-      bloom: 1,
-      fruit: 2,
+      tree: 2,
+      grove: 2,
+      forest: 2,
     });
   });
 
@@ -128,10 +127,10 @@ describe("dashboardStats", () => {
     const d1 = await seedDeck(db, u1.id);
     const d2 = await seedDeck(db, u2.id);
     await seedCard(db, d1.id, { repetitions: 0 });
-    await seedCard(db, d2.id, { repetitions: 6 });
+    await seedCard(db, d2.id, { repetitions: 8 });
     const stats = await dashboardStats(u1.id, TZ);
-    expect(stats.memoryStages.fruit).toBe(0);
-    expect(stats.memoryStages.seed).toBe(1);
+    expect(stats.memoryStages.forest).toBe(0);
+    expect(stats.memoryStages.acorn).toBe(1);
   });
 });
 
@@ -148,19 +147,18 @@ describe("deckStats", () => {
     const d1 = await seedDeck(db, user.id, { name: "D1" });
     const d2 = await seedDeck(db, user.id, { name: "D2" });
     await seedCard(db, d1.id, { repetitions: 0 });
-    await seedCard(db, d1.id, { repetitions: 6 });
+    await seedCard(db, d1.id, { repetitions: 8 });
     // d2 cards should be excluded.
     await seedCard(db, d2.id, { repetitions: 0 });
     await seedCard(db, d2.id, { repetitions: 0 });
     const stats = await deckStats(user.id, d1.id, TZ);
     expect(stats?.memoryStages).toEqual({
-      seed: 1,
+      acorn: 1,
       sprout: 0,
-      seedling: 0,
       sapling: 0,
-      bud: 0,
-      bloom: 0,
-      fruit: 1,
+      tree: 0,
+      grove: 0,
+      forest: 1,
     });
     expect(stats?.reviewForecast).toHaveLength(30);
   });

@@ -1,13 +1,12 @@
 'use client';
 
 export interface MemoryStagesData {
-  seed: number;
+  acorn: number;
   sprout: number;
-  seedling: number;
   sapling: number;
-  bud: number;
-  bloom: number;
-  fruit: number;
+  tree: number;
+  grove: number;
+  forest: number;
 }
 
 const STAGE_META: {
@@ -15,13 +14,12 @@ const STAGE_META: {
   label: string;
   color: string;
 }[] = [
-  { key: 'seed', label: 'Seed', color: 'var(--tier-seed)' },
+  { key: 'acorn', label: 'Acorn', color: 'var(--tier-acorn)' },
   { key: 'sprout', label: 'Sprout', color: 'var(--tier-sprout)' },
-  { key: 'seedling', label: 'Seedling', color: 'var(--tier-seedling)' },
   { key: 'sapling', label: 'Sapling', color: 'var(--tier-sapling)' },
-  { key: 'bud', label: 'Bud', color: 'var(--tier-bud)' },
-  { key: 'bloom', label: 'Bloom', color: 'var(--tier-bloom)' },
-  { key: 'fruit', label: 'Fruit', color: 'var(--tier-fruit)' },
+  { key: 'tree', label: 'Tree', color: 'var(--tier-tree)' },
+  { key: 'grove', label: 'Grove', color: 'var(--tier-grove)' },
+  { key: 'forest', label: 'Forest', color: 'var(--tier-forest)' },
 ];
 
 interface MemoryStagesWidgetProps {

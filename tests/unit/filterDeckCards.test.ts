@@ -113,21 +113,21 @@ describe("filterDeckCards", () => {
       expect(result.map((c) => c.id)).toEqual([2, 3]);
     });
 
-    it("filters to Reviewing (reps 3-5)", () => {
+    it("filters to Reviewing (reps 3-7)", () => {
       const cards = [
         card({ id: 1, repetitions: 2 }),
         card({ id: 2, repetitions: 3 }),
-        card({ id: 3, repetitions: 5 }),
-        card({ id: 4, repetitions: 6 }),
+        card({ id: 3, repetitions: 7 }),
+        card({ id: 4, repetitions: 8 }),
       ];
       const result = filterDeckCards(cards, { ...defaults, stageFilter: "Reviewing" });
       expect(result.map((c) => c.id)).toEqual([2, 3]);
     });
 
-    it("filters to Mastered (reps >= 6)", () => {
+    it("filters to Mastered (reps >= 8)", () => {
       const cards = [
-        card({ id: 1, repetitions: 5 }),
-        card({ id: 2, repetitions: 6 }),
+        card({ id: 1, repetitions: 7 }),
+        card({ id: 2, repetitions: 8 }),
         card({ id: 3, repetitions: 100 }),
       ];
       const result = filterDeckCards(cards, { ...defaults, stageFilter: "Mastered" });

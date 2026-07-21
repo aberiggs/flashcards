@@ -16,34 +16,36 @@ describe("getMemoryStage", () => {
     [3, "Reviewing"],
     [4, "Reviewing"],
     [5, "Reviewing"],
-    [6, "Mastered"],
+    [7, "Reviewing"],
+    [8, "Mastered"],
     [10, "Mastered"],
     [100, "Mastered"],
   ])("repetitions=%i → %s", (reps, expected) => {
     expect(getMemoryStage(reps)).toBe(expected);
   });
 
-  it("handles negative repetitions as Learning (<=2 branch)", () => {
+  it("handles negative repetitions as New (<=0 branch)", () => {
     // Not a real state, but the function should not throw. -1 falls into the
-    // `<= 2` bucket, so it reports Learning rather than New.
-    expect(getMemoryStage(-1)).toBe("Learning");
+    // `<= 0` bucket, so it reports New.
+    expect(getMemoryStage(-1)).toBe("New");
   });
 });
 
 describe("getCardTier", () => {
   it.each([
-    [-3, "Seed"],
-    [-1, "Seed"],
-    [0, "Seed"],
+    [-3, "Acorn"],
+    [-1, "Acorn"],
+    [0, "Acorn"],
     [1, "Sprout"],
-    [2, "Seedling"],
-    [3, "Sapling"],
-    [4, "Bud"],
-    [5, "Bloom"],
-    [6, "Fruit"],
-    [7, "Fruit"],
-    [50, "Fruit"],
-    [1000, "Fruit"],
+    [2, "Sapling"],
+    [3, "Tree"],
+    [4, "Tree"],
+    [5, "Grove"],
+    [6, "Grove"],
+    [7, "Grove"],
+    [8, "Forest"],
+    [50, "Forest"],
+    [1000, "Forest"],
   ])("repetitions=%i → %s", (reps, expected) => {
     expect(getCardTier(reps)).toBe(expected);
   });
@@ -58,13 +60,12 @@ describe("getCardTier", () => {
 
 describe("tierOrdinal", () => {
   it("returns 0-based position in CARD_TIERS", () => {
-    expect(tierOrdinal("Seed")).toBe(0);
+    expect(tierOrdinal("Acorn")).toBe(0);
     expect(tierOrdinal("Sprout")).toBe(1);
-    expect(tierOrdinal("Seedling")).toBe(2);
-    expect(tierOrdinal("Sapling")).toBe(3);
-    expect(tierOrdinal("Bud")).toBe(4);
-    expect(tierOrdinal("Bloom")).toBe(5);
-    expect(tierOrdinal("Fruit")).toBe(6);
+    expect(tierOrdinal("Sapling")).toBe(2);
+    expect(tierOrdinal("Tree")).toBe(3);
+    expect(tierOrdinal("Grove")).toBe(4);
+    expect(tierOrdinal("Forest")).toBe(5);
   });
 
   it("every tier's ordinal matches its index in CARD_TIERS", () => {
@@ -83,17 +84,9 @@ describe("TIER_TO_STAGE roll-up", () => {
   });
 
   it("rolls tiers up to the same buckets getMemoryStage uses", () => {
-    const tiers: CardTier[] = [
-      "Seed",
-      "Sprout",
-      "Seedling",
-      "Sapling",
-      "Bud",
-      "Bloom",
-      "Fruit",
-    ];
+    const tiers: CardTier[] = CARD_TIERS;
     // Tier index → repetitions value to cross-check against getMemoryStage.
-    const repsForTier = [0, 1, 2, 3, 4, 5, 6];
+    const repsForTier = [0, 1, 2, 3, 5, 8];
     tiers.forEach((tier, i) => {
       expect(TIER_TO_STAGE[tier]).toBe(getMemoryStage(repsForTier[i]));
     });
