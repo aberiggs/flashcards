@@ -19,6 +19,9 @@ interface CardViewerModalProps {
     onCancelInfo?: () => void;
     /** Called when user clicks the info button; receives the current card index so the parent can show that card's info. */
     onShowInfo?: (cardIndex: number) => void;
+    /** Called when the user navigates within the viewer (arrows / type-ahead),
+     *  so the parent can track the currently-viewed card by id. */
+    onNavigate?: (cardIndex: number) => void;
 }
 
 export function CardViewerModal({
@@ -31,6 +34,7 @@ export function CardViewerModal({
     infoContent = null,
     onCancelInfo,
     onShowInfo,
+    onNavigate,
 }: CardViewerModalProps) {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const [isFlipped, setIsFlipped] = useState(false);
@@ -44,6 +48,11 @@ export function CardViewerModal({
         setIsFlipped(false);
         setIsEditing(false);
     }, [initialIndex]);
+
+    // Notify parent of navigation so it can track the viewed card by id.
+    useEffect(() => {
+        if (isOpen) onNavigate?.(currentIndex);
+    }, [currentIndex, isOpen, onNavigate]);
 
     const safeIndex = Math.min(currentIndex, cards.length - 1);
     const card = cards[safeIndex];

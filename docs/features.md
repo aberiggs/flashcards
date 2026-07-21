@@ -7,6 +7,11 @@ User-facing capabilities.
 - Create, edit, and remove decks and cards.
 - View card counts, due counts, and last-studied order on decks.
 - Render card content as Markdown (paragraphs, emphasis, lists, inline code).
+- In-deck card browser with text search (front/back), memory-stage filter
+  (New / Learning / Reviewing / Mastered), due-status filter (Overdue / Due
+  today / Upcoming), and sort (oldest / newest / due first / stage). Filtering
+  is client-side against the loaded deck; the card viewer modal walks the
+  filtered set when filters are active.
 
 ## Study workflow
 
