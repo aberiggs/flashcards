@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "../components/theme/ThemeProvider";
@@ -19,6 +19,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Flashcards App",
   description: "Create and study flashcards",
+};
+
+// App-like viewport: disables pinch-zoom on mobile so the experience matches
+// a native app (no accidental zoom when tapping a textarea, no double-tap
+// zoom dance). Users who need larger text can still use system font scaling.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

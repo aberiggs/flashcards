@@ -127,7 +127,36 @@ describe("GET /api/stats/dashboard", () => {
     expect(body.memoryStages).toBeDefined();
     expect(Array.isArray(body.reviewForecast)).toBe(true);
     expect(body.reviewForecast).toHaveLength(30);
-    expect(body.memoryStages.new).toBe(1);
+    expect(body.reviewForecast[0].bucket).toBe("day");
+    expect(body.memoryStages.acorn).toBe(1);
+  });
+
+  it("accepts ?horizon=24h and returns 24 hour-buckets", async () => {
+    const user = await createTestUser(db);
+    const deck = await seedDeck(db, user.id);
+    await seedCard(db, deck.id, { repetitions: 0 });
+    setAuthUserId(user.id);
+    const res = await dashboardRoute(
+      req("http://localhost/api/stats/dashboard?tz=UTC&horizon=24h")
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.reviewForecast).toHaveLength(24);
+    expect(body.reviewForecast.every((b: { bucket: string }) => b.bucket === "hour")).toBe(true);
+  });
+
+  it("treats an unknown horizon as 30d", async () => {
+    const user = await createTestUser(db);
+    const deck = await seedDeck(db, user.id);
+    await seedCard(db, deck.id, { repetitions: 0 });
+    setAuthUserId(user.id);
+    const res = await dashboardRoute(
+      req("http://localhost/api/stats/dashboard?tz=UTC&horizon=bogus")
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.reviewForecast).toHaveLength(30);
+    expect(body.reviewForecast[0].bucket).toBe("day");
   });
 });
 

@@ -10,7 +10,7 @@ import { ReviewForecastWidget } from "@/components/features/dashboard/ReviewFore
 import { IntervalStatsWidget } from "@/components/features/dashboard/IntervalStatsWidget";
 import { ActivityHeatmapWidget } from "@/components/features/dashboard/ActivityHeatmapWidget";
 import { HeroCTAWidget } from "@/components/features/dashboard/HeroCTAWidget";
-import { useDashboardStats, useIntervalStats, useActivityHistory, useRegistrationOpen } from "@/lib/hooks";
+import { useDashboardStats, useIntervalStats, useActivityHistory, useRegistrationOpen, type ForecastHorizon } from "@/lib/hooks";
 import { api, ApiError } from "@/lib/api";
 
 function AuthenticatedContent() {
@@ -18,7 +18,8 @@ function AuthenticatedContent() {
     typeof Intl !== "undefined"
       ? Intl.DateTimeFormat().resolvedOptions().timeZone
       : "UTC";
-  const { data: stats } = useDashboardStats(timeZone);
+  const [forecastHorizon, setForecastHorizon] = useState<ForecastHorizon>("30d");
+  const { data: stats } = useDashboardStats(timeZone, forecastHorizon);
   const { data: intervals } = useIntervalStats(timeZone);
   const { data: activity } = useActivityHistory(timeZone);
 
@@ -36,7 +37,12 @@ function AuthenticatedContent() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 flex flex-col gap-6">
             {stats && (
-              <ReviewForecastWidget data={stats.reviewForecast} timeZone={timeZone} />
+              <ReviewForecastWidget
+                data={stats.reviewForecast}
+                timeZone={timeZone}
+                horizon={forecastHorizon}
+                onHorizonChange={setForecastHorizon}
+              />
             )}
             {activity && (
               <ActivityHeatmapWidget data={activity} timeZone={timeZone} />

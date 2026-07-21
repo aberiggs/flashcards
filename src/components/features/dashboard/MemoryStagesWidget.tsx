@@ -1,30 +1,24 @@
 'use client';
 
-export interface MemoryStagesData {
-  new: number;
-  learning: number;
-  reviewing: number;
-  mastered: number;
-}
+import { TIER_META } from '@/lib/memoryStage';
+import type { MemoryStages } from '@/lib/hooks';
 
 const STAGE_META: {
-  key: keyof MemoryStagesData;
+  key: keyof MemoryStages;
   label: string;
   color: string;
-}[] = [
-  { key: 'new', label: 'New', color: 'var(--chart-new)' },
-  { key: 'learning', label: 'Learning', color: 'var(--chart-learning)' },
-  { key: 'reviewing', label: 'Reviewing', color: 'var(--chart-reviewing)' },
-  { key: 'mastered', label: 'Mastered', color: 'var(--chart-mastered)' },
-];
+}[] = TIER_META.map((t) => ({
+  key: t.tier.toLowerCase() as keyof MemoryStages,
+  label: t.label,
+  color: t.token,
+}));
 
 interface MemoryStagesWidgetProps {
-  data: MemoryStagesData;
+  data: MemoryStages;
 }
 
 export function MemoryStagesWidget({ data }: MemoryStagesWidgetProps) {
-  const total =
-    data.new + data.learning + data.reviewing + data.mastered;
+  const total = STAGE_META.reduce((sum, s) => sum + data[s.key], 0);
 
   if (total === 0) {
     return (

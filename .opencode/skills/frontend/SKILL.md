@@ -98,6 +98,11 @@ Lives in `src/app/globals.css` under `@theme inline` and `@layer base`:
   `--accent-success`, `--accent-warning`, `--accent-error`
 - **Chart**: `--chart-new`, `--chart-learning`, `--chart-reviewing`,
   `--chart-mastered`, `--chart-bar`, `--chart-streak`, `--chart-activity`
+- **Card tier badges**: `--tier-seed`, `--tier-sprout`, `--tier-seedling`,
+  `--tier-sapling`, `--tier-bud`, `--tier-bloom`, `--tier-fruit` — one hue
+  per tier in the 7-step plant progression (Seed → Fruit). Deliberately
+  distinct from the 4 `--chart-*` stage colors so adjacent tiers stay
+  distinguishable at a glance. See `src/components/ui/TierBadge.tsx`.
 - **Borders**: `--border-primary`, `--border-secondary`
 
 All have light + dark variants defined in `:root` and the `.dark` / system

@@ -2,6 +2,7 @@ import {
   useQuery,
   useMutation,
   useQueryClient,
+  keepPreviousData,
 } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useSession } from "next-auth/react";
@@ -48,23 +49,31 @@ export interface DeckWithCards extends Deck {
 }
 
 export interface MemoryStages {
-  new: number;
-  learning: number;
-  reviewing: number;
-  mastered: number;
+  acorn: number;
+  sprout: number;
+  sapling: number;
+  tree: number;
+  grove: number;
+  forest: number;
 }
 
-export interface ReviewForecastDay {
+export interface ReviewForecastBucket {
   date: string;
   count: number;
+  bucket: "hour" | "day";
 }
+
+/** @deprecated — kept as an alias for callers still using the old name. */
+export type ReviewForecastDay = ReviewForecastBucket;
 
 export interface DashboardStats {
   memoryStages: MemoryStages;
-  reviewForecast: ReviewForecastDay[];
+  reviewForecast: ReviewForecastBucket[];
   dueNow: number;
   nextDueAt: number | null;
 }
+
+export type ForecastHorizon = "24h" | "30d";
 
 export type IntervalKey = "1w" | "1m" | "1y";
 
@@ -102,12 +111,16 @@ const qk = {
   deck: (id: number) => ["decks", id] as const,
   deckCards: (id: number) => ["decks", id, "cards"] as const,
   dueCards: (id: number) => ["decks", id, "due"] as const,
-  deckStats: (id: number) => ["decks", id, "stats"] as const,
-  dashboardStats: (tz: string) => ["stats", "dashboard", tz] as const,
+  dashboardStats: (tz: string, horizon: ForecastHorizon) =>
+    ["stats", "dashboard", tz, horizon] as const,
   intervals: (tz: string) => ["stats", "intervals", tz] as const,
   deckIntervals: (id: number, tz: string) => ["decks", id, "intervals", tz] as const,
   activity: (tz: string) => ["stats", "activity", tz] as const,
   search: (q: string) => ["search", q] as const,
+  deckStats: (id: number, tz: string, horizon: ForecastHorizon) =>
+    ["decks", id, "stats", tz, horizon] as const,
+  /** Prefix key for invalidating deck-stats queries across all tz/horizons. */
+  deckStatsPrefix: (id: number) => ["decks", id, "stats"] as const,
 };
 
 // ── Hooks: decks ─────────────────────────────────────────────────────────────────
@@ -191,7 +204,7 @@ export function useCreateCard(deckId: number) {
       qc.invalidateQueries({ queryKey: qk.dueCards(deckId) });
       qc.invalidateQueries({ queryKey: qk.deck(deckId) });
       qc.invalidateQueries({ queryKey: qk.decks });
-      qc.invalidateQueries({ queryKey: qk.deckStats(deckId) });
+      qc.invalidateQueries({ queryKey: qk.deckStatsPrefix(deckId) });
     },
   });
 }
@@ -226,7 +239,7 @@ export function useRecordReview(deckId: number) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: qk.deckCards(deckId) });
       qc.invalidateQueries({ queryKey: qk.dueCards(deckId) });
-      qc.invalidateQueries({ queryKey: qk.deckStats(deckId) });
+      qc.invalidateQueries({ queryKey: qk.deckStatsPrefix(deckId) });
       qc.invalidateQueries({ queryKey: qk.decks });
     },
   });
@@ -242,7 +255,7 @@ export function useDeleteCard(deckId: number) {
       qc.invalidateQueries({ queryKey: qk.dueCards(deckId) });
       qc.invalidateQueries({ queryKey: qk.deck(deckId) });
       qc.invalidateQueries({ queryKey: qk.decks });
-      qc.invalidateQueries({ queryKey: qk.deckStats(deckId) });
+      qc.invalidateQueries({ queryKey: qk.deckStatsPrefix(deckId) });
     },
   });
 }
@@ -266,7 +279,7 @@ export function useCompleteSession(deckId: number) {
     }) => api.patch<{ ok: true }>(`/api/decks/${deckId}/study`, input),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stats"] });
-      qc.invalidateQueries({ queryKey: qk.deckStats(deckId) });
+      qc.invalidateQueries({ queryKey: qk.deckStatsPrefix(deckId) });
       qc.invalidateQueries({ queryKey: ["decks", deckId, "intervals"] });
       qc.invalidateQueries({ queryKey: qk.decks });
     },
@@ -275,13 +288,16 @@ export function useCompleteSession(deckId: number) {
 
 // ── Hooks: stats ─────────────────────────────────────────────────────────────────
 
-export function useDashboardStats(timeZone: string) {
+export function useDashboardStats(timeZone: string, horizon: ForecastHorizon = "30d") {
   const { status } = useSession();
   return useQuery({
-    queryKey: qk.dashboardStats(timeZone),
+    queryKey: qk.dashboardStats(timeZone, horizon),
     queryFn: () =>
-      api.get<DashboardStats>(`/api/stats/dashboard?tz=${encodeURIComponent(timeZone)}`),
+      api.get<DashboardStats>(
+        `/api/stats/dashboard?tz=${encodeURIComponent(timeZone)}&horizon=${horizon}`
+      ),
     enabled: status === "authenticated",
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -305,15 +321,20 @@ export function useActivityHistory(timeZone: string) {
   });
 }
 
-export function useDeckStats(deckId: number, timeZone: string) {
+export function useDeckStats(
+  deckId: number,
+  timeZone: string,
+  horizon: ForecastHorizon = "30d"
+) {
   const { status } = useSession();
   return useQuery({
-    queryKey: qk.deckStats(deckId),
+    queryKey: qk.deckStats(deckId, timeZone, horizon),
     queryFn: () =>
       api.get<DashboardStats>(
-        `/api/decks/${deckId}/stats?tz=${encodeURIComponent(timeZone)}`
+        `/api/decks/${deckId}/stats?tz=${encodeURIComponent(timeZone)}&horizon=${horizon}`
       ),
     enabled: status === "authenticated",
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -339,6 +360,7 @@ export function useSearch(query: string, enabled: boolean) {
       api.get<SearchResult>(`/api/search?q=${encodeURIComponent(query)}`),
     enabled: status === "authenticated" && enabled,
     staleTime: 10_000,
+    placeholderData: keepPreviousData,
   });
 }
 

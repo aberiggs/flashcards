@@ -1,12 +1,15 @@
 'use client';
 
+import { Check } from 'lucide-react';
+
 interface CardEditFormProps {
   front: string;
   back: string;
   onFrontChange: (value: string) => void;
   onBackChange: (value: string) => void;
-  /** If provided, renders Cancel and a primary action button in the footer. */
+  /** Optional Cancel handler. Renders a secondary button in the footer. */
   onCancel?: () => void;
+  /** Primary Save action. */
   onSave?: () => void;
   saveLabel?: string;
   /** Auto-focus the front textarea on mount. */
@@ -25,10 +28,13 @@ export function CardEditForm({
   onBackChange,
   onCancel,
   onSave,
-  saveLabel = 'Save Changes',
+  saveLabel = 'Save',
   autoFocus = false,
   saving = false,
 }: CardEditFormProps) {
+  const canSubmit = !front.trim() || !back.trim() || saving;
+  const hasFooter = onCancel || onSave;
+
   return (
     <div className="flex flex-col gap-4 h-full">
       <div>
@@ -40,7 +46,7 @@ export function CardEditForm({
           onChange={(e) => onFrontChange(e.target.value)}
           rows={4}
           autoFocus={autoFocus}
-          className="w-full bg-surface-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          className="w-full bg-surface-secondary border border-border-primary rounded-lg px-3 py-2 text-base text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
           placeholder="Question or prompt"
         />
       </div>
@@ -52,13 +58,13 @@ export function CardEditForm({
           value={back}
           onChange={(e) => onBackChange(e.target.value)}
           rows={4}
-          className="w-full bg-surface-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          className="w-full bg-surface-secondary border border-border-primary rounded-lg px-3 py-2 text-base text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
           placeholder="Answer"
         />
       </div>
 
-      {(onCancel || onSave) && (
-        <div className="flex gap-2 justify-end mt-auto">
+      {hasFooter && (
+        <div className="flex flex-wrap gap-2 justify-end mt-auto">
           {onCancel && (
             <button
               type="button"
@@ -72,9 +78,10 @@ export function CardEditForm({
             <button
               type="button"
               onClick={onSave}
-              disabled={!front.trim() || !back.trim() || saving}
-              className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+              disabled={canSubmit}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
+              <Check className="w-4 h-4" aria-hidden />
               {saving ? 'Saving…' : saveLabel}
             </button>
           )}

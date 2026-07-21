@@ -92,45 +92,45 @@ describe("filterDeckCards", () => {
   });
 
   describe("stage filter", () => {
-    it("filters to New (reps=0)", () => {
+    it("filters to Acorn (reps=0)", () => {
       const cards = [
         card({ id: 1, repetitions: 0 }),
         card({ id: 2, repetitions: 1 }),
         card({ id: 3, repetitions: 6 }),
       ];
-      const result = filterDeckCards(cards, { ...defaults, stageFilter: "New" });
+      const result = filterDeckCards(cards, { ...defaults, stageFilter: "Acorn" });
       expect(result.map((c) => c.id)).toEqual([1]);
     });
 
-    it("filters to Learning (reps 1-2)", () => {
+    it("filters to Sprout (reps=1)", () => {
       const cards = [
         card({ id: 1, repetitions: 0 }),
         card({ id: 2, repetitions: 1 }),
         card({ id: 3, repetitions: 2 }),
         card({ id: 4, repetitions: 3 }),
       ];
-      const result = filterDeckCards(cards, { ...defaults, stageFilter: "Learning" });
-      expect(result.map((c) => c.id)).toEqual([2, 3]);
+      const result = filterDeckCards(cards, { ...defaults, stageFilter: "Sprout" });
+      expect(result.map((c) => c.id)).toEqual([2]);
     });
 
-    it("filters to Reviewing (reps 3-5)", () => {
+    it("filters to Tree (reps 3-4)", () => {
       const cards = [
         card({ id: 1, repetitions: 2 }),
         card({ id: 2, repetitions: 3 }),
-        card({ id: 3, repetitions: 5 }),
-        card({ id: 4, repetitions: 6 }),
+        card({ id: 3, repetitions: 4 }),
+        card({ id: 4, repetitions: 5 }),
       ];
-      const result = filterDeckCards(cards, { ...defaults, stageFilter: "Reviewing" });
+      const result = filterDeckCards(cards, { ...defaults, stageFilter: "Tree" });
       expect(result.map((c) => c.id)).toEqual([2, 3]);
     });
 
-    it("filters to Mastered (reps >= 6)", () => {
+    it("filters to Forest (reps >= 8)", () => {
       const cards = [
-        card({ id: 1, repetitions: 5 }),
-        card({ id: 2, repetitions: 6 }),
+        card({ id: 1, repetitions: 7 }),
+        card({ id: 2, repetitions: 8 }),
         card({ id: 3, repetitions: 100 }),
       ];
-      const result = filterDeckCards(cards, { ...defaults, stageFilter: "Mastered" });
+      const result = filterDeckCards(cards, { ...defaults, stageFilter: "Forest" });
       expect(result.map((c) => c.id)).toEqual([2, 3]);
     });
   });
@@ -213,7 +213,7 @@ describe("filterDeckCards", () => {
       const result = filterDeckCards(cards, {
         ...defaults,
         query: "hola",
-        stageFilter: "New",
+        stageFilter: "Acorn",
         dueFilter: "overdue",
       });
       expect(result.map((c) => c.id)).toEqual([1]);
@@ -269,7 +269,7 @@ describe("isFilterActive", () => {
   it("is true when stage filter is set", () => {
     expect(isFilterActive({
       query: "",
-      stageFilter: "Learning",
+      stageFilter: "Sprout",
       dueFilter: "all",
       sortKey: "oldest",
     })).toBe(true);

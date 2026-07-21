@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 import {
   buildHeatmapDays,
   groupIntoWeeks,
@@ -33,6 +35,13 @@ export function ActivityHeatmapWidget({ data, timeZone }: ActivityHeatmapWidgetP
   const monthLabels = computeMonthLabels(weeks);
   const totalCards = Object.values(data).reduce((sum, c) => sum + c, 0);
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollLeft = scrollRef.current.scrollWidth;
+    }
+  }, [weeks.length]);
+
   return (
     <div className="rounded-xl border border-border-primary bg-surface-primary p-5 shadow-sm">
       <div className="flex items-center justify-between mb-3">
@@ -44,7 +53,7 @@ export function ActivityHeatmapWidget({ data, timeZone }: ActivityHeatmapWidgetP
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div ref={scrollRef} className="overflow-x-auto">
         <div className="inline-flex flex-col min-w-fit">
           {/* Month labels — offset by weekday label width */}
           <div className="flex mb-1">

@@ -3,13 +3,13 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Pencil, Trash2, Plus, Layers } from 'lucide-react';
-import { useDeck, useDeckStats, useDeckIntervalStats, useUpdateDeck, useDeleteDeck, useCreateCard, useUpdateCard, useDeleteCard, type Card } from '@/lib/hooks';
+import { useDeck, useDeckStats, useDeckIntervalStats, useUpdateDeck, useDeleteDeck, useCreateCard, useUpdateCard, useDeleteCard, type Card, type ForecastHorizon } from '@/lib/hooks';
 import { useDebounce } from '@/lib/useDebounce';
 import { filterDeckCards, type CardSortKey, type DueFilter, type StageFilter } from '@/lib/filterDeckCards';
 import { startOfTodayInTimezone } from '@/lib/startOfToday';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { getMemoryStage } from '@/lib/memoryStage';
+import { getCardTier } from '@/lib/memoryStage';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { MemoryStagesWidget } from '@/components/features/dashboard/MemoryStagesWidget';
@@ -20,6 +20,7 @@ import { CardViewerModal } from '@/components/features/decks/CardViewerModal';
 import { CardEditForm } from '@/components/features/decks/CardEditForm';
 import { CardBrowserFilters } from '@/components/features/decks/CardBrowserFilters';
 import { ExportDeckButton } from '@/components/features/decks/ExportDeckButton';
+import { TierBadge } from '@/components/ui/TierBadge';
 import Link from 'next/link';
 
 interface CardFormData {
@@ -39,8 +40,10 @@ export default function DeckDetailPage() {
 
     const { toast } = useToast();
 
+    const [forecastHorizon, setForecastHorizon] = useState<ForecastHorizon>('30d');
+
     const { data: deckWithCards, isLoading } = useDeck(deckId);
-    const { data: deckStats } = useDeckStats(deckId, timeZone);
+    const { data: deckStats } = useDeckStats(deckId, timeZone, forecastHorizon);
     const { data: deckIntervals } = useDeckIntervalStats(deckId, timeZone);
     const updateDeckMutation = useUpdateDeck(deckId);
     const deleteDeckMutation = useDeleteDeck();
@@ -54,6 +57,11 @@ export default function DeckDetailPage() {
     const [deckDescription, setDeckDescription] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [addForm, setAddForm] = useState<CardFormData>({ front: '', back: '' });
+    // Tracks how many cards have been added in the current add-card session
+    // (reset to 0 when the modal closes). Used for the toast counter and to
+    // force the form to remount via `key` so autoFocus re-triggers after a
+    // save-and-add-another.
+    const [addCount, setAddCount] = useState(0);
     const [isDeleteDeckModalOpen, setIsDeleteDeckModalOpen] = useState(false);
     const [isDeleteCardModalOpen, setIsDeleteCardModalOpen] = useState(false);
     const [cardToDeleteId, setCardToDeleteId] = useState<number | null>(null);
@@ -248,6 +256,10 @@ export default function DeckDetailPage() {
         }
     };
 
+    // Save the current card, clear the form, and keep the modal open so the
+    // user can immediately add another. The form remounts via `key` (see the
+    // Modal JSX) so autoFocus re-triggers on the cleared front textarea. The
+    // X (or Esc / backdrop) closes the modal when the user is done.
     const handleAddCard = async () => {
         if (addForm.front.trim() && addForm.back.trim()) {
             try {
@@ -255,9 +267,9 @@ export default function DeckDetailPage() {
                     front: addForm.front.trim(),
                     back: addForm.back.trim(),
                 });
-                toast.success('Card added');
+                setAddCount((n) => n + 1);
+                toast.success(`Card added · ${addCount + 1} this session`);
                 setAddForm({ front: '', back: '' });
-                setIsAddModalOpen(false);
             } catch (err) {
                 toast.error(err instanceof Error ? err.message : 'Failed to add card');
             }
@@ -315,6 +327,7 @@ export default function DeckDetailPage() {
     const closeAddModal = () => {
         setIsAddModalOpen(false);
         setAddForm({ front: '', back: '' });
+        setAddCount(0);
     };
 
     return (
@@ -432,7 +445,12 @@ export default function DeckDetailPage() {
                     {deckStats ? (
                         <>
                             <MemoryStagesWidget data={deckStats.memoryStages} />
-                            <ReviewForecastWidget data={deckStats.reviewForecast} timeZone={timeZone} />
+                            <ReviewForecastWidget
+                                data={deckStats.reviewForecast}
+                                timeZone={timeZone}
+                                horizon={forecastHorizon}
+                                onHorizonChange={setForecastHorizon}
+                            />
                         </>
                     ) : (
                         <>
@@ -512,6 +530,7 @@ export default function DeckDetailPage() {
                                                     key={card.id}
                                                     front={card.front}
                                                     index={gridIndex}
+                                                    repetitions={card.repetitions}
                                                     onClick={() => {
                                                         setViewingCardId(card.id);
                                                         setShowingCardInfo(false);
@@ -546,7 +565,7 @@ export default function DeckDetailPage() {
                         const safeInfoIndex = Math.min(infoCardIndex, viewerCards.length - 1);
                         const infoCard = viewerCards[safeInfoIndex];
                         const reps = infoCard.repetitions;
-                        const stage = getMemoryStage(reps);
+                        const tier = getCardTier(reps);
                         const nextReviewMs = new Date(infoCard.nextReview).getTime();
                         const nextReviewLabel =
                             nextReviewMs <= now
@@ -555,8 +574,8 @@ export default function DeckDetailPage() {
                         return (
                             <div className="space-y-6">
                                 <div>
-                                    <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">Memory stage</h3>
-                                    <p className="text-text-primary font-medium">{stage}</p>
+                                    <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-2">Tier</h3>
+                                    <TierBadge tier={tier} variant="chip" />
                                 </div>
                                 <div>
                                     <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">Next review</h3>
@@ -576,15 +595,15 @@ export default function DeckDetailPage() {
             />
 
             {/* Add Card Modal */}
-            <Modal isOpen={isAddModalOpen} onClose={closeAddModal} title="Add New Card" size="lg">
+            <Modal isOpen={isAddModalOpen} onClose={closeAddModal} title="Add Card" size="lg">
                 <CardEditForm
+                    key={`add-${addCount}`}
                     front={addForm.front}
                     back={addForm.back}
                     onFrontChange={(v) => setAddForm((f) => ({ ...f, front: v }))}
                     onBackChange={(v) => setAddForm((f) => ({ ...f, back: v }))}
-                    onCancel={closeAddModal}
                     onSave={handleAddCard}
-                    saveLabel="Add Card"
+                    saveLabel="Save"
                     autoFocus
                     saving={addCardMutation.isPending}
                 />

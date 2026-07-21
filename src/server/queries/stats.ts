@@ -1,8 +1,18 @@
 import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cards, decks, studySessions } from "@/db/schema";
+import { getCardTier, CARD_TIERS, type CardTier } from "@/lib/memoryStage";
+
+/**
+ * Map each {@link CardTier} to its lowercase key in {@link MemoryStages}.
+ * Built from CARD_TIERS so the order stays in sync with the tier list.
+ */
+const TIER_KEY: Record<CardTier, keyof MemoryStages> = Object.fromEntries(
+  CARD_TIERS.map((tier) => [tier, tier.toLowerCase()])
+) as Record<CardTier, keyof MemoryStages>;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MS_PER_HOUR = 60 * 60 * 1000;
 
 /** Get start of today (midnight) in the given timezone, as a UTC epoch ms. */
 function getStartOfTodayInTimezone(timeZone: string): number {
@@ -40,26 +50,74 @@ function getDayKey(timestamp: number, timeZone: string): string {
   return `${year}-${month}-${day}`;
 }
 
-export interface MemoryStages {
-  new: number;
-  learning: number;
-  reviewing: number;
-  mastered: number;
+/**
+ * Get a `YYYY-MM-DDTHH:00` hour key for a timestamp in the given timezone.
+ * Used by the 24h forecast horizon. Hours are zero-padded, 24-hour clock.
+ */
+function getHourKey(timestamp: number, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(timestamp));
+  const year = parts.find((p) => p.type === "year")?.value ?? "0000";
+  const month = parts.find((p) => p.type === "month")?.value ?? "01";
+  const day = parts.find((p) => p.type === "day")?.value ?? "01";
+  // Intl uses "24" instead of "00" for midnight with hour12:false in some
+  // environments; normalize so we always get "00".
+  let hour = parts.find((p) => p.type === "hour")?.value ?? "00";
+  if (hour === "24") hour = "00";
+  return `${year}-${month}-${day}T${hour}:00`;
 }
 
 /**
- * Per-day due-card counts for the next 30 days (today + 29 future days).
- * Cards overdue relative to today roll into today's bucket; cards beyond
- * the window are excluded.
+ * Per-tier card counts for the memory-stages chart. One bucket per
+ * {@link CardTier} (Acorn / Sprout / Sapling / Tree / Grove / Forest).
  */
-export interface ReviewForecastDay {
-  date: string; // YYYY-MM-DD in the user's tz
-  count: number;
+export interface MemoryStages {
+  acorn: number;
+  sprout: number;
+  sapling: number;
+  tree: number;
+  grove: number;
+  forest: number;
 }
+
+/**
+ * Forecast horizon. `'30d'` (default) buckets by day for 30 days; `'24h'`
+ * buckets by hour for the next 24 hours. The two share a single response
+ * shape — see {@link ReviewForecastBucket} — so the widget can render either
+ * mode with the same code path.
+ */
+export type ForecastHorizon = "24h" | "30d";
+
+export const FORECAST_HORIZONS: ForecastHorizon[] = ["24h", "30d"];
+
+export function normalizeHorizon(value: string | null | undefined): ForecastHorizon {
+  return value === "24h" ? "24h" : "30d";
+}
+
+/**
+ * One bucket in the review forecast. `bucket` tells the client how to format
+ * the X-axis label and how to interpret `date`:
+ * - `'day'`  → `date` is `YYYY-MM-DD` (day key in the user's tz).
+ * - `'hour'` → `date` is `YYYY-MM-DDTHH:00` (hour key in the user's tz).
+ */
+export interface ReviewForecastBucket {
+  date: string;
+  count: number;
+  bucket: "hour" | "day";
+}
+
+/** @deprecated Use {@link ReviewForecastBucket}. Kept as an alias for callers. */
+export type ReviewForecastDay = ReviewForecastBucket;
 
 export interface DashboardStats {
   memoryStages: MemoryStages;
-  reviewForecast: ReviewForecastDay[];
+  reviewForecast: ReviewForecastBucket[];
   /** Number of cards due right now (nextReview <= current time). */
   dueNow: number;
   /** Earliest future nextReview timestamp (epoch ms), null when no cards exist. */
@@ -83,12 +141,132 @@ export interface IntervalStats {
 export type IntervalStatsResponse = Record<IntervalKey, IntervalStats>;
 
 /**
- * Memory stages + 30-day review forecast across all of the user's decks.
- * Uses a single SQL aggregation instead of the Convex version's per-deck fanout.
+ * Build the review forecast buckets for a horizon, given the per-card
+ * `nextReview` timestamps. Pure: takes already-fetched rows + a timeZone +
+ * horizon and returns the ordered bucket list. Shared by
+ * {@link dashboardStats} and {@link deckStats} so the bucketing logic
+ * can't drift between them.
+ *
+ * Horizon semantics:
+ * - `'30d'` → 30 day-buckets starting today. Cards overdue relative to
+ *   today roll into today's bucket; cards beyond 30 days are excluded.
+ * - `'24h'` → 24 hour-buckets starting at the current hour. Cards due
+ *   earlier than the current hour roll into the first (current-hour)
+ *   bucket; cards beyond 24h are excluded.
+ */
+function buildForecast(
+  rows: { nextReview: Date }[],
+  timeZone: string,
+  horizon: ForecastHorizon
+): ReviewForecastBucket[] {
+  const nowMs = Date.now();
+  const todayStart = getStartOfTodayInTimezone(timeZone);
+
+  if (horizon === "24h") {
+    // Anchor at the start of the current hour in the user's tz. We compute
+    // this from `now` rather than `todayStart` so the first bucket is the
+    // hour we're currently in, not midnight.
+    const hourStart =
+      todayStart +
+      Math.floor((nowMs - todayStart) / MS_PER_HOUR) * MS_PER_HOUR;
+    const horizonEnd = hourStart + 24 * MS_PER_HOUR;
+    const forecastByHour = new Map<string, number>();
+    for (let i = 0; i < 24; i++) {
+      const key = getHourKey(hourStart + i * MS_PER_HOUR, timeZone);
+      forecastByHour.set(key, 0);
+    }
+
+    for (const card of rows) {
+      const nr = card.nextReview.getTime();
+      const bucketStart = nr < hourStart ? hourStart : nr;
+      if (bucketStart < horizonEnd) {
+        const key = getHourKey(bucketStart, timeZone);
+        const existing = forecastByHour.get(key);
+        if (existing !== undefined) forecastByHour.set(key, existing + 1);
+      }
+    }
+
+    const out: ReviewForecastBucket[] = [];
+    for (let i = 0; i < 24; i++) {
+      const key = getHourKey(hourStart + i * MS_PER_HOUR, timeZone);
+      out.push({ date: key, count: forecastByHour.get(key) ?? 0, bucket: "hour" });
+    }
+    return out;
+  }
+
+  // 30d (default)
+  const horizonEnd = todayStart + 30 * MS_PER_DAY;
+  const forecastByDay = new Map<string, number>();
+  for (let i = 0; i < 30; i++) {
+    const key = getDayKey(todayStart + i * MS_PER_DAY, timeZone);
+    forecastByDay.set(key, 0);
+  }
+
+  for (const card of rows) {
+    const nr = card.nextReview.getTime();
+    const bucketStart = nr < todayStart ? todayStart : nr;
+    if (bucketStart < horizonEnd) {
+      const key = getDayKey(bucketStart, timeZone);
+      const existing = forecastByDay.get(key);
+      if (existing !== undefined) forecastByDay.set(key, existing + 1);
+    }
+  }
+
+  const out: ReviewForecastBucket[] = [];
+  for (let i = 0; i < 30; i++) {
+    const key = getDayKey(todayStart + i * MS_PER_DAY, timeZone);
+    out.push({ date: key, count: forecastByDay.get(key) ?? 0, bucket: "day" });
+  }
+  return out;
+}
+
+/**
+ * Accumulate memory stages + due-now/next-due counters from a set of card
+ * rows. Pure helper shared by {@link dashboardStats} and {@link deckStats}.
+ */
+function buildCardAggregates(
+  rows: { repetitions: number; nextReview: Date }[],
+  nowMs: number
+): {
+  memoryStages: MemoryStages;
+  dueNow: number;
+  nextDueAt: number | null;
+} {
+  const memoryStages: MemoryStages = {
+    acorn: 0,
+    sprout: 0,
+    sapling: 0,
+    tree: 0,
+    grove: 0,
+    forest: 0,
+  };
+  let dueNow = 0;
+  let nextDueAt: number | null = null;
+
+  for (const card of rows) {
+    const tier = getCardTier(card.repetitions);
+    memoryStages[TIER_KEY[tier]]++;
+
+    const nr = card.nextReview.getTime();
+    if (nr <= nowMs) {
+      dueNow++;
+    } else if (nextDueAt === null || nr < nextDueAt) {
+      nextDueAt = nr;
+    }
+  }
+
+  return { memoryStages, dueNow, nextDueAt };
+}
+
+/**
+ * Memory stages + review forecast across all of the user's decks. Horizon
+ * selects 30 day-buckets (default) or 24 hour-buckets. Uses a single SQL
+ * aggregation instead of the Convex version's per-deck fanout.
  */
 export async function dashboardStats(
   userId: string,
-  timeZone: string
+  timeZone: string,
+  horizon: ForecastHorizon = "30d"
 ): Promise<DashboardStats> {
   const rows = await db
     .select({
@@ -99,53 +277,8 @@ export async function dashboardStats(
     .innerJoin(decks, eq(decks.id, cards.deckId))
     .where(eq(decks.userId, userId));
 
-  const memoryStages: MemoryStages = {
-    new: 0,
-    learning: 0,
-    reviewing: 0,
-    mastered: 0,
-  };
-
-  const nowMs = Date.now();
-  const todayStart = getStartOfTodayInTimezone(timeZone);
-  const horizonEnd = todayStart + 30 * MS_PER_DAY;
-  const forecastByDay = new Map<string, number>();
-  for (let i = 0; i < 30; i++) {
-    const key = getDayKey(todayStart + i * MS_PER_DAY, timeZone);
-    forecastByDay.set(key, 0);
-  }
-
-  let dueNow = 0;
-  let nextDueAt: number | null = null;
-
-  for (const card of rows) {
-    const reps = card.repetitions;
-    if (reps === 0) memoryStages.new++;
-    else if (reps <= 2) memoryStages.learning++;
-    else if (reps <= 5) memoryStages.reviewing++;
-    else memoryStages.mastered++;
-
-    const nr = card.nextReview.getTime();
-    if (nr <= nowMs) {
-      dueNow++;
-    } else if (nextDueAt === null || nr < nextDueAt) {
-      nextDueAt = nr;
-    }
-
-    const bucketStart = nr < todayStart ? todayStart : nr;
-    if (bucketStart < horizonEnd) {
-      const key = getDayKey(bucketStart, timeZone);
-      const existing = forecastByDay.get(key);
-      if (existing !== undefined) forecastByDay.set(key, existing + 1);
-    }
-  }
-
-  const reviewForecast: ReviewForecastDay[] = [];
-  for (let i = 0; i < 30; i++) {
-    const key = getDayKey(todayStart + i * MS_PER_DAY, timeZone);
-    reviewForecast.push({ date: key, count: forecastByDay.get(key) ?? 0 });
-  }
-
+  const { memoryStages, dueNow, nextDueAt } = buildCardAggregates(rows, Date.now());
+  const reviewForecast = buildForecast(rows, timeZone, horizon);
   return { memoryStages, reviewForecast, dueNow, nextDueAt };
 }
 
@@ -153,7 +286,8 @@ export async function dashboardStats(
 export async function deckStats(
   userId: string,
   deckId: number,
-  timeZone: string
+  timeZone: string,
+  horizon: ForecastHorizon = "30d"
 ): Promise<DashboardStats | null> {
   const [deck] = await db
     .select({ id: decks.id })
@@ -170,53 +304,8 @@ export async function deckStats(
     .from(cards)
     .where(eq(cards.deckId, deckId));
 
-  const memoryStages: MemoryStages = {
-    new: 0,
-    learning: 0,
-    reviewing: 0,
-    mastered: 0,
-  };
-
-  const nowMs = Date.now();
-  const todayStart = getStartOfTodayInTimezone(timeZone);
-  const horizonEnd = todayStart + 30 * MS_PER_DAY;
-  const forecastByDay = new Map<string, number>();
-  for (let i = 0; i < 30; i++) {
-    const key = getDayKey(todayStart + i * MS_PER_DAY, timeZone);
-    forecastByDay.set(key, 0);
-  }
-
-  let dueNow = 0;
-  let nextDueAt: number | null = null;
-
-  for (const card of rows) {
-    const reps = card.repetitions;
-    if (reps === 0) memoryStages.new++;
-    else if (reps <= 2) memoryStages.learning++;
-    else if (reps <= 5) memoryStages.reviewing++;
-    else memoryStages.mastered++;
-
-    const nr = card.nextReview.getTime();
-    if (nr <= nowMs) {
-      dueNow++;
-    } else if (nextDueAt === null || nr < nextDueAt) {
-      nextDueAt = nr;
-    }
-
-    const bucketStart = nr < todayStart ? todayStart : nr;
-    if (bucketStart < horizonEnd) {
-      const key = getDayKey(bucketStart, timeZone);
-      const existing = forecastByDay.get(key);
-      if (existing !== undefined) forecastByDay.set(key, existing + 1);
-    }
-  }
-
-  const reviewForecast: ReviewForecastDay[] = [];
-  for (let i = 0; i < 30; i++) {
-    const key = getDayKey(todayStart + i * MS_PER_DAY, timeZone);
-    reviewForecast.push({ date: key, count: forecastByDay.get(key) ?? 0 });
-  }
-
+  const { memoryStages, dueNow, nextDueAt } = buildCardAggregates(rows, Date.now());
+  const reviewForecast = buildForecast(rows, timeZone, horizon);
   return { memoryStages, reviewForecast, dueNow, nextDueAt };
 }
 

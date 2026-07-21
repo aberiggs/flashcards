@@ -22,30 +22,37 @@ describe("dashboardStats", () => {
     const user = await createTestUser(db);
     const stats = await dashboardStats(user.id, TZ);
     expect(stats.memoryStages).toEqual({
-      new: 0,
-      learning: 0,
-      reviewing: 0,
-      mastered: 0,
+      acorn: 0,
+      sprout: 0,
+      sapling: 0,
+      tree: 0,
+      grove: 0,
+      forest: 0,
     });
     expect(stats.reviewForecast).toHaveLength(30);
     expect(stats.reviewForecast.every((d) => d.count === 0)).toBe(true);
   });
 
-  it("classifies cards into memory stages by repetitions", async () => {
+  it("classifies cards into tiers by repetitions", async () => {
     const user = await createTestUser(db);
     const deck = await seedDeck(db, user.id);
-    await seedCard(db, deck.id, { repetitions: 0 }); // New
-    await seedCard(db, deck.id, { repetitions: 1 }); // Learning
-    await seedCard(db, deck.id, { repetitions: 2 }); // Learning
-    await seedCard(db, deck.id, { repetitions: 3 }); // Reviewing
-    await seedCard(db, deck.id, { repetitions: 5 }); // Reviewing
-    await seedCard(db, deck.id, { repetitions: 6 }); // Mastered
+    await seedCard(db, deck.id, { repetitions: 0 }); // Acorn
+    await seedCard(db, deck.id, { repetitions: 1 }); // Sprout
+    await seedCard(db, deck.id, { repetitions: 2 }); // Sapling
+    await seedCard(db, deck.id, { repetitions: 3 }); // Tree
+    await seedCard(db, deck.id, { repetitions: 4 }); // Tree
+    await seedCard(db, deck.id, { repetitions: 5 }); // Grove
+    await seedCard(db, deck.id, { repetitions: 7 }); // Grove
+    await seedCard(db, deck.id, { repetitions: 8 }); // Forest
+    await seedCard(db, deck.id, { repetitions: 20 }); // Forest
     const stats = await dashboardStats(user.id, TZ);
     expect(stats.memoryStages).toEqual({
-      new: 1,
-      learning: 2,
-      reviewing: 2,
-      mastered: 1,
+      acorn: 1,
+      sprout: 1,
+      sapling: 1,
+      tree: 2,
+      grove: 2,
+      forest: 2,
     });
   });
 
@@ -79,16 +86,51 @@ describe("dashboardStats", () => {
     expect(total).toBe(5);
   });
 
+  it("24h horizon returns 24 hour-buckets tagged bucket='hour'", async () => {
+    const user = await createTestUser(db);
+    const deck = await seedDeck(db, user.id);
+    const now = Date.now();
+    const MS_PER_HOUR = 60 * 60 * 1000;
+    const hourStart = Math.floor(now / MS_PER_HOUR) * MS_PER_HOUR;
+    // Overdue (rolls into current hour bucket).
+    await seedCard(db, deck.id, { nextReview: new Date(now - MS_PER_HOUR) });
+    // Current hour.
+    await seedCard(db, deck.id, { nextReview: new Date(now + 1000) });
+    // 3 hours from now.
+    await seedCard(db, deck.id, {
+      nextReview: new Date(hourStart + 3 * MS_PER_HOUR + 1000),
+    });
+    // 25 hours from now — beyond horizon, excluded.
+    await seedCard(db, deck.id, {
+      nextReview: new Date(hourStart + 25 * MS_PER_HOUR),
+    });
+    const stats = await dashboardStats(user.id, TZ, "24h");
+    expect(stats.reviewForecast).toHaveLength(24);
+    expect(stats.reviewForecast.every((b) => b.bucket === "hour")).toBe(true);
+    expect(stats.reviewForecast[0].count).toBe(2); // overdue + current
+    expect(stats.reviewForecast[3].count).toBe(1);
+    const total = stats.reviewForecast.reduce((s, d) => s + d.count, 0);
+    expect(total).toBe(3);
+  });
+
+  it("24h horizon produces empty buckets for a user with no due cards", async () => {
+    const user = await createTestUser(db);
+    const stats = await dashboardStats(user.id, TZ, "24h");
+    expect(stats.reviewForecast).toHaveLength(24);
+    expect(stats.reviewForecast.every((b) => b.bucket === "hour")).toBe(true);
+    expect(stats.reviewForecast.every((b) => b.count === 0)).toBe(true);
+  });
+
   it("only counts the calling user's cards", async () => {
     const u1 = await createTestUser(db, { email: "u1@x.com" });
     const u2 = await createTestUser(db, { email: "u2@x.com" });
     const d1 = await seedDeck(db, u1.id);
     const d2 = await seedDeck(db, u2.id);
     await seedCard(db, d1.id, { repetitions: 0 });
-    await seedCard(db, d2.id, { repetitions: 6 });
+    await seedCard(db, d2.id, { repetitions: 8 });
     const stats = await dashboardStats(u1.id, TZ);
-    expect(stats.memoryStages.mastered).toBe(0);
-    expect(stats.memoryStages.new).toBe(1);
+    expect(stats.memoryStages.forest).toBe(0);
+    expect(stats.memoryStages.acorn).toBe(1);
   });
 });
 
@@ -105,16 +147,18 @@ describe("deckStats", () => {
     const d1 = await seedDeck(db, user.id, { name: "D1" });
     const d2 = await seedDeck(db, user.id, { name: "D2" });
     await seedCard(db, d1.id, { repetitions: 0 });
-    await seedCard(db, d1.id, { repetitions: 6 });
+    await seedCard(db, d1.id, { repetitions: 8 });
     // d2 cards should be excluded.
     await seedCard(db, d2.id, { repetitions: 0 });
     await seedCard(db, d2.id, { repetitions: 0 });
     const stats = await deckStats(user.id, d1.id, TZ);
     expect(stats?.memoryStages).toEqual({
-      new: 1,
-      learning: 0,
-      reviewing: 0,
-      mastered: 1,
+      acorn: 1,
+      sprout: 0,
+      sapling: 0,
+      tree: 0,
+      grove: 0,
+      forest: 1,
     });
     expect(stats?.reviewForecast).toHaveLength(30);
   });

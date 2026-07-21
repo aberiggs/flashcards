@@ -56,6 +56,17 @@
   --chart-streak: #f59e0b;
   --chart-activity: #3b82f6;
 
+  /* Card tier badge colors — 6-step forest progression (Acorn → Forest).
+     Brown for the unreviewed acorn (it isn't green yet), then a clear
+     lightness ramp through greens so adjacent tiers stay distinguishable
+     at a glance. Kept light enough to read against the light surface. */
+  --tier-acorn: #ca8a04;
+  --tier-sprout: #a3e635;
+  --tier-sapling: #65a30d;
+  --tier-tree: #16a34a;
+  --tier-grove: #15803d;
+  --tier-forest: #166534;
+
   /* Shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -116,6 +127,14 @@
   --chart-bar: #60a5fa;
   --chart-streak: #fbbf24;
   --chart-activity: #60a5fa;
+
+  /* Card tier badge colors — slightly softer in dark mode */
+  --tier-acorn: #d97706;
+  --tier-sprout: #bef264;
+  --tier-sapling: #4ade80;
+  --tier-tree: #22c55e;
+  --tier-grove: #16a34a;
+  --tier-forest: #14532d;
 
   /* Shadow */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
@@ -179,6 +198,14 @@
     --chart-streak: #fbbf24;
     --chart-activity: #60a5fa;
 
+    /* Card tier badge colors — slightly softer in dark mode */
+    --tier-acorn: #d97706;
+    --tier-sprout: #bef264;
+    --tier-sapling: #4ade80;
+    --tier-tree: #22c55e;
+    --tier-grove: #16a34a;
+    --tier-forest: #14532d;
+
     /* Shadow */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
@@ -221,6 +248,12 @@
   --color-status-close-bg: var(--status-close-bg);
   --color-status-close-border: var(--status-close-border);
   --color-status-close-text: var(--status-close-text);
+  --color-tier-acorn: var(--tier-acorn);
+  --color-tier-sprout: var(--tier-sprout);
+  --color-tier-sapling: var(--tier-sapling);
+  --color-tier-tree: var(--tier-tree);
+  --color-tier-grove: var(--tier-grove);
+  --color-tier-forest: var(--tier-forest);
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
