@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Pencil, Trash2, Plus, Layers } from 'lucide-react';
-import { useDeck, useDeckStats, useDeckIntervalStats, useUpdateDeck, useDeleteDeck, useCreateCard, useUpdateCard, useDeleteCard, type Card } from '@/lib/hooks';
+import { useDeck, useDeckStats, useDeckIntervalStats, useUpdateDeck, useDeleteDeck, useCreateCard, useUpdateCard, useDeleteCard, type Card, type ForecastHorizon } from '@/lib/hooks';
 import { useDebounce } from '@/lib/useDebounce';
 import { filterDeckCards, type CardSortKey, type DueFilter, type StageFilter } from '@/lib/filterDeckCards';
 import { startOfTodayInTimezone } from '@/lib/startOfToday';
@@ -40,8 +40,10 @@ export default function DeckDetailPage() {
 
     const { toast } = useToast();
 
+    const [forecastHorizon, setForecastHorizon] = useState<ForecastHorizon>('30d');
+
     const { data: deckWithCards, isLoading } = useDeck(deckId);
-    const { data: deckStats } = useDeckStats(deckId, timeZone);
+    const { data: deckStats } = useDeckStats(deckId, timeZone, forecastHorizon);
     const { data: deckIntervals } = useDeckIntervalStats(deckId, timeZone);
     const updateDeckMutation = useUpdateDeck(deckId);
     const deleteDeckMutation = useDeleteDeck();
@@ -433,7 +435,12 @@ export default function DeckDetailPage() {
                     {deckStats ? (
                         <>
                             <MemoryStagesWidget data={deckStats.memoryStages} />
-                            <ReviewForecastWidget data={deckStats.reviewForecast} timeZone={timeZone} />
+                            <ReviewForecastWidget
+                                data={deckStats.reviewForecast}
+                                timeZone={timeZone}
+                                horizon={forecastHorizon}
+                                onHorizonChange={setForecastHorizon}
+                            />
                         </>
                     ) : (
                         <>
