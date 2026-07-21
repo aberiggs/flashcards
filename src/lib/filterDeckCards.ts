@@ -11,8 +11,6 @@ export interface FilterDeckCardsOptions {
   stageFilter: StageFilter;
   dueFilter: DueFilter;
   sortKey: CardSortKey;
-  /** Current time in ms. Pass Date.now() from callers; fixed in tests. */
-  now: number;
   /** Start-of-today in ms (midnight in the user's tz). Fixed in tests. */
   startOfTodayMs: number;
 }
