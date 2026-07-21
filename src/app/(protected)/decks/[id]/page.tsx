@@ -57,6 +57,11 @@ export default function DeckDetailPage() {
     const [deckDescription, setDeckDescription] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [addForm, setAddForm] = useState<CardFormData>({ front: '', back: '' });
+    // Tracks how many cards have been added in the current add-card session
+    // (reset to 0 when the modal closes). Used for the toast counter and to
+    // force the form to remount via `key` so autoFocus re-triggers after a
+    // save-and-add-another.
+    const [addCount, setAddCount] = useState(0);
     const [isDeleteDeckModalOpen, setIsDeleteDeckModalOpen] = useState(false);
     const [isDeleteCardModalOpen, setIsDeleteCardModalOpen] = useState(false);
     const [cardToDeleteId, setCardToDeleteId] = useState<number | null>(null);
@@ -267,6 +272,25 @@ export default function DeckDetailPage() {
         }
     };
 
+    // Save the current card, clear the form, and keep the modal open so the
+    // user can immediately add another. The form remounts via `key` (see the
+    // Modal JSX) so autoFocus re-triggers on the cleared front textarea.
+    const handleAddCardAndAnother = async () => {
+        if (addForm.front.trim() && addForm.back.trim()) {
+            try {
+                await addCardMutation.mutateAsync({
+                    front: addForm.front.trim(),
+                    back: addForm.back.trim(),
+                });
+                setAddCount((n) => n + 1);
+                toast.success(`Card added · ${addCount + 1} this session`);
+                setAddForm({ front: '', back: '' });
+            } catch (err) {
+                toast.error(err instanceof Error ? err.message : 'Failed to add card');
+            }
+        }
+    };
+
     const handleEditCard = async (card: Card, front: string, back: string) => {
         if (front.trim() && back.trim()) {
             try {
@@ -318,6 +342,7 @@ export default function DeckDetailPage() {
     const closeAddModal = () => {
         setIsAddModalOpen(false);
         setAddForm({ front: '', back: '' });
+        setAddCount(0);
     };
 
     return (
@@ -587,15 +612,18 @@ export default function DeckDetailPage() {
             />
 
             {/* Add Card Modal */}
-            <Modal isOpen={isAddModalOpen} onClose={closeAddModal} title="Add New Card" size="lg">
+            <Modal isOpen={isAddModalOpen} onClose={closeAddModal} title="Add Card" size="lg">
                 <CardEditForm
+                    key={`add-${addCount}`}
                     front={addForm.front}
                     back={addForm.back}
                     onFrontChange={(v) => setAddForm((f) => ({ ...f, front: v }))}
                     onBackChange={(v) => setAddForm((f) => ({ ...f, back: v }))}
                     onCancel={closeAddModal}
                     onSave={handleAddCard}
-                    saveLabel="Add Card"
+                    saveLabel="Save & Close"
+                    onSaveAndAddAnother={handleAddCardAndAnother}
+                    saveAndAddAnotherLabel="Save & Add Another"
                     autoFocus
                     saving={addCardMutation.isPending}
                 />

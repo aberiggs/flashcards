@@ -9,9 +9,17 @@ interface CardEditFormProps {
   onCancel?: () => void;
   onSave?: () => void;
   saveLabel?: string;
+  /**
+   * Optional secondary action — typically "Save & Add Another" in the
+   * add-card flow. When provided, it renders as the primary button and
+   * `onSave` becomes a secondary "Save & Close" button. The parent is
+   * responsible for clearing the form and refocusing on success.
+   */
+  onSaveAndAddAnother?: () => void;
+  saveAndAddAnotherLabel?: string;
   /** Auto-focus the front textarea on mount. */
   autoFocus?: boolean;
-  /** Disables the save button and shows a pending label while true. */
+  /** Disables the save buttons and shows a pending label while true. */
   saving?: boolean;
 }
 
@@ -26,9 +34,14 @@ export function CardEditForm({
   onCancel,
   onSave,
   saveLabel = 'Save Changes',
+  onSaveAndAddAnother,
+  saveAndAddAnotherLabel = 'Save & Add Another',
   autoFocus = false,
   saving = false,
 }: CardEditFormProps) {
+  const canSubmit = !front.trim() || !back.trim() || saving;
+  const hasFooter = onCancel || onSave || onSaveAndAddAnother;
+
   return (
     <div className="flex flex-col gap-4 h-full">
       <div>
@@ -40,7 +53,7 @@ export function CardEditForm({
           onChange={(e) => onFrontChange(e.target.value)}
           rows={4}
           autoFocus={autoFocus}
-          className="w-full bg-surface-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          className="w-full bg-surface-secondary border border-border-primary rounded-lg px-3 py-2 text-base text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
           placeholder="Question or prompt"
         />
       </div>
@@ -52,13 +65,13 @@ export function CardEditForm({
           value={back}
           onChange={(e) => onBackChange(e.target.value)}
           rows={4}
-          className="w-full bg-surface-secondary border border-border-primary rounded-lg px-3 py-2 text-sm text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
+          className="w-full bg-surface-secondary border border-border-primary rounded-lg px-3 py-2 text-base text-text-primary resize-none focus:outline-none focus:ring-2 focus:ring-accent-primary"
           placeholder="Answer"
         />
       </div>
 
-      {(onCancel || onSave) && (
-        <div className="flex gap-2 justify-end mt-auto">
+      {hasFooter && (
+        <div className="flex flex-wrap gap-2 justify-end mt-auto">
           {onCancel && (
             <button
               type="button"
@@ -72,10 +85,20 @@ export function CardEditForm({
             <button
               type="button"
               onClick={onSave}
-              disabled={!front.trim() || !back.trim() || saving}
-              className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+              disabled={canSubmit}
+              className="px-4 py-2.5 rounded-lg text-sm font-medium border border-border-primary text-text-primary hover:bg-surface-secondary transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
               {saving ? 'Saving…' : saveLabel}
+            </button>
+          )}
+          {onSaveAndAddAnother && (
+            <button
+              type="button"
+              onClick={onSaveAndAddAnother}
+              disabled={canSubmit}
+              className="px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-primary text-text-inverse hover:bg-accent-primary-hover transition-colors disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+            >
+              {saving ? 'Saving…' : saveAndAddAnotherLabel}
             </button>
           )}
         </div>

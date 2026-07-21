@@ -12,6 +12,14 @@ User-facing capabilities.
   today / Upcoming), and sort (oldest / newest / due first / stage). Filtering
   is client-side against the loaded deck; the card viewer modal walks the
   filtered set when filters are active.
+- 7-tier plant-metaphor progression (Seed → Sprout → Seedling → Sapling → Bud
+  → Bloom → Fruit), one tier per `repetitions` value 0-5 and 6+. Each card
+  preview shows a colored tier badge with its `N/7` ordinal; the card viewer
+  info panel shows the tier name + its coarse stage roll-up. The 4-bucket
+  memory-stage filter and dashboard widget remain as a stable roll-up.
+- Add-card flow supports "Save & Add Another" — keeps the modal open, clears
+  the form, refocuses the front textarea, and toasts a per-session counter —
+  for fast batch entry.
 
 ## Study workflow
 
@@ -23,8 +31,12 @@ User-facing capabilities.
 
 ## Dashboard and insights
 
-- Memory stages pie chart and 30-day per-day review forecast chart (overdue
-  cards roll into today).
+- Memory stages pie chart (New / Learning / Reviewing / Mastered) and review
+  forecast chart with an adjustable horizon: 24h (hourly buckets, anchored at
+  the current hour) or 30d (daily buckets, today + 29 future days; overdue
+  cards roll into today). Header summary reads "N due now · M scheduled in
+  the next <period>" so the current bucket and the whole-horizon total stay
+  distinct.
 - Interval stats (1 week / 1 month / 1 year): sessions, cards reviewed,
   accuracy, and % change vs the previous interval.
 - 90-day activity heatmap and helpful empty states.
@@ -40,3 +52,7 @@ User-facing capabilities.
 - Sign-out and authenticated route gating.
 - Theme options (light, dark, system).
 - Global search (Cmd/Ctrl+K), toast notifications, and mobile usability improvements.
+- App-like mobile viewport: pinch-zoom is disabled (maximum-scale=1,
+  user-scalable=no) so the experience matches a native app — no accidental
+  zoom when tapping inputs, no double-tap zoom dance. System font scaling
+  still works for users who need larger text.
