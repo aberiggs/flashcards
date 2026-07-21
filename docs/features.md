@@ -31,12 +31,13 @@ User-facing capabilities.
 
 ## Dashboard and insights
 
-- Memory stages pie chart (New / Learning / Reviewing / Mastered) and review
-  forecast chart with an adjustable horizon: 24h (hourly buckets, anchored at
-  the current hour) or 30d (daily buckets, today + 29 future days; overdue
-  cards roll into today). Header summary reads "N due now · M scheduled in
-  the next <period>" so the current bucket and the whole-horizon total stay
-  distinct.
+- Memory stages chart showing the full 7-tier progression (Seed / Sprout /
+  Seedling / Sapling / Bud / Bloom / Fruit) as a stacked bar with per-tier
+  counts and percentages. Review forecast chart with an adjustable horizon:
+  24h (hourly buckets, anchored at the current hour) or 30d (daily buckets,
+  today + 29 future days; overdue cards roll into today). Header summary
+  reads "N due now · M scheduled in the next <period>" so the current bucket
+  and the whole-horizon total stay distinct.
 - Interval stats (1 week / 1 month / 1 year): sessions, cards reviewed,
   accuracy, and % change vs the previous interval.
 - 90-day activity heatmap and helpful empty states.

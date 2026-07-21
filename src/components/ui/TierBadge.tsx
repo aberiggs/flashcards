@@ -22,8 +22,8 @@ export interface TierBadgeProps {
   tier: CardTier;
   /**
    * Visual variant:
-   * - `'dot'`    — small colored dot + ordinal, for dense surfaces like
-   *                the card grid. (default)
+   * - `'dot'`    — colored dot + tier name + ordinal, for dense surfaces
+   *                like the card grid. (default)
    * - `'chip'`   — rounded chip with the tier name, for detail views like
    *                the card viewer info panel.
    */
@@ -33,9 +33,9 @@ export interface TierBadgeProps {
 }
 
 /**
- * Compact tier badge. Shows a tier-colored dot (or chip) plus the tier's
- * 1-based ordinal out of 7 — e.g. "• 4/7" — so the user can gauge progress
- * at a glance without needing to memorize the plant metaphor.
+ * Tier badge. The dot variant shows a visible colored dot followed by the
+ * tier name and its 1-based ordinal out of 7 (e.g. "Sprout · 2/7") so the
+ * progression is readable without memorizing the metaphor.
  */
 export function TierBadge({ tier, variant = 'dot', className }: TierBadgeProps) {
   const color = TIER_TOKEN[tier];
@@ -61,16 +61,18 @@ export function TierBadge({ tier, variant = 'dot', className }: TierBadgeProps) 
 
   return (
     <span
-      className={`inline-flex items-center gap-1 text-xs font-medium text-text-tertiary tabular-nums ${className ?? ''}`}
+      className={`inline-flex items-center gap-1 text-xs font-medium text-text-secondary tabular-nums ${className ?? ''}`}
       title={`${tier} — level ${level} of ${TOTAL_TIERS}`}
     >
       <span
-        className="size-2 rounded-full"
+        className="size-2.5 rounded-full"
         style={{ backgroundColor: color }}
         aria-hidden
       />
-      <span className="text-text-secondary">{level}/{TOTAL_TIERS}</span>
-      <span className="sr-only">{tier}</span>
+      <span className="text-text-secondary">{tier}</span>
+      <span className="text-text-tertiary">
+        {level}/{TOTAL_TIERS}
+      </span>
     </span>
   );
 }

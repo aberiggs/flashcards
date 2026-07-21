@@ -1,10 +1,13 @@
 'use client';
 
 export interface MemoryStagesData {
-  new: number;
-  learning: number;
-  reviewing: number;
-  mastered: number;
+  seed: number;
+  sprout: number;
+  seedling: number;
+  sapling: number;
+  bud: number;
+  bloom: number;
+  fruit: number;
 }
 
 const STAGE_META: {
@@ -12,10 +15,13 @@ const STAGE_META: {
   label: string;
   color: string;
 }[] = [
-  { key: 'new', label: 'New', color: 'var(--chart-new)' },
-  { key: 'learning', label: 'Learning', color: 'var(--chart-learning)' },
-  { key: 'reviewing', label: 'Reviewing', color: 'var(--chart-reviewing)' },
-  { key: 'mastered', label: 'Mastered', color: 'var(--chart-mastered)' },
+  { key: 'seed', label: 'Seed', color: 'var(--tier-seed)' },
+  { key: 'sprout', label: 'Sprout', color: 'var(--tier-sprout)' },
+  { key: 'seedling', label: 'Seedling', color: 'var(--tier-seedling)' },
+  { key: 'sapling', label: 'Sapling', color: 'var(--tier-sapling)' },
+  { key: 'bud', label: 'Bud', color: 'var(--tier-bud)' },
+  { key: 'bloom', label: 'Bloom', color: 'var(--tier-bloom)' },
+  { key: 'fruit', label: 'Fruit', color: 'var(--tier-fruit)' },
 ];
 
 interface MemoryStagesWidgetProps {
@@ -23,8 +29,7 @@ interface MemoryStagesWidgetProps {
 }
 
 export function MemoryStagesWidget({ data }: MemoryStagesWidgetProps) {
-  const total =
-    data.new + data.learning + data.reviewing + data.mastered;
+  const total = STAGE_META.reduce((sum, s) => sum + data[s.key], 0);
 
   if (total === 0) {
     return (

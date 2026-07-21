@@ -1,6 +1,15 @@
 import { and, eq, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { cards, decks, studySessions } from "@/db/schema";
+import { getCardTier, CARD_TIERS, type CardTier } from "@/lib/memoryStage";
+
+/**
+ * Map each {@link CardTier} to its lowercase key in {@link MemoryStages}.
+ * Built from CARD_TIERS so the order stays in sync with the tier list.
+ */
+const TIER_KEY: Record<CardTier, keyof MemoryStages> = Object.fromEntries(
+  CARD_TIERS.map((tier) => [tier, tier.toLowerCase()])
+) as Record<CardTier, keyof MemoryStages>;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MS_PER_HOUR = 60 * 60 * 1000;
@@ -64,11 +73,21 @@ function getHourKey(timestamp: number, timeZone: string): string {
   return `${year}-${month}-${day}T${hour}:00`;
 }
 
+/**
+ * Per-tier card counts for the memory-stages chart. One bucket per
+ * {@link CardTier} (Seed / Sprout / Seedling / Sapling / Bud / Bloom /
+ * Fruit). The older 4-bucket roll-up is gone — the dashboard now shows the
+ * full 7-tier progression. The 4-bucket {@link getMemoryStage} roll-up is
+ * still used by the stage filter in the deck page.
+ */
 export interface MemoryStages {
-  new: number;
-  learning: number;
-  reviewing: number;
-  mastered: number;
+  seed: number;
+  sprout: number;
+  seedling: number;
+  sapling: number;
+  bud: number;
+  bloom: number;
+  fruit: number;
 }
 
 /**
@@ -218,20 +237,20 @@ function buildCardAggregates(
   nextDueAt: number | null;
 } {
   const memoryStages: MemoryStages = {
-    new: 0,
-    learning: 0,
-    reviewing: 0,
-    mastered: 0,
+    seed: 0,
+    sprout: 0,
+    seedling: 0,
+    sapling: 0,
+    bud: 0,
+    bloom: 0,
+    fruit: 0,
   };
   let dueNow = 0;
   let nextDueAt: number | null = null;
 
   for (const card of rows) {
-    const reps = card.repetitions;
-    if (reps === 0) memoryStages.new++;
-    else if (reps <= 2) memoryStages.learning++;
-    else if (reps <= 5) memoryStages.reviewing++;
-    else memoryStages.mastered++;
+    const tier = getCardTier(card.repetitions);
+    memoryStages[TIER_KEY[tier]]++;
 
     const nr = card.nextReview.getTime();
     if (nr <= nowMs) {

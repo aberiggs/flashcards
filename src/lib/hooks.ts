@@ -48,10 +48,13 @@ export interface DeckWithCards extends Deck {
 }
 
 export interface MemoryStages {
-  new: number;
-  learning: number;
-  reviewing: number;
-  mastered: number;
+  seed: number;
+  sprout: number;
+  seedling: number;
+  sapling: number;
+  bud: number;
+  bloom: number;
+  fruit: number;
 }
 
 export interface ReviewForecastBucket {

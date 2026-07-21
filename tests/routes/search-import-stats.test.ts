@@ -128,7 +128,7 @@ describe("GET /api/stats/dashboard", () => {
     expect(Array.isArray(body.reviewForecast)).toBe(true);
     expect(body.reviewForecast).toHaveLength(30);
     expect(body.reviewForecast[0].bucket).toBe("day");
-    expect(body.memoryStages.new).toBe(1);
+    expect(body.memoryStages.seed).toBe(1);
   });
 
   it("accepts ?horizon=24h and returns 24 hour-buckets", async () => {
