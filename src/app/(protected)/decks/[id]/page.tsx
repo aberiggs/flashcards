@@ -9,7 +9,7 @@ import { filterDeckCards, type CardSortKey, type DueFilter, type StageFilter } f
 import { startOfTodayInTimezone } from '@/lib/startOfToday';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { getMemoryStage, getCardTier } from '@/lib/memoryStage';
+import { getCardTier } from '@/lib/memoryStage';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { MemoryStagesWidget } from '@/components/features/dashboard/MemoryStagesWidget';
@@ -256,26 +256,11 @@ export default function DeckDetailPage() {
         }
     };
 
-    const handleAddCard = async () => {
-        if (addForm.front.trim() && addForm.back.trim()) {
-            try {
-                await addCardMutation.mutateAsync({
-                    front: addForm.front.trim(),
-                    back: addForm.back.trim(),
-                });
-                toast.success('Card added');
-                setAddForm({ front: '', back: '' });
-                setIsAddModalOpen(false);
-            } catch (err) {
-                toast.error(err instanceof Error ? err.message : 'Failed to add card');
-            }
-        }
-    };
-
     // Save the current card, clear the form, and keep the modal open so the
     // user can immediately add another. The form remounts via `key` (see the
-    // Modal JSX) so autoFocus re-triggers on the cleared front textarea.
-    const handleAddCardAndAnother = async () => {
+    // Modal JSX) so autoFocus re-triggers on the cleared front textarea. The
+    // X (or Esc / backdrop) closes the modal when the user is done.
+    const handleAddCard = async () => {
         if (addForm.front.trim() && addForm.back.trim()) {
             try {
                 await addCardMutation.mutateAsync({
@@ -581,7 +566,6 @@ export default function DeckDetailPage() {
                         const infoCard = viewerCards[safeInfoIndex];
                         const reps = infoCard.repetitions;
                         const tier = getCardTier(reps);
-                        const stage = getMemoryStage(reps);
                         const nextReviewMs = new Date(infoCard.nextReview).getTime();
                         const nextReviewLabel =
                             nextReviewMs <= now
@@ -592,7 +576,6 @@ export default function DeckDetailPage() {
                                 <div>
                                     <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-2">Tier</h3>
                                     <TierBadge tier={tier} variant="chip" />
-                                    <p className="text-xs text-text-tertiary mt-2">{stage} stage</p>
                                 </div>
                                 <div>
                                     <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">Next review</h3>
@@ -619,11 +602,8 @@ export default function DeckDetailPage() {
                     back={addForm.back}
                     onFrontChange={(v) => setAddForm((f) => ({ ...f, front: v }))}
                     onBackChange={(v) => setAddForm((f) => ({ ...f, back: v }))}
-                    onCancel={closeAddModal}
                     onSave={handleAddCard}
-                    saveLabel="Save & Close"
-                    onSaveAndAddAnother={handleAddCardAndAnother}
-                    saveAndAddAnotherLabel="Save & Add Another"
+                    saveLabel="Save"
                     autoFocus
                     saving={addCardMutation.isPending}
                 />

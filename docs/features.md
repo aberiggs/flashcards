@@ -7,19 +7,22 @@ User-facing capabilities.
 - Create, edit, and remove decks and cards.
 - View card counts, due counts, and last-studied order on decks.
 - Render card content as Markdown (paragraphs, emphasis, lists, inline code).
-- In-deck card browser with text search (front/back), memory-stage filter
-  (New / Learning / Reviewing / Mastered), due-status filter (Overdue / Due
-  today / Upcoming), and sort (oldest / newest / due first / stage). Filtering
-  is client-side against the loaded deck; the card viewer modal walks the
-  filtered set when filters are active.
-- 7-tier plant-metaphor progression (Seed → Sprout → Seedling → Sapling → Bud
-  → Bloom → Fruit), one tier per `repetitions` value 0-5 and 6+. Each card
-  preview shows a colored tier badge with its `N/7` ordinal; the card viewer
-  info panel shows the tier name + its coarse stage roll-up. The 4-bucket
-  memory-stage filter and dashboard widget remain as a stable roll-up.
-- Add-card flow supports "Save & Add Another" — keeps the modal open, clears
-  the form, refocuses the front textarea, and toasts a per-session counter —
-  for fast batch entry.
+- In-deck card browser with text search (front/back), tier filter
+  (All / Acorn / Sprout / Sapling / Tree / Grove / Forest), due-status filter
+  (Overdue / Due today / Upcoming), and sort (oldest / newest / due first /
+  stage). Filtering is client-side against the loaded deck; the card viewer
+  modal walks the filtered set when filters are active.
+- 6-tier plant-metaphor progression (Acorn → Sprout → Sapling → Tree →
+  Grove → Forest), grouped by SM-2 reality: the early tiers change per review
+  because intervals jump fast there, while the mature tiers each span
+  multiple reps because by then intervals are weeks/months/years. Tier
+  labels, colors, and order are defined once in `src/lib/memoryStage.ts`
+  (`TIER_META`) and consumed by the card badge, dashboard widget, and stage
+  filter so they can never drift apart.
+- Add-card flow: a single Save commits the card, clears the form, and keeps
+  the modal open with the front textarea auto-focused for fast batch entry.
+  A per-session counter in the toast ("Card added · N this session") tracks
+  how many you've added; close the modal (X / Esc / backdrop) when done.
 
 ## Study workflow
 
@@ -31,13 +34,13 @@ User-facing capabilities.
 
 ## Dashboard and insights
 
-- Memory stages chart showing the full 7-tier progression (Seed / Sprout /
-  Seedling / Sapling / Bud / Bloom / Fruit) as a stacked bar with per-tier
-  counts and percentages. Review forecast chart with an adjustable horizon:
-  24h (hourly buckets, anchored at the current hour) or 30d (daily buckets,
-  today + 29 future days; overdue cards roll into today). Header summary
-  reads "N due now · M scheduled in the next <period>" so the current bucket
-  and the whole-horizon total stay distinct.
+- Memory stages chart showing the full 6-tier progression (Acorn / Sprout /
+  Sapling / Tree / Grove / Forest) as a stacked bar with per-tier counts and
+  percentages. Review forecast chart with an adjustable horizon: 24h (hourly
+  buckets, anchored at the current hour) or 30d (daily buckets, today + 29
+  future days; overdue cards roll into today). Header summary reads "N due
+  now · M scheduled in the next <period>" so the current bucket and the
+  whole-horizon total stay distinct.
 - Interval stats (1 week / 1 month / 1 year): sessions, cards reviewed,
   accuracy, and % change vs the previous interval.
 - 90-day activity heatmap and helpful empty states.
