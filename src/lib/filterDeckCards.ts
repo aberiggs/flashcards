@@ -49,8 +49,8 @@ function toMs(value: string | number | Date): number {
 
 /**
  * Filter and sort a deck's cards in-memory. Pure: no IO, no globals. All
- * time-dependent comparisons are parameterized via `now` and
- * `startOfTodayMs` so the function is deterministic under test.
+ * time-dependent comparisons are parameterized via `startOfTodayMs` so the
+ * function is deterministic under test.
  *
  * Due-status buckets:
  *   - overdue:  nextReview < startOfTodayMs
