@@ -1,8 +1,8 @@
-import { getMemoryStage, type MemoryStage } from "@/lib/memoryStage";
+import { getCardTier, type CardTier } from "@/lib/memoryStage";
 
 // ── Filter option types ─────────────────────────────────────────────────────
 
-export type StageFilter = MemoryStage | "all";
+export type StageFilter = CardTier | "all";
 export type DueFilter = "all" | "overdue" | "today" | "upcoming";
 export type CardSortKey = "oldest" | "newest" | "due" | "stage";
 
@@ -79,7 +79,7 @@ export function filterDeckCards(
     }
 
     if (opts.stageFilter !== "all") {
-      if (getMemoryStage(card.repetitions) !== opts.stageFilter) continue;
+      if (getCardTier(card.repetitions) !== opts.stageFilter) continue;
     }
 
     if (opts.dueFilter !== "all") {

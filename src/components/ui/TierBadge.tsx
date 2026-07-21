@@ -1,19 +1,14 @@
 'use client';
 
-import { type CardTier } from '@/lib/memoryStage';
+import { TIER_META, type CardTier } from '@/lib/memoryStage';
 
 /**
- * CSS token name for each tier. Kept here so callers don't have to map
- * tier → token — the badge and any future consumer just look it up.
+ * Tier → CSS color token, looked up from the shared {@link TIER_META} table
+ * so the badge, dashboard widget, and filter all read from one place.
  */
-const TIER_TOKEN: Record<CardTier, string> = {
-  Acorn: 'var(--tier-acorn)',
-  Sprout: 'var(--tier-sprout)',
-  Sapling: 'var(--tier-sapling)',
-  Tree: 'var(--tier-tree)',
-  Grove: 'var(--tier-grove)',
-  Forest: 'var(--tier-forest)',
-};
+const TIER_TOKEN: Record<CardTier, string> = Object.fromEntries(
+  TIER_META.map((t) => [t.tier, t.token])
+) as Record<CardTier, string>;
 
 export interface TierBadgeProps {
   tier: CardTier;

@@ -1,29 +1,20 @@
 'use client';
 
-export interface MemoryStagesData {
-  acorn: number;
-  sprout: number;
-  sapling: number;
-  tree: number;
-  grove: number;
-  forest: number;
-}
+import { TIER_META } from '@/lib/memoryStage';
+import type { MemoryStages } from '@/lib/hooks';
 
 const STAGE_META: {
-  key: keyof MemoryStagesData;
+  key: keyof MemoryStages;
   label: string;
   color: string;
-}[] = [
-  { key: 'acorn', label: 'Acorn', color: 'var(--tier-acorn)' },
-  { key: 'sprout', label: 'Sprout', color: 'var(--tier-sprout)' },
-  { key: 'sapling', label: 'Sapling', color: 'var(--tier-sapling)' },
-  { key: 'tree', label: 'Tree', color: 'var(--tier-tree)' },
-  { key: 'grove', label: 'Grove', color: 'var(--tier-grove)' },
-  { key: 'forest', label: 'Forest', color: 'var(--tier-forest)' },
-];
+}[] = TIER_META.map((t) => ({
+  key: t.tier.toLowerCase() as keyof MemoryStages,
+  label: t.label,
+  color: t.token,
+}));
 
 interface MemoryStagesWidgetProps {
-  data: MemoryStagesData;
+  data: MemoryStages;
 }
 
 export function MemoryStagesWidget({ data }: MemoryStagesWidgetProps) {

@@ -1,30 +1,23 @@
 /**
- * Card memory state.
+ * Card memory state — the single source of truth for card progression.
  *
- * Two parallel views over `repetitions`:
+ * Every consumer in the app (badges, dashboard widget, stage filter, stats
+ * backend) reads from this module. There is no longer a parallel "coarse
+ * 4-bucket" stage type — the 6 tiers ARE the stages.
  *
- * - {@link MemoryStage} rolls up into the 4 coarse buckets the stage filter
- *   uses (New / Learning / Reviewing / Mastered). Stable surface — do not
- *   rename without updating the filter and route tests.
+ * Tier boundaries group by SM-2 reality: the early tiers change per review
+ * because intervals jump fast there (1d → 6d → 15d), while the mature tiers
+ * each span multiple reps because by then intervals are weeks/months/years —
+ * one good review shouldn't bump a Tree straight to a Forest.
  *
- * - {@link CardTier} is the finer, user-facing 6-tier "forest" progression
- *   (Acorn → Forest). Grouped by SM-2 reality: the early tiers change per
- *   review because intervals jump fast there (1d → 6d → 15d), while the
- *   mature tiers each span multiple reps because by then intervals are
- *   weeks/months/years — one good review shouldn't bump a Tree straight to
- *   a Forest. Used for per-card badges and the dashboard widget so progress
- *   feels granular and rewarding without misrepresenting how far along a
- *   card actually is.
- *
- * Repetition → tier boundaries (and the matching coarse stage):
- *   0      → Acorn    (New)
- *   1      → Sprout   (Learning)
- *   2      → Sapling  (Learning)
- *   3–4    → Tree     (Reviewing)
- *   5–7    → Grove    (Reviewing)
- *   8+     → Forest   (Mastered)
+ * Repetition → tier:
+ *   0      → Acorn
+ *   1      → Sprout
+ *   2      → Sapling
+ *   3–4    → Tree
+ *   5–7    → Grove
+ *   8+     → Forest
  */
-export type MemoryStage = 'New' | 'Learning' | 'Reviewing' | 'Mastered';
 
 export type CardTier =
   | 'Acorn'
@@ -34,28 +27,9 @@ export type CardTier =
   | 'Grove'
   | 'Forest';
 
-export function getMemoryStage(repetitions: number): MemoryStage {
-    if (repetitions <= 0) return 'New';
-    if (repetitions <= 2) return 'Learning';
-    if (repetitions <= 7) return 'Reviewing';
-    return 'Mastered';
-}
-
 /**
- * Tier → parent stage roll-up. Used by the stage filter so it can map a
- * fine tier back to its coarse bucket.
- */
-export const TIER_TO_STAGE: Record<CardTier, MemoryStage> = {
-    Acorn: 'New',
-    Sprout: 'Learning',
-    Sapling: 'Learning',
-    Tree: 'Reviewing',
-    Grove: 'Reviewing',
-    Forest: 'Mastered',
-};
-
-/**
- * Ordered tier list (lowest → highest). Drives badge color and widget order.
+ * Ordered tier list (lowest → highest). Drives badge order, the dashboard
+ * widget, and the stage-filter dropdown.
  */
 export const CARD_TIERS: CardTier[] = [
     'Acorn',
@@ -82,3 +56,22 @@ export function getCardTier(repetitions: number): CardTier {
 export function tierOrdinal(tier: CardTier): number {
     return CARD_TIERS.indexOf(tier);
 }
+
+/**
+ * Shared per-tier metadata. The single source of truth for tier label and
+ * CSS color token — `TierBadge`, `MemoryStagesWidget`, and the stage-filter
+ * dropdown all read from this table so they can never drift apart.
+ */
+export interface TierMeta {
+    tier: CardTier;
+    /** Display label (same as the tier name, but explicit for the table). */
+    label: string;
+    /** CSS custom property name for the tier color, e.g. `var(--tier-acorn)`. */
+    token: string;
+}
+
+export const TIER_META: TierMeta[] = CARD_TIERS.map((tier) => ({
+    tier,
+    label: tier,
+    token: `var(--tier-${tier.toLowerCase()})`,
+}));

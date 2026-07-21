@@ -76,8 +76,6 @@ function getHourKey(timestamp: number, timeZone: string): string {
 /**
  * Per-tier card counts for the memory-stages chart. One bucket per
  * {@link CardTier} (Acorn / Sprout / Sapling / Tree / Grove / Forest).
- * The 4-bucket {@link getMemoryStage} roll-up is still used by the stage
- * filter in the deck page.
  */
 export interface MemoryStages {
   acorn: number;

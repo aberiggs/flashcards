@@ -2,6 +2,7 @@
 
 import { Search, X, Filter, CalendarClock, GraduationCap, ArrowDownUp } from 'lucide-react';
 import { Dropdown, type DropdownOption } from '@/components/ui/Dropdown';
+import { TIER_META } from '@/lib/memoryStage';
 import {
   type CardSortKey,
   type DueFilter,
@@ -29,10 +30,7 @@ export interface CardBrowserFiltersProps {
 
 const STAGE_OPTIONS: DropdownOption[] = [
   { value: 'all', label: 'All stages' },
-  { value: 'New', label: 'New' },
-  { value: 'Learning', label: 'Learning' },
-  { value: 'Reviewing', label: 'Reviewing' },
-  { value: 'Mastered', label: 'Mastered' },
+  ...TIER_META.map((t) => ({ value: t.tier, label: t.label })),
 ];
 
 const DUE_OPTIONS: DropdownOption[] = [
