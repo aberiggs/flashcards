@@ -9,7 +9,7 @@ import { filterDeckCards, type CardSortKey, type DueFilter, type StageFilter } f
 import { startOfTodayInTimezone } from '@/lib/startOfToday';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/components/ui/Toast';
-import { getMemoryStage } from '@/lib/memoryStage';
+import { getMemoryStage, getCardTier } from '@/lib/memoryStage';
 import { AppHeader } from '@/components/layout/AppHeader';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { MemoryStagesWidget } from '@/components/features/dashboard/MemoryStagesWidget';
@@ -20,6 +20,7 @@ import { CardViewerModal } from '@/components/features/decks/CardViewerModal';
 import { CardEditForm } from '@/components/features/decks/CardEditForm';
 import { CardBrowserFilters } from '@/components/features/decks/CardBrowserFilters';
 import { ExportDeckButton } from '@/components/features/decks/ExportDeckButton';
+import { TierBadge } from '@/components/ui/TierBadge';
 import Link from 'next/link';
 
 interface CardFormData {
@@ -512,6 +513,7 @@ export default function DeckDetailPage() {
                                                     key={card.id}
                                                     front={card.front}
                                                     index={gridIndex}
+                                                    repetitions={card.repetitions}
                                                     onClick={() => {
                                                         setViewingCardId(card.id);
                                                         setShowingCardInfo(false);
@@ -546,6 +548,7 @@ export default function DeckDetailPage() {
                         const safeInfoIndex = Math.min(infoCardIndex, viewerCards.length - 1);
                         const infoCard = viewerCards[safeInfoIndex];
                         const reps = infoCard.repetitions;
+                        const tier = getCardTier(reps);
                         const stage = getMemoryStage(reps);
                         const nextReviewMs = new Date(infoCard.nextReview).getTime();
                         const nextReviewLabel =
@@ -555,8 +558,9 @@ export default function DeckDetailPage() {
                         return (
                             <div className="space-y-6">
                                 <div>
-                                    <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">Memory stage</h3>
-                                    <p className="text-text-primary font-medium">{stage}</p>
+                                    <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-2">Tier</h3>
+                                    <TierBadge tier={tier} variant="chip" />
+                                    <p className="text-xs text-text-tertiary mt-2">{stage} stage</p>
                                 </div>
                                 <div>
                                     <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1">Next review</h3>
