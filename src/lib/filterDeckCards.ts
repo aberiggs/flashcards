@@ -11,8 +11,6 @@ export interface FilterDeckCardsOptions {
   stageFilter: StageFilter;
   dueFilter: DueFilter;
   sortKey: CardSortKey;
-  /** Current time in ms. Pass Date.now() from callers; fixed in tests. */
-  now: number;
   /** Start-of-today in ms (midnight in the user's tz). Fixed in tests. */
   startOfTodayMs: number;
 }
@@ -51,8 +49,8 @@ function toMs(value: string | number | Date): number {
 
 /**
  * Filter and sort a deck's cards in-memory. Pure: no IO, no globals. All
- * time-dependent comparisons are parameterized via `now` and
- * `startOfTodayMs` so the function is deterministic under test.
+ * time-dependent comparisons are parameterized via `startOfTodayMs` so the
+ * function is deterministic under test.
  *
  * Due-status buckets:
  *   - overdue:  nextReview < startOfTodayMs

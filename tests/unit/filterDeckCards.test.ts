@@ -27,7 +27,6 @@ const defaults = {
   stageFilter: "all" as const,
   dueFilter: "all" as const,
   sortKey: "oldest" as const,
-  now: NOW,
   startOfTodayMs: TODAY_START,
 };
 

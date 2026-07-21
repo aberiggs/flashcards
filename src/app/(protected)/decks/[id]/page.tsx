@@ -96,7 +96,6 @@ export default function DeckDetailPage() {
             stageFilter,
             dueFilter,
             sortKey,
-            now: Date.now(),
             startOfTodayMs,
         }),
         [allCards, debouncedQuery, stageFilter, dueFilter, sortKey, startOfTodayMs]
